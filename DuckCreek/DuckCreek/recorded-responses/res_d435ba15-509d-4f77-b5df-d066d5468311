@@ -1,0 +1,873 @@
+var app = angular.module('refAppDirectives');
+
+app.service('ProductSelection', function()
+{
+    function productSelectionService()
+    {
+        var isEdit = -1;
+        var lastSub = 0;
+        var scopeCache = {};
+        var opts;
+
+        this.bootstrapScope = function bootstrapScope($scope, $rootScope, $compile, $timeout, Submission, controllerOpts)
+        {
+            $scope.isQuotePage = sessionStorage.mainDisplayPage == "quoteList";
+            opts = controllerOpts;
+            scopeCache = {};
+            $scope.model = {};
+            $scope.model.productSelectionType = "SYMBOL";   // default value
+            $scope.selectedHolder = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+            $scope.selectedHolderProd = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+            $scope.options = {};
+            $scope.options.productSelectionList = [
+                { "value":"SYMBOL", "label": "Symbol", "id": "selectBySymbol"},
+                { "value":"PRODUCT", "label": "Product", "id": "selectByProduct"}
+            ];
+            $scope.symbolCache = {};
+            $scope.isQuotePage = sessionStorage.mainDisplayPage == "quoteList";
+            $scope.sortProducts = function sortProducts(rpmObject)
+            {
+                return rpmObject.getRpmClass().getClassTrait('ui:label');
+            };
+
+            $scope.toggleProductSelection = function toggleProductSelection(isEditing, indexNum)
+            {
+                RA.UI.doClearMessages($scope);
+                $rootScope.showPageLoading();
+
+                async.series(
+                    [
+                        function(callback)
+                        {
+                            var state = getProperty(opts.state);
+                            var date = getProperty(opts.date);
+                            var isFirstCall = !scopeCache.state && !scopeCache.date;
+                            var hasChanged = state !== scopeCache.state || date !== scopeCache.date;
+
+                            scopeCache.state = getProperty(opts.state);
+                            scopeCache.date = getProperty(opts.date);
+                            var subDto = $scope.submission ? $scope.submission : {policyInfo:{policyStateCode:state}, submissionEffectiveDate:date};
+                            if(isFirstCall || hasChanged)
+                            {
+                                Submission.doPopulateAvailableProducts(subDto, function(result)
+                                {
+                                    var data = RA.Service.handleServiceResult(result, $scope);
+                                    callback(NO_ERRORS, data);
+                                });
+                            }
+                            else
+                            {
+                                callback('NO_APPLY', subDto);
+                            }
+                        }
+                    ],
+                    function(err, results)
+                    {
+                        $scope.submission = results[0];
+                        opts.session = $scope.submission.rpmSession;
+                        $rootScope.rpmSessionMap['submission'] = opts.session;
+                        $rootScope.$broadcast('sessionChanged');
+
+                        var symbols = opts.session.namedObjects['availableSymbols'];
+
+                        if(symbols)
+                        {
+                            $scope.available = [];
+                            for(var i = 0; i < symbols.length; i++)
+                            {
+                                $scope.available.push(opts.session.getRpmObjectById(symbols[i]));
+                            }
+                        }
+
+                        $scope.availableProducts = {symbols:[]};
+                        if(!isEditing)
+                        {
+                            isEdit = -1;
+                            $scope.selectedHolder = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+                            $scope.selectedHolderProd = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+
+                            $('#rpmSubmissionNumberScreenLabel').text('Submission #: ' + (opts.quoteList.length + 1));
+                        }
+                        else
+                        {
+                            isEdit = parseInt(indexNum);
+
+                            if($scope.isQuotePage) {
+                                $('#rpmSubmissionNumberScreenLabel').text('Submission #: ' + 1);
+                            } else {
+                                $('#rpmSubmissionNumberScreenLabel').text('Submission #: ' + (isEdit + 1));
+                            }
+                        }
+
+                        $scope.isProductSelectionOpen = !$scope.isProductSelectionOpen;
+                        $scope.updateProductSelectionBySymbolView();
+                        $scope.buildSymbolCache();
+                        $rootScope.hidePageLoading();
+                        $("#productsModal").show();
+                        $timeout(angular.noop);
+                    }
+                );
+            };
+
+            $scope.saveProductSelection = function saveProductSelection(closeModal)
+            {
+                var holder = ($scope.selectedHolder.symbol !== NONE_DASH_DASH_OPTION && $scope.selectedHolder.symbol !== 'null') ? $scope.selectedHolder : $scope.selectedHolderProd;
+                var editIndex = isEdit;
+
+                if (holder.products && holder.products.length < 1) {
+                    alert("You must select a product to add.");
+                    return false;
+                }
+
+                var productNames = [];
+                var productRpmObject;
+
+                for (var i = 0; i < holder.products.length; i++)
+                {
+                    productRpmObject = opts.session.getRpmObjectById(holder.products[i]);
+
+                    if (productRpmObject)
+                        productNames.push(productRpmObject.getRpmClass().getName());
+                }
+
+                var symbolName;
+                var objects = opts.session.getRpmObjects();
+                for(var id in objects)
+                {
+                    var rpmObject = objects[id];
+                    var rpmClass = rpmObject.getRpmClass();
+                    if(rpmClass.getClassTrait('ui:label') === holder.symbol)
+                    {
+                        var objClasses = ['com.gaic.bue.uwd.ra.common.dto.submission.SubmissionDto']
+                        Submission.getHiddenFields(objClasses,holder.symbol, $scope.submission.submissionId, function(result)
+                        {
+                            var data = RA.Service.handleServiceResult(result, $scope);
+                            //Create HiddenFields Map
+                            $scope.hiddenFields = {};
+                            var hiddenFields = data.hiddenFields;
+                            for (var i in hiddenFields) {
+                                var fieldName = hiddenFields[i];
+                                $scope.hiddenFields[fieldName] = fieldName;
+                            }
+
+                        });
+
+                        symbolName = rpmClass.getName();
+                        if (!$scope.isQuotePage) {
+                            $scope.submission.policyInfo.policySymbol = rpmClass.getClassTrait('pd:code');
+                        }
+
+                        var currentSelectedSymbol = rpmClass.fields.CLASS_TRAITS.traits['ui:label']
+                        if ($scope.prevSelectedSymbol !== currentSelectedSymbol && isEdit > -1){
+                            var continuousCancelIndicator = rpmClass.fields.CLASS_TRAITS.getTrait('pd:continuousTillCancelledPolicyDefaultValue')
+                            $scope.submission.continuousTillCancInd = continuousCancelIndicator !== undefined ?  continuousCancelIndicator : false
+                        }
+
+                        var continuousOption = rpmClass.fields.CLASS_TRAITS.getTrait('pd:continuousTillCancelledPolicy');
+                        $scope.continuousUntilCancelledOption = continuousOption ? continuousOption : CONTINUOUS_NOT_ELIGIBLE;
+                        if($scope.doToggleContinuousUntilCancelledOnChange!== undefined) {
+                            $scope.doToggleContinuousUntilCancelledOnChange();
+                        }
+                    }
+                }
+
+                async.series(
+                    [
+                        function(callback)
+                        {
+                            RA.UI.doClearMessages($scope);
+                            $rootScope.showPageLoading();
+
+                            var quoteRpmSession;
+
+                            if (editIndex > -1)
+                                quoteRpmSession = opts.quoteList[editIndex];
+
+                            var scope = {state: opts.state, date: opts.date, useReducedQuoteSession: opts.useReducedQuoteSession, screenName: opts.screenName};
+                            Submission.initQuote(symbolName, productNames, quoteRpmSession, scope, function (result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                var messages = result.data['RpmPipelineController.route'].messages;
+                                var messagesLength = messages.length;
+                                if (messagesLength) {
+                                    callback(CALLBACK_ERROR, data);
+                                } else {
+                                    callback(NO_ERRORS, data);
+                                }
+                            });
+                        }
+                    ],
+                    function (err, results)
+                    {
+                        if(!err) {
+                            var rpmSession = new Dynamis.RpmSession(results[0]);
+
+                            if (editIndex > -1)
+                            {
+                                rpmSession.namedObjects.quoteNum = editIndex +1;
+                                opts.quoteList[editIndex] = rpmSession;
+                            }
+                            else
+                            {
+                                opts.quoteList.push(rpmSession);
+                                rpmSession.namedObjects.quoteNum = opts.quoteList.length
+                            }
+
+                            if(opts.source)
+                            {
+                                opts.source();
+                            }
+
+                            if(opts.onNewSession)
+                            {
+                                opts.onNewSession(rpmSession, editIndex);
+                            }
+                            if(closeModal)
+                            {
+                                isEdit = -1;
+                                $scope.model.productSelectionType = 'SYMBOL';
+                                $scope.isProductSelectionOpen = !$scope.isProductSelectionOpen;
+
+                                // fix for IE10
+                                if (!opts.hide()) {
+                                    $("#productsModal").hide();
+                                }
+
+                                if(opts.onClose)
+                                {
+                                    opts.onClose();
+                                }
+                            }
+                            $scope.selectedHolder = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+                            $scope.selectedHolderProd = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+                            $('#rpmProductScreenLabel').text(EMPTY_OPTION);
+                            $scope.availableProducts = {symbols:[]};
+
+                        }
+
+                        $rootScope.hidePageLoading();
+                    }
+                );
+
+
+                return true;
+            };
+
+            $scope.saveProductSelectionAddAnother = function saveProductSelectionAddAnother()
+            {
+                var count = 1;
+                if ($scope.saveProductSelection(false)) {
+                    isEdit = -1;
+                    $scope.model.productSelectionType = 'SYMBOL';
+                    $scope.updateProductSelectionBySymbolView();
+                    if ($scope.quoteList && $scope.quoteList.length > 0) {
+                        count = $scope.quoteList.length + 1;
+                    }
+                    $('#rpmSubmissionNumberScreenLabel').text("Submission #: " + (count + 1));
+                }
+            };
+
+            $scope.cancelProductSelection = function cancelProductSelection()
+            {
+                $scope.model.productSelectionType = 'SYMBOL';
+
+                $('#rpmProductScreenLabel').text(EMPTY_OPTION);
+
+                // fix for IE10
+                if (!opts.hide()) {
+                    $("#productsModal").hide();
+                }
+
+                if(isEdit > -1)
+                {
+                    $scope.selectedHolder.symbol = opts.quoteList[isEdit].namedObjects.symbolLabel;
+                }
+
+                $scope.selectedHolder = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+                $scope.selectedHolderProd = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+                $scope.isProductSelectionOpen = !$scope.isProductSelectionOpen;
+                if(opts.onClose)
+                {
+                    opts.onClose();
+                }
+            };
+
+            $scope.doChangeProductSelection = function doChangeProductSelection()
+            {
+                if($scope.model.productSelectionType === 'SYMBOL') // Yes, I realize the code here is logically backwards...thank you AngularJS
+                {
+                    $scope.selectedHolderProd = angular.copy($scope.selectedHolder);
+                    $scope.updateProductSelectionByProductView();
+                }
+                else if($scope.model.productSelectionType === 'PRODUCT')
+                {
+                    $scope.selectedHolder = angular.copy($scope.selectedHolderProd);
+                    $scope.updateProductSelectionBySymbolView();
+                }
+            };
+
+            $scope.doDeleteProduct = function doDeleteProduct(quoteNumToDelete)
+            {
+                lastSub = lastSub === 0 ? 0 : lastSub - 1;
+                opts.quoteList.splice(quoteNumToDelete-1, 1);
+
+                $scope.selectedHolder = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+                $scope.selectedHolderProd = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+
+                for(var i = 0; i < opts.quoteList.length; i++)
+                {
+                    var rpmSession = opts.quoteList[i];
+                    rpmSession.namedObjects.quoteNum = i+1;
+                }
+            };
+
+            $scope.doEditProduct = function doEditProduct(indexNumber)
+            {
+                var index = indexNumber ? indexNumber - 1 : 0;
+                var rpmSession = opts.quoteList[index];
+
+                async.auto(
+                    {
+                        available:function(callback)
+                        {
+                            var state = getProperty(opts.state);
+                            var date = getProperty(opts.date);
+                            var isFirstCall = !scopeCache.state && !scopeCache.date; // shouldn't happen on edit, just a safety precaution
+                            var hasChanged = state !== scopeCache.state || date !== scopeCache.date;
+
+                            scopeCache.state = getProperty(opts.state);
+                            scopeCache.date = getProperty(opts.date);
+                            var subDto = $scope.submission ? $scope.submission : {policyInfo:{policyStateCode:state}, submissionEffectiveDate:date};
+                            if(!$scope.available || $scope.available.length === 0 || isFirstCall || hasChanged)
+                            {
+                                Submission.doPopulateAvailableProducts(RA.Controller.serialize(subDto), function(result)
+                                {
+                                    var data = RA.Service.handleServiceResult(result, $scope);
+                                    callback(NO_ERRORS, data);
+                                });
+                            }
+                            else
+                            {
+                                callback(NO_ERRORS, subDto);
+                            }
+                        }
+                    },
+                    function(err, results)
+                    {
+                        $scope.submission = results.available;
+                        opts.session = $scope.submission.rpmSession;
+
+                        $scope.selectedHolder = {'symbol':'', 'products':[], 'labels':[]};
+                        $scope.selectedHolderProd = {'symbol':'', 'products':[], 'labels':[]};
+
+                        $scope.selectedHolder.symbol = rpmSession.namedObjects.symbolLabel;
+                        $scope.selectedHolderProd.symbol = rpmSession.namedObjects.symbolLabel;
+
+                        $scope.selectedHolder.products = (rpmSession.namedObjects.productIds);
+                        $scope.selectedHolder.labels = (rpmSession.namedObjects.productLabels);
+
+                        $scope.selectedHolderProd.products = (rpmSession.namedObjects.productIds);
+                        $scope.selectedHolderProd.labels = (rpmSession.namedObjects.productLabels);
+
+                        var symbols = opts.session.namedObjects['availableSymbols'];
+                        if(symbols) // this doesn't get populated if there's no reason to go to the server for its
+                        {
+                            $scope.available = [];
+                            for(var i = 0; i < symbols.length; i++)
+                            {
+                                $scope.available.push(opts.session.getRpmObjectById(symbols[i]));
+                            }
+                        }
+                        $scope.prevSelectedSymbol = rpmSession.namedObjects.symbolLabel;
+
+                        isEdit = index;
+                        if(!$scope.availableProducts)
+                        {
+                            $scope.availableProducts = {symbols:[]};
+                        }
+
+                        // fix for IE10
+                        $("#productsModal").show();
+                        $scope.toggleProductSelection(true, index);
+                    });
+            };
+
+            $scope.updateProductSelectionByProductView = function updateProductSelectionByProductView()
+            {
+                var uiProductSection = $('#rpmProductScreenLabel2');
+                uiProductSection.text(EMPTY_STRING);
+
+                var idSet = {};
+                var checkedSet = [];
+                var htmlSet = [];
+                for(var i = 0; i < $scope.available.length; i++)
+                {
+                    var rpmObject = $scope.available[i];
+                    var rels = opts.session.getRpmObjectRels();
+                    for(var id in rels)
+                    {
+                        var rel = rels[id];
+                        if(rel.getSource().getId() === rpmObject.getId())
+                        {
+                            var product = rel.getTarget();
+                            var prodClass = product.getRpmClass();
+                            var rpmObjectId = product.getId();
+                            var traitUILabel = prodClass.getClassTrait('ui:label');
+                            if (idSet[traitUILabel])
+                            {
+                                continue;
+                            }
+
+                            idSet[traitUILabel] = true;
+                            var prodName = prodClass.getName();
+                            var isRequired = undefined;
+                            var ngModelName = 'productCk2_' + prodName;
+                            var fields = rel.getSource().getFields();
+                            for (var f in fields)
+                            {
+                                var field = fields[f];
+                                if (field.getType() === prodName)
+                                {
+                                    isRequired = field.getMin() > 0 ? true : undefined;
+                                    break;
+                                }
+                            }
+
+                            var checked = isRequired || $scope.shouldValueBeChecked(traitUILabel);
+                            var disabled = isRequired !== undefined;
+                            if (checked)
+                            {
+                                checkedSet.push({name:ngModelName, label:traitUILabel, id:rpmObjectId});
+                            }
+
+                            var setIndex = getIndex(traitUILabel);
+                            if(setIndex > -1) {
+                                htmlSet[setIndex] = '<input class="productCheckboxGroup ra-radio-sub" ng-disabled=' + disabled + ' id="' + ngModelName + '"type="checkbox"' +
+                                    ' ng-click="updateOutputSummaryProducts(\'' + ngModelName + '\',\'' + traitUILabel + '\', \'' + rpmObjectId + '\')" ' +
+                                    ' name="' + traitUILabel + '" value="' + traitUILabel + '"' + checked + ' >  ' + traitUILabel;
+                            }
+                        }
+                    }
+                }
+
+                for(var p = 0; p < htmlSet.length; p++)
+                {
+                    uiProductSection.append(htmlSet[p]);
+                    uiProductSection.append('<br/>');
+                }
+
+                for(var i = 0; i < checkedSet.length; i++)
+                {
+                    var obj = checkedSet[i];
+                    $scope.updateOutputSummaryProducts(obj.name, obj.label, obj.id);
+                }
+
+                $compile(uiProductSection)($scope);
+                $timeout(angular.noop);
+            };
+
+            $scope.updateProductSelectionBySymbolView = function updateProductSelectionBySymbolView()
+            {
+                var uiProductSection = $('#rpmProductScreenLabel');
+                uiProductSection.text(EMPTY_STRING);
+
+                var checked = EMPTY_STRING;
+                var disabled = false;
+                var checkedSet = [];
+                var labels = [];
+                var products = [];
+                var htmlSet = [];
+
+                for(var i = 0; i < $scope.available.length; i++)
+                {
+                    var rpmSession = opts.session;
+                    var rpmObject = $scope.available[i];
+                    var sym = rpmObject.getRpmClass().getClassTrait('ui:label');
+
+                    if (sym === $scope.selectedHolder.symbol)
+                    {
+                        var ids = {};
+                        var rels = rpmSession.getRpmObjectRels();
+                        for(var id in rels)
+                        {
+                            var rel = rels[id];
+                            if(rel.getSource().getRpmClass().getClassTrait('ui:label') === sym)
+                            {
+                                var product = rel.getTarget();
+                                var prodClass = product.getRpmClass();
+                                var traitUILabel = prodClass.getClassTrait('ui:label');
+
+                                if(ids[traitUILabel]) continue;
+                                ids[traitUILabel] = true;
+
+                                var isRequired = undefined;
+                                var prodName = prodClass.getName();
+                                var rpmObjectId = product.getId();
+                                var ngModelName = 'productCk_' + prodName;
+                                var fields = rel.getSource().getFields();
+                                for(var f in fields)
+                                {
+                                    var field = fields[f];
+                                    if(field.getType() === prodName)
+                                    {
+                                        isRequired = field.getMin() > 0 ? true : undefined;
+                                        break;
+                                    }
+                                }
+
+                                checked = isRequired || $scope.shouldValueBeChecked(traitUILabel);
+                                if(checked)
+                                {
+                                    labels.push(traitUILabel);
+                                    products.push(rpmObjectId);
+                                    checkedSet.push({name:ngModelName, symbol:sym, label:traitUILabel, id:rpmObjectId, products:products, labels:labels});
+                                }
+
+                                //if the symbol is monoline with a product already selected, disable remaining products
+                                disabled = isRequired !== undefined|| $scope.shouldBeDisabled(rel.getSource().getRpmClass().getClassTrait('pd:monoLineOnly'), traitUILabel);
+
+                                var setIndex = getIndex(traitUILabel);
+                                if(setIndex > -1) {
+                                    htmlSet[setIndex] = '<input class="productCheckboxGroup ra-radio-sub" ng-disabled=' + disabled + ' id="' + ngModelName + '"type="checkbox"' +
+                                        ' ng-click="updateOutputSummary(\'' + ngModelName + '\',\'' + sym + '\',\'' + traitUILabel + '\', \'' + rpmObjectId + '\')" ' +
+                                        ' name="' + traitUILabel + '" value="' + traitUILabel + '"' + checked + ' >  ' + traitUILabel;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // By symbol, we'll be dealing with a sparse array, so have to make the array dense
+                htmlSet = htmlSet.filter(function (x) { return x !== undefined && x != null; });
+                for(var p = 0; p < htmlSet.length; p++)
+                {
+                    uiProductSection.append(htmlSet[p]);
+                    uiProductSection.append('<br/>');
+                }
+
+                for(var i = 0; i < checkedSet.length; i++)
+                {
+                    var obj = checkedSet[i];
+                    var escaped = obj.name.indexOf('\\.') === -1 ? obj.name.replace('.', '\\.') : obj.name;
+                    if(!$('#' + escaped).prop('checked'))
+                    {
+                        $('#' + escaped).click();
+                    }
+                    $scope.updateOutputSummary(obj.name, obj.symbol, obj.label, obj.id);
+                    $scope.selectedHolder.products = RA.Controller.concatUnique(obj.products, []);
+                    $scope.selectedHolder.labels = RA.Controller.concatUnique(obj.labels, []);
+                }
+
+                if(checkedSet.length === 0)
+                {
+                    $scope.selectedHolder.products = [];
+                    $scope.selectedHolder.labels = [];
+                }
+
+                $compile(uiProductSection)($scope);
+                $timeout(angular.noop);
+            };
+
+            $scope.shouldValueBeChecked = function shouldValueBeChecked(traitUILabel)
+            {
+                var productsLabels = $scope.selectedHolder.labels;
+
+                for (var i = 0; i < productsLabels.length; i++)
+                {
+                    if (productsLabels[i] === traitUILabel)
+                        return 'checked';
+                }
+
+                return '';
+            };
+
+            $scope.shouldBeDisabled = function shouldBeDisabled(isMonoLine, productLabel)
+            {
+                var productsLabels = $scope.selectedHolder.labels;
+
+                return isMonoLine && productsLabels && productsLabels.length && (productsLabels.indexOf(productLabel) === -1)
+            };
+
+            $scope.updateOutputSummary = function updateOutputSummary(checkBoxName, symbol, productLabel, id)
+            {
+                $scope.updateHolder($scope.selectedHolder, checkBoxName, productLabel, id);
+            };
+
+            $scope.updateOutputSummaryProducts = function updateOutputSummaryProducts(checkBoxName, productLabel, id)
+            {
+                var inboundSymbol = $scope.selectedHolderProd.symbol !== NONE_DASH_DASH_OPTION ? $scope.selectedHolderProd.symbol : undefined;
+                $scope.selectedHolder = {symbol:NONE_DASH_DASH_OPTION, products:[], labels:[]};
+                $scope.selectedHolderProd.symbol = NONE_DASH_DASH_OPTION;
+                $scope.updateHolder($scope.selectedHolderProd, checkBoxName, productLabel, id);
+                $scope.doChangeSymbolSelection();
+                var prodCount = $scope.selectedHolderProd.products.length;
+                var idSet = {};
+                for(var i = 0; i < prodCount; i++)
+                {
+                    var rels = opts.session.getRpmObjectRels();
+                    for(var relId in rels)
+                    {
+                        var rel = rels[relId];
+                        var target = rel.getTarget();
+                        if(target.getRpmClass().getClassTrait('ui:label') === $scope.selectedHolderProd.labels[i])
+                        {
+                            var symbolObject = rel.getSource();
+                            var symbolClass = symbolObject.getRpmClass();
+                            var symbol = symbolClass.getClassTrait('ui:label');
+                            if(idSet[symbol])
+                            {
+                                continue;
+                            }
+                            idSet[symbol] = true;
+                            if(!inboundSymbol && symbolClass.getClassTrait((prodCount > 1 ? 'pd:multiLineDefaultSymbol' : 'pd:monoLineDefaultSymbol')))
+                            {
+                                $scope.selectedHolderProd.symbol = symbolClass.getClassTrait('ui:label');
+                            }
+                        }
+                    }
+                }
+                if($scope.availableProducts.symbols.length === 1 || $scope.selectedHolderProd.symbol === NONE_DASH_DASH_OPTION)
+                {
+                    if ($scope.availableProducts.symbols.length > 0)
+                        $scope.selectedHolderProd.symbol = inboundSymbol ? inboundSymbol : $scope.availableProducts.symbols[0].value;
+                }
+                // give angular time to digest DOM nodes(checkboxes)
+                setTimeout(function(){$scope.disableProducts();},10);
+            };
+
+            $scope.updateHolder = function updateHolder(holder, checkBoxName, productLabel, id)
+            {
+                var escaped = checkBoxName.indexOf('\\.') === -1 ? checkBoxName.replace('.', '\\.') : checkBoxName;
+                var array = holder.labels;
+                var array2 = holder.products;
+                var isChecked;
+                if(isChecked = !$("#" + escaped).prop('checked'))
+                {
+                    for(var i = array.length - 1; i >= 0; i--)
+                    {
+                        if(array[i] === productLabel)
+                        {
+                            array.splice(i, 1);
+                            array2.splice(i, 1);
+                        }
+                    }
+                }
+                else
+                {
+                    //adding these checks to eliminate duplicates when editing the product selection
+                    //this function needs to be re-visited and refactored to be more robust
+                    if (array instanceof Array && array.indexOf(productLabel) === -1)
+                        array.push(productLabel);
+
+                    if (array2 instanceof Array && array2.indexOf(id) === -1)
+                        array2.push(id);
+                }
+
+                for(var v in $scope.available)
+                {
+                    var traits = $scope.available[v].getRpmClass().getClassTraits();
+                    if(traits['ui:label'] === holder.symbol && traits['pd:monoLineOnly'])
+                    {
+                        for(var l in $scope.symbolCache)
+                        {
+                            for(var m = 0; m < $scope.symbolCache[l].length; m++)
+                            {
+                                if($scope.symbolCache[l][m].label !== productLabel)
+                                    $('#productCk_' + $scope.symbolCache[l][m].id).prop('disabled', !isChecked);
+                            }
+                        }
+                    }
+                }
+                holder.labels = RA.Controller.concatUnique(array, []);
+                holder.products = RA.Controller.concatUnique(array2, []);
+            };
+
+            $scope.disableProducts = function disableProducts()
+            {
+                $scope.buildSymbolCache();
+                for(var l in $scope.symbolCache)
+                {
+                    for(var m = 0; m < $scope.symbolCache[l].length; m++)
+                    {
+                        $('#productCk2_' + $scope.symbolCache[l][m].id).prop('disabled', false);
+                    }
+                }
+                if(!$scope.availableProducts || $scope.availableProducts.symbols.length === 0) return;
+
+                var sym = $scope.selectedHolderProd.symbol;
+                var allowed = $scope.symbolCache[sym];
+                for(var symbol in $scope.symbolCache)
+                {
+                    var cached = $scope.symbolCache[symbol];
+                    for(var c in cached)
+                    {
+                        var matchFound = false;
+                        var cachedId = cached[c].id;
+                        var cachedObjectId = cached[c].objectId;
+                        var cachedLabel = cached[c].label;
+                        for(var a in allowed)
+                        {
+                            if(allowed[a].label === cachedLabel)
+                            {
+                                matchFound = true;
+                                break;
+                            }
+                        }
+
+                        if(cached[c].monoOnly && symbol === sym)
+                        {
+                            $('#productCk2_' + cachedId).prop('checked', $.inArray(cachedLabel, $scope.selectedHolderProd.labels) !== -1);
+                            $('#productCk2_' + cachedId).prop('disabled', $.inArray(cachedLabel, $scope.selectedHolderProd.labels) === -1);
+                            $('#productCk2_' + cachedId).prop('ng-disabled', $.inArray(cachedLabel, $scope.selectedHolderProd.labels) === -1);
+                            continue;
+                        }
+
+                        if(!matchFound || (cached[c].req && symbol === sym))
+                        {
+                            $('#productCk2_' + cachedId).prop('checked', false);
+                            $('#productCk2_' + cachedId).prop('disabled', true);
+                            $('#productCk2_' + cachedId).prop('ng-disabled', true);
+                        }
+
+                        if(cached[c].req && symbol === sym)
+                        {
+                            $('#productCk2_' + cachedId).prop('checked', true);
+                            $scope.updateHolder($scope.selectedHolderProd, 'productCk2_' + cachedId, cachedLabel, cachedObjectId);
+                        }
+                    }
+                }
+            };
+
+            $scope.doChangeSymbolSelection = function doChangeSymbolSelection()
+            {
+                var rpmSession = opts.session;
+                var masterList = [];
+                for(var i = 0; i < $scope.selectedHolderProd.products.length; i++)
+                {
+                    var prodId = $scope.selectedHolderProd.products[i];
+                    var allowed = getAllowed(rpmSession.getRpmObjectById(prodId).getRpmClass().getClassTrait('ui:label'));
+                    if(masterList.length === 0)
+                    {
+                        masterList = RA.Controller.concatUnique(masterList, allowed);
+                    }
+                    else
+                    {
+                        for(var m = 0; m < masterList.length; m++)
+                        {
+                            var matchFound = false;
+                            for(var a = 0; a < allowed.length; a++)
+                            {
+                                if(allowed[a] === masterList[m])
+                                {
+                                    matchFound = true;
+                                    break;
+                                }
+                            }
+
+                            if(!matchFound)
+                            {
+                                masterList.splice(m,1);
+                            }
+                        }
+                    }
+                }
+                $scope.availableProducts.symbols = [];
+                for(var f in masterList)
+                {
+                    var symbol = masterList[f];
+                    $scope.availableProducts.symbols.push({label:symbol, value:symbol});
+                }
+
+                function getAllowed(prodLabel)
+                {
+                    $scope.buildSymbolCache();
+                    var retArray = [];
+                    for(var sym in $scope.symbolCache)
+                    {
+                        var symArray = $scope.symbolCache[sym];
+                        for(var s = 0; s < symArray.length; s++)
+                        {
+                            if(symArray[s].label === prodLabel)
+                            {
+                                retArray.push(sym);
+                            }
+                        }
+                    }
+                    return retArray;
+                }
+            };
+
+            $scope.buildSymbolCache = function buildSymbolCache()
+            {
+                if(Object.keys($scope.symbolCache).length === 0)
+                {
+                    var rpmSession = opts.session;
+                    if(!rpmSession) return; // gaig-something calls this method needlessly on startup
+                    var rels = rpmSession.getRpmObjectRels();
+                    for(var v in $scope.available)
+                    {
+                        var symbolObject = $scope.available[v];
+                        var symbol = symbolObject.getRpmClass().getClassTrait('ui:label');
+                        for(var id in rels)
+                        {
+                            var rel = rels[id];
+                            var relClass = rel.getSource().getRpmClass();
+                            if(relClass.getClassTrait('ui:label') === symbol)
+                            {
+                                var target = rel.getTarget();
+                                var targetClass = target.getRpmClass();
+                                var label = targetClass.getClassTrait('ui:label');
+                                var monoOnly = relClass.getClassTrait('pd:monoLineOnly');
+                                var fields = rel.getSource().getFields();
+                                var required = false;
+                                for(var f in fields)
+                                {
+                                    var field = fields[f];
+                                    if(field.getType() === targetClass.getName())
+                                    {
+                                        required = field.getMin() > 0 ? true : undefined;
+                                        break;
+                                    }
+                                }
+                                var className = targetClass.getName();
+                                var array = $scope.symbolCache[symbol] || [];
+                                array.push({label:label, id:className.replace('.', '\\.'), req:required, objectId:target.getId(), monoOnly:monoOnly});
+                                $scope.symbolCache[symbol] = array;
+                            }
+                        }
+                    }
+                }
+            };
+
+            $scope.clearScopeCache = function clearScopeCache()
+            {
+                scopeCache = {};
+            };
+
+            function getProperty(propName)
+            {
+                var prop = $scope;
+                var split = propName.split('.');
+                for(var i = 0; i < split.length; i++)
+                {
+                    prop = prop[split[i]];
+                }
+                return prop;
+            }
+
+            function getIndex(label)
+            {
+                var i;
+                for(i = 0; i < $scope.productSortOrder.length; i++)
+                {
+                    if($scope.productSortOrder[i] === label)
+                    {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+        };
+    }
+    return new productSelectionService();
+});

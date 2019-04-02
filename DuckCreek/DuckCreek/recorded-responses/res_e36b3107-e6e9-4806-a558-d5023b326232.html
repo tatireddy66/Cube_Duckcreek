@@ -1,0 +1,52 @@
+<div ng-controller="ConfirmTransactionController" class="with-bg" ng-init="init(confirm)";>
+    <ra-modal modal-class="btn" modal-size="confirm"
+              display-title="Timeout Message" ng-cloak
+              toggle="isTimeoutOpen"
+              func="toggleTimeoutModal()"
+              close-btn-label="OK"
+              cancel-function="toggleTimeoutModal()">
+        <br />
+        Your request has exceeded the time allowed.
+    </ra-modal>
+    <ra-modal modal-class="btn" modal-size="confirm"
+              display-title="Out Of Sequence Transaction Detected" ng-cloak
+              toggle="isConfirmOutOfSequenceOpen"
+              func="toggleConfirmOutOfSequenceModal()"
+              close-btn-label="Cancel"
+              buttons="confirmOutOfSequenceButtons"
+              cancel-function="toggleConfirmOutOfSequenceModal()">
+        <br />
+        This transaction is out of sequence. Do you want to continue processing?
+    </ra-modal>
+    <ra-modal modal-class="btn" modal-size="confirm"
+              display-title="Out Of Sequence Transaction for Commission Change" ng-cloak
+              toggle="isConfirmCommissionOutOfSequenceOpen"
+              func="toggleConfirmCommissionOutOfSequenceModal()"
+              close-btn-label="Cancel"
+              buttons="confirmCommissionOutOfSequenceButtons"
+              cancel-function="toggleConfirmCommissionOutOfSequenceModal()">
+        <br />
+        This transaction is considered out of sequence due to the technical processing needed for the Commission Change endorsement.  Would you like to continue processing your endorsement?
+    </ra-modal>
+    <ra-modal modal-class="btn" modal-size="confirm"
+              display-title="Earlier Inactive Transaction Detected" ng-cloak
+              toggle="isConfirmEarlierInactiveOpen"
+              func="toggleConfirmEarlierInactiveModal()"
+              close-btn-label="Cancel"
+              buttons="confirmEarlierInactiveButtons"
+              cancel-function="toggleConfirmEarlierInactiveModal()">
+        <br />
+        A transaction with an earlier transaction effective date exists on the same policy term. Are you sure you want to continue to work this transaction?
+    </ra-modal>
+    <ra-modal modal-class="btn" modal-size="confirm"
+              display-title="Pending Rate Change Detected" ng-cloak
+              toggle="isConfirmPendingRateChange"
+              func="toggleConfirmPendingRateChangeModal()"
+              close-btn-label="Cancel"
+              buttons="confirmPendingRateChangeButtons"
+              cancel-function="toggleConfirmPendingRateChangeModal()">
+        <br />
+        Policy contains Pending Rate Change for 1 or more states. This transaction will cause the Pending Rate Change to become an Out Of Sequence transaction that will require manual processing of the Pending Rate Change.
+    </ra-modal>
+</div>
+<script type="text/javascript" src="dyn/js/confirmTransaction"></script>

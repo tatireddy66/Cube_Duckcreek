@@ -1,0 +1,115 @@
+<gaig-validation-panel ng-model="validationMessages"></gaig-validation-panel>
+<messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+
+<div class="row-form">
+    <div class="form-cell">
+        <label>ID</label>
+        {{aggregate.aggregateID || '--'}}
+    </div>
+    <label class="required" for="aggregateName">Aggregate Name</label>
+    <input id="aggregateName" type="text" class="input-xlarge2" ng-model="aggregate.aggregateName" maxlength="170" ng-disabled="disabledFields.addNewAgregate || !editAggregateAccess">
+</div>
+
+<div class="row-form">
+    <div class="form-cell">
+        <label class="required" for="deductibleType">Large Deductible Type</label>
+        <select gaig-select class="input-medium2point5" id="deductibleType"
+                ng-model="aggregate.largeDeductibleType"
+                data-placeholder="--Select--" ng-change="largeDeductibleChanged()" ng-disabled="disabledFields.addNewAgregate || !editAggregateAccess"
+                ng-options="item.value as item.label for item in deductibleTypeList track by item.value">
+            <option value=""></option>
+        </select>
+    </div>
+    <div class="form-cell">
+        <label for="fundedDeductible">Funded</label>
+        <gaig-switch ng-model="aggregate.funded" id="fundedDeductible"
+                     data-on-label="Yes"
+                     data-off-label="No"
+                     size="small" ng-disabled="viewOnlyMode || !editAggregateAccess">
+        </gaig-switch>
+    </div>
+    <div class="form-cell">
+        <label for="intermediateDeductible">Intermediate Deductible</label>
+        <gaig-switch ng-model="aggregate.intermediateDeductible" id="intermediateDeductible"
+                     data-on-label="Yes"
+                     data-off-label="No"
+                     size="small" ng-disabled="viewOnlyMode || !editAggregateAccess"
+                     on-change="intermediateChanged()">
+        </gaig-switch>
+    </div>
+    <div class="form-cell">
+        <label ng-class="aggDeductClass" for="aggregateDeductible">Aggregate Deductible Limit</label>
+        <input id="aggregateDeductible"  ng-model="aggregate.aggregateDeductibleLimit" ng-disabled="disableAggDeduct || disabledFields.addNewAgregate || !editAggregateAccess"
+           type="text" decimal-places="0" decimals-to-show="0" class="gaig-currency input-small alignRight">
+    </div>
+</div>
+
+<div class="row-form">
+    <div class="form-cell">
+        <label for="variableFee">Variable Fee %</label>
+        <input type="text" id="variableFee" class="input-mini" gaig-percentage decimal-places="2" decimals-to-show="2" max="30.000" ng-model="aggregate.variableFeePercent" ng-disabled="disabledFields.addNewAgregate || !editAggregateAccess" style="vertical-align:middle;width:60px">
+    </div>
+    <div class="form-cell">
+        <label for="splitInvoicing">Split Invoicing</label>
+        <gaig-switch ng-model="aggregate.splitInvoicing" id="splitInvoicing"
+                     data-on-label="Yes"
+                     data-off-label="No"
+                     size="small" ng-disabled="viewOnlyMode || !editAggregateAccess">
+        </gaig-switch>
+    </div>
+    <div class="form-cell">
+        <label class="required" for="effectiveDate">Agg Term Effective Date</label>
+        <gaig-datepicker id="effectiveDate"
+                         ng-model="aggregate.aggLimitTermEffectiveDate" ng-disabled="disabledFields.addNewAgregate || !editAggregateAccess">
+        </gaig-datepicker>
+    </div>
+    <div class="form-cell">
+        <label class="required" for="expirationDate">Agg Term Expiration Date</label>
+        <gaig-datepicker id="expirationDate"
+                         ng-model="aggregate.aggLimitTermExpirationDate" ng-disabled="disabledFields.addNewAgregate || !editAggregateAccess">
+        </gaig-datepicker>
+    </div>
+</div>
+
+<div class="row-form">
+    <div class="form-cell">
+        <label for="aggRateYear1">Agg Rate Year 1</label>
+        <input id="aggRateYear1" type="text" class="input-mini" gaig-number decimal-places="3" min="0.0001" max="100" ng-model="aggregate.aggLimitRateYear1" ng-disabled="disabledFields.addNewAgregate || !editAggregateAccess">
+    </div>
+    <div class="form-cell">
+        <label for="minimumAggYear1">Minimum Agg Year 1</label>
+        <input id="minimumAggYear1"  ng-model="aggregate.minAggregateYear1"
+               type="text" decimal-places="0" decimals-to-show="0" class="gaig-currency input-small alignRight" ng-disabled="disabledFields.addNewAgregate || !editAggregateAccess">
+    </div>
+    <div class="form-cell" ng-hide="hideYear2">
+        <label for="aggRateYear2">Agg Rate Year 2</label>
+        <input id="aggRateYear2" type="text" class="input-mini" gaig-number decimal-places="3" min="0.0001" max="100" ng-model="aggregate.aggLimitRateYear2" ng-disabled="!editAggregateAccess">
+    </div>
+    <div class="form-cell" ng-hide="hideYear2">
+        <label for="minimumAggYear2">Minimum Agg Year 2</label>
+        <input id="minimumAggYear2"  ng-model="aggregate.minAggregateYear2"
+               type="text" decimal-places="0" decimals-to-show="0" class="gaig-currency input-small alignRight" ng-disabled="!editAggregateAccess">
+    </div>
+</div>
+
+<div class="row-form" ng-show="aggregate.aggregateID">
+    <div class="form-cell">
+        <label for="relatedPolicies">Assigned Policies</label>
+        <table id="relatedPolicies" class="table gaig-table table-striped">
+            <thead>
+                <tr>
+                    <th>Policy Number</th>
+                    <th>Primary Named Insured</th>
+                    <th>Policy Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="rel in relatedAggregates">
+                    <td><a id="maLink_$index" ng-click="navigate($index)">{{rel.policy}}</a></td>
+                    <td>{{rel.insuredName}}</td>
+                    <td>{{rel.policyStatus}}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

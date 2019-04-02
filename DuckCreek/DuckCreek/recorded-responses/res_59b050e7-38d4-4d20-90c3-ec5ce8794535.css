@@ -1,0 +1,182 @@
+/*GAIG-MODAL*/
+.gaig-modal.confirm{
+    width: 400px;
+    min-height: 100px;
+}
+.gaig-modal.mini{
+    width: 350px;
+    min-height: 100px;
+}
+.gaig-modal.medium{
+    width: 500px;
+    min-height: 100px;
+}
+.gaig-modal.advancedSearch{
+    width: 682px;
+    min-height: 100px;
+}
+.gaig-modal.historySnapshot{
+    width: 600px;
+    min-height: 100px;
+}
+.gaig-modal.large{
+    width: 900px;
+    min-height: 250px;
+}
+.gaig-modal.addAggregateModal{
+    width: 675px;
+    min-height: 100px;
+}
+.gaig-modal.xlarge{
+    width: 600px;
+    min-height: 100px;
+}
+.gaig-modal.xxlarge{
+    width: 950px;
+    min-height: 200px;
+}
+.gaig-modal.xxlargeProducer{
+    width: 1000px;
+    min-height: 200px;
+}
+.gaig-modal.xxxlarge{
+    width: 1050px;
+    min-height: 500px;
+}
+.gaig-modal.activityDetails{
+    width: 700px;
+    height:	700px;
+    min-height: 700px;
+}
+.gaig-modal.saveReportModal{
+    width: 500px;
+    min-height: 200px;
+}
+.gaig-modal.deleteReportsModal{
+    width: 500px;
+    min-height: 100px;
+}
+.gaig-modal.carrierDetails{
+    width: 1000px;
+    min-height: 250px;
+}
+/*GAIG-MODAL END*/
+
+
+.percent-align {
+    margin-top: -5px;
+}
+
+/* RA Button Panel */
+ra-button-panel ra-dynamic-button + ra-dynamic-button input {
+    margin-left: 5px;
+}
+
+div.form-actions {
+    clear: both;
+}
+
+.fieldset-noToggle {
+    background: white;
+    position: relative;
+    margin-top: 1em;
+    padding-top:.65em;
+    margin-left: 5px;
+    padding-bottom: 2px;
+}
+
+.fieldset-noToggle legend{
+    font-size: 10pt;
+    font-weight: bold;
+    background: white;
+    position: absolute;
+    top: -.7em;
+    left: .5em;
+}
+
+.singleLinePadding{
+    padding-top: 13px;
+}
+.selectBottomPadding{
+    padding-bottom: 7px;
+}
+
+.gaig-fieldset-legend {
+    position: absolute;
+}
+
+.generatePolButton {
+    margin-top: 12px;
+}
+
+.redCloseAcctBind {
+    margin-top: 10px;
+    margin-left: 19px;
+}
+
+.premiumAcctBind {
+    margin-top: 20px;
+}
+
+.borderless {
+    border: none;
+}
+
+.srpWrapper {
+    padding-top: 3em;
+}
+
+.sprRowNoPad {
+    padding-bottom: 0px;
+    padding-top: 0px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    margin-left: -10px;
+}
+
+.sprRowNoPad > legend{
+    font-size: 9pt;
+    font-weight: bold;
+}
+
+.sprRowNoPad textarea {
+    resize: vertical;
+}
+
+.row-form label.labelValueLabel {
+    font-size: 9pt;
+    font-weight: bold;
+}
+
+.accountBind_generatePolContols {
+    margin-top: -21px;
+    vertical-align: middle;
+}
+
+#searchLoading {
+  position: absolute;
+  z-index: 3000;
+  background-color: #000;
+  background-image: url(data:image/gif;base64,R0lGODlhEAALAPQAAP///wAzZtrh6NDZ4uru8gY3aQAzZi5XgYKas2B/n7rH1SJOekpukoqhuGSCob7K1yZRfAQ2aE5xlObq79jf5/T2+Dhfh9zi6fL09rbE0qCyxcrU3u7x9AAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCwAAACwAAAAAEAALAAAFLSAgjmRpnqSgCuLKAq5AEIM4zDVw03ve27ifDgfkEYe04kDIDC5zrtYKRa2WQgAh+QQJCwAAACwAAAAAEAALAAAFJGBhGAVgnqhpHIeRvsDawqns0qeN5+y967tYLyicBYE7EYkYAgAh+QQJCwAAACwAAAAAEAALAAAFNiAgjothLOOIJAkiGgxjpGKiKMkbz7SN6zIawJcDwIK9W/HISxGBzdHTuBNOmcJVCyoUlk7CEAAh+QQJCwAAACwAAAAAEAALAAAFNSAgjqQIRRFUAo3jNGIkSdHqPI8Tz3V55zuaDacDyIQ+YrBH+hWPzJFzOQQaeavWi7oqnVIhACH5BAkLAAAALAAAAAAQAAsAAAUyICCOZGme1rJY5kRRk7hI0mJSVUXJtF3iOl7tltsBZsNfUegjAY3I5sgFY55KqdX1GgIAIfkECQsAAAAsAAAAABAACwAABTcgII5kaZ4kcV2EqLJipmnZhWGXaOOitm2aXQ4g7P2Ct2ER4AMul00kj5g0Al8tADY2y6C+4FIIACH5BAkLAAAALAAAAAAQAAsAAAUvICCOZGme5ERRk6iy7qpyHCVStA3gNa/7txxwlwv2isSacYUc+l4tADQGQ1mvpBAAIfkECQsAAAAsAAAAABAACwAABS8gII5kaZ7kRFGTqLLuqnIcJVK0DeA1r/u3HHCXC/aKxJpxhRz6Xi0ANAZDWa+kEAA7AAAAAAAAAAAA);
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: .6;
+  filter: alpha(opacity=60);
+}
+
+label.myToolTip {
+    position: relative;
+}
+label.myToolTip span {
+    display: none;
+}
+label.myToolTip:hover span, label.myToolTip:focus span {
+    display: block;
+    position: fixed;
+    white-space: pre-line;
+    bottom: 0;
+    right: 0;
+    background-color: #333;
+    color: white;
+    padding: 10px;
+}

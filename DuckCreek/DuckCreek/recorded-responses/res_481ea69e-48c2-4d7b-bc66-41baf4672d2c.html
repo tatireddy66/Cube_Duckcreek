@@ -1,0 +1,352 @@
+<style>
+    .marginTop4 {
+        margin-top:4px;
+    }
+</style>
+<div id="setStatusModal">
+    <gaig-modal modal-id="dashboardChangeStatus"
+                title="Set Status"
+                ng-model="isOpen"
+                on-cancel="trn_cancel"
+                modal-css="gaig-modal-full"
+                cancel-button-id="cancelButtonStatus"
+                footer-buttons="footerButtons"
+                ng-cloak
+                show-save="false"
+                >
+
+        <div class="row-form">
+            <div class="row-fluid">
+
+                <messages-modal validation="validationMessages"></messages-modal>
+                <messages success="successMessages" info="infoMessages" error="errorMessages"
+                          validation="validationMessages"></messages>
+                <div error-catcher></div>
+                <div class="row-form">
+                    <div class="row-fluid">
+                        <div class="span12">
+                            Update the status for the following items:
+                            <table class="table gaig-table table-striped">
+                                <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Lock</th>
+                                    <th>Policy</th>
+                                    <th>Insured Name</th>
+                                    <th>Activity</th>
+                                    <th>TRN Effective Date</th>
+                                    <th>Status</th>
+                                    <th>Remove</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat-start="row in table">
+                                    <td style="text-align: center;">
+                                        <img src='dyn/images/greencheck.gif' ng-show="row.isValid == true" />
+                                        <img src='dyn/images/redx.gif' ng-show="row.isValid == false" ng-click="row.showErrors=true"/>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <img src='dyn/images/lockBlack.png' ng-show="row.lockHid && !isAdmin && (row.lockHid != currentUser)"  val="{{row.lockHid}}" title="{{row.lockName}}" />
+                                        <img src='dyn/images/lockGreen.png' ng-show="row.lockHid && (isAdmin || row.lockHid == currentUser)"  val="{{row.lockHid}}" title="{{row.lockName}}" />
+                                    </td>
+                                    <td>{{row.policy}}</td>
+                                    <td>{{row.insuredName}}</td>
+                                    <td>{{row.type}}</td>
+                                    <td>{{row.date}}</td>
+                                    <td>{{row.status}}</td>
+                                    <td class="centerColumn">
+                                        <button type="button" class="redClose" ng-click="removeRow($index);">X
+                                        </button>
+                                    </td>
+                                <tr>
+                                <tr ng-hide="!row.showErrors" ng-repeat-end>
+                                    <td colspan="8">
+                                        <div style="text-align:left" ng-repeat="error in row.errors track by $index">
+                                            <label style="color:red">Error Text:</label>
+                                            {{error}}
+                                        </div>
+                                        <div style="text-align:right">
+                                            <button class="btn" ng-click="row.showErrors = false">Close</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row-form">
+                    <div class="row-fluid">
+                        <div class="form-cell">
+                            Select the transaction status and enter any relevant details.
+                        </div>
+                    </div>
+                    <div class="row-fluid">
+                        <div class="form-cell">
+                            <select class="input-medium marginTop4" gaig-select id="dispositionStatusOptions"
+                                    ng-model="disposition.dispositionTypeCode"
+                                    data-placeholder="Select new status"
+                                    on-change="changeDisposition()"
+                                    ng-disabled="viewOnlyMode">
+                                <option value="" disabled="disabled"></option>
+                                <option ng-repeat="status in dispositionStatusList" value="{{status.value}}">
+                                    {{status.label}}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row-fluid">
+                        <div class="form-cell">
+                            <button id="editBindDetailsButton" class="btn" ng-click="doOpenEditBindDetails()" ng-show="showBindLink">Edit Bind Details...</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row-form" ng-show="lostDisposition">
+                    <div class="row-fluid">
+                        <div class="span3">
+                            <label for="dispositionDate">{{dateLabel}}</label>
+                            {{currentDateTrnStatus}}
+                        </div>
+                        <div class="span3">
+                            <label for="lostToCarrier">Lost to Carrier</label>
+                            {{disposition.lostToCarrierName}}
+                        </div>
+
+                        <div class="span3">
+                            <button type="submit" class="redClose" ng-click="clearLostCarrier()">X</button>
+                            &nbsp;
+                            <button type="submit" class="btn" id="statusCarrierSearchButton"
+                                    ng-click="onCarrierLookupOpen()"><i class="icon-search"></i></button>
+                        </div>
+
+                        <ra-modal-custom modal-class="btn" modal-size="carrierLookup" ng-disabled="viewOnlyMode"
+                                         custom-footer open-btn-label="" show-open-btn="false"
+                                         title="Search for Carrier" ng-cloak toggle="isSearchForCarrierOpen"
+                                         open-func="onCarrierLookupOpen()"
+                                         cancel-func="onCarrierLookupCancelButton()"
+                                         buttons="">
+                            <div class="container-fixed">
+                                <messages success="successMessages" info="infoMessages" error="errorMessages"
+                                          validation="validationMessages"></messages>
+                                <div error-catcher></div>
+                                <div class="row-form modal-body-carrierLookup noPadding">
+                                    <div class="row-fluid">
+                                        <div class="span2andAHalf">
+                                            <div class="carrierModalLHN">
+                                                <div class="row-fluid">
+                                                    <div style="text-align:center">
+                                                        <button type="submit" class="btn"
+                                                                id="carrierLookupButton"
+                                                                ng-click="doCarrierLookup()"
+                                                                ng-disabled="carrierLookup.carrierLookupString.length < 3">
+                                                            Search&nbsp;<i class="icon-search"></i></button>
+                                                    </div>
+                                                </div>
+                                                <div class="row-fluid">
+                                                    <hr>
+                                                </div>
+                                                <div class="row-fluid">
+                                                    <select class="input-medium"
+                                                            gaig-select="{'allowClear': false }"
+                                                            ng-model="carrierLookup.carrierLookupType"
+                                                            on-change="doChangeCarrierLookupType()">
+                                                        <option value=""></option>
+                                                        <option ng-repeat="item in carrierLookupTypeList"
+                                                                value="{{item.value}}">{{item.label}}
+                                                        </option>
+                                                    </select>
+                                                </div>
+                                                <div class="row-fluid">
+                                                    <label>Carrier Name</label>
+                                                    <input type="text" class="input-mini3" id="carrierName"
+                                                           ng-model="carrierLookup.carrierLookupString"
+                                                           placeholder="Search..."
+                                                           gaig-keypress="{'enter': 'doCarrierLookup()'}"/>
+                                                    &nbsp;&nbsp;
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="span9andThreeFourths">
+                                            <div class="gaig-table-topper carrierLookupTableTopper">
+                                                <div class="pull-left">
+                                                    <h3 class="table-title">Search Results</h3>
+                                                </div>
+                                            </div>
+                                            <table class="table gaig-table display marginLeft-10"
+                                                   carrier-lookup-table
+                                                   id="carrierLookupTable" data="carrierLookupRows"
+                                                   headings="carrierLookupColumnHeadings"
+                                                   columnDefs="carrierLookupColumnHeadingsDef">
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="row-form">
+                                        <div class="row-fluid">
+                                            <div style="width:80.5%">
+                                                <table class="pull-left leftMargin171">
+                                                    <tr>
+                                                        <td><label>&nbsp;&nbsp;Can't find the correct
+                                                            match?</label>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            <legend>
+                                                                <label class="checkbox small">
+                                                                    <input type="checkbox"
+                                                                           ng-model="carrierLookup.otherCarrierIndicator"
+                                                                           ng-click="toggleOtherCarrierCheckbox()"/>
+                                                                    Use "Other" or enter your own carrier or
+                                                                    group
+                                                                    name
+                                                                </label>
+                                                            </legend>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>
+                                                            <label class="leftMargin26">Carrier Name</label>
+                                                            <input class="leftMargin26" type="text"
+                                                                   ng-disabled="!carrierLookup.otherCarrierIndicator"
+                                                                   ng-model="carrierLookup.otherCarrierName"
+                                                                   placeholder="Other" maxlength="60"/>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-custom-footer-refapp">
+                                <button type="submit" class="btn btn-primary"
+                                        ng-disabled="!carrierLookup.otherCarrierIndicator || carrierLookup.otherCarrierName.length < 1"
+                                        ng-click="onSelectCarrierName()">Ok
+                                </button>
+                                &nbsp;
+                                <button type="submit" class="btn" ng-click="onCarrierLookupCancelButton()">
+                                    Cancel
+                                </button>
+                            </div>
+                        </ra-modal-custom>
+                    </div>
+                    <br/>
+                    <div class="row-fluid">
+                        <div class="form-cell">
+                            <label for="lostToAgent">Lost to Agent</label>
+                            <input id="lostToAgent" type="text" class="input-large2"
+                                   ng-model="disposition.lostToAgentName"
+                                   maxlength="90"
+                            />
+                        </div>
+
+                        <div class="form-cell">
+                            <label for="lostToRate">Lost to Rate</label>
+                            <input id="lostToRate" type="text" class="input-medium"
+                                   ng-model="disposition.lostToRate"
+                                   onKeyPress="RA.UI.allowOnlyNumerics(event)"
+                                   maxlength="10"
+                            />
+                        </div>
+                        <div class="form-cell">
+                            <label for="noOfYearsQuoted"># of Years Quoted</label>
+                            <input id="noOfYearsQuoted" type="text" class="input-small"
+                                   ng-model="disposition.numberOfYearsQuoted"
+                                   onKeyPress="RA.UI.allowOnlyNumerics(event)"
+                                   maxlength="3"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row-form" ng-show="withdrawnDisposition || declinedDisposition">
+                    <div class="row-fluid">
+                        <label for="dispositionDate">{{dateLabel}}</label>
+                        {{currentDateTrnStatus}}
+                    </div>
+                </div>
+
+                <div class="row-form" ng-show="lostDisposition || withdrawnDisposition || declinedDisposition">
+                    <div class="row-fluid">
+                        <label for="reason" class="required">{{reasonLabel}}</label>
+                        <div ng-show="declinedDisposition">
+                            <select id="declReason" class="input-xxlarge" gaig-select="{'allowClear': true}"
+                                    ng-model="disposition.reasonRefCode" ng-change="changeDisposition()">
+                                <option value=""></option>
+                                <option ng-repeat="item in displayList" value="{{item.itemCode}}">
+                                    {{item.itemDescriptionLong}}
+                                </option>
+                            </select>
+                        </div>
+                        <div ng-show="withdrawnDisposition || lostDisposition">
+                            <select id="lWReason" class="input-xxlarge" gaig-select="{'allowClear': true}"
+                                    ng-model="disposition.reasonRefCode" ng-change="changeDisposition()">
+                                <option value=""></option>
+                                <option ng-repeat="item in displayList" value="{{item.itemCode}}">
+                                    {{item.itemDescriptionShort}}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row-form" ng-show="lostDisposition || withdrawnDisposition || declinedDisposition">
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <label for="dispositionComments">{{commentsLabel}}</label>
+              <textarea rows="4" id="dispositionComments" class="span12"
+                        ng-model="disposition.dispositionComments" maxlength="500" ng-disabled="viewOnlyMode"
+                        gaig-maxlength="500" ng-blur="changeDisposition()" ng-Focus="resetFooter()" ></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div ng-show="lostDisposition || withdrawnDisposition || declinedDisposition">
+                    <div class="row-form">
+                        <div class="row-fluid">
+                            <div class="form-cell">
+                                <label>Recapture Next Term</label>
+                                <gaig-switch id="recaptureSwitch"
+                                             ng-model="disposition.recaptureIndicator"
+                                             data-on-label="Yes"
+                                             data-off-label="No"
+                                             on-change="updateDispositionStatus()"
+                                             ng-disabled="viewOnlyMode"
+                                             size="small">
+                                </gaig-switch>
+
+                            </div>
+                            <div class="form-cell">
+                                <label for="recaptureReviewDate"
+                                       ng-class="{true:'required', false: ''}[!disableRecapture]">Recapture
+                                    Review
+                                    Date</label>
+                                <gaig-datepicker id="recaptureReviewDate"
+                                                 ng-model="disposition.recaptureReviewDate"
+                                                 ng-disabled="viewOnlyMode || disableRecapture"
+                                                 on-select="updateRecaptureReviewDate()"
+                                                 ng-required="!disableRecapture">
+                                </gaig-datepicker>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row-form">
+                        <div class="row-fluid">
+                            <div class="span12">
+                                <label for="recaptureComments">Recapture Comments</label>
+                  <textarea rows="4" id="recaptureComments" class="span12"
+                            ng-model="disposition.recaptureComments" maxlength="500"
+                            ng-disabled="viewOnlyMode || disableRecapture"
+                            gaig-maxlength="500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>    <!--  end of outer row fluid -->
+    </gaig-modal>
+    <div ng-include src="'dyn/html/confirmTransaction'"></div>
+</div>
+<script type="text/javascript" src="dyn/js/setTRNStatusModal"></script>

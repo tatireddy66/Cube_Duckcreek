@@ -1,0 +1,544 @@
+'use strict';
+//# sourceURL=dyn/js/aggregate
+var filterTable;
+
+function AggregateController($scope, $rootScope, $timeout, $compile, Presentation, Account, DomManip)
+{
+    var tableReader = DomManip.getTableReaderInstance('aggregateTable', '', ['', 'aggregateId','aggregateName','deductType','effDate','expDate','variableFee','aggregateDeduct','sharedDetail']);
+    var tableReaderSub = DomManip.getTableReaderInstance('aggregateTableSub', '', ['aggregateId','aggregateName','deductType','effDate','expDate','variableFee','aggregateDeduct','sharedDetail']);
+
+    initAggregateFunctions();
+    initPageLoad();
+
+    function initAggregateFunctions()
+    {
+        $scope.search = {};
+        $scope.searchResults;
+        $scope.selectedResult;
+        $scope.aggregate = {};
+        $scope.isAddAggregateOpen = false;
+        $scope.isSearchAggregatesOpen = false;
+        $scope.hideYear2 = true;
+        $scope.disableAggDeduct = false;
+        $scope.aggDeductClass = 'required';
+        $scope.isAddOrEditTitle = "";
+        $scope.editAggregateAccess = false;
+        $scope.aggregatesSearchTypeList = [];
+        $scope.deductibleTypeList;
+        $scope.aggregateModalTitle = "";
+
+        $scope.createAddAggregateButtons = function() {
+            var x = [];
+            if ($scope.editAggregateAccess) {
+                x.push({
+                    id: 'addSaveButton',
+                    label: 'Save',
+                    function: function(){$scope.saveAggregate("aggregate")},
+                    class: 'btn btn-primary'
+                });
+            }
+            x.push({
+                id: 'cancelSaveButton',
+                label: $scope.editAggregateAccess?'Cancel':'Close',
+                function: function(){$scope.toggleAddAggregate()},
+                class: 'btn'
+            });
+
+            return x;
+        };
+
+        $scope.addAggregateButtons;
+
+        $scope.createSubAggregateButtons = function () {
+            var x = [];
+            if ($scope.editAggregateAccess) {
+                x.push({
+                    id: 'addSaveButton',
+                    label: 'Save',
+                    function: function(){$scope.saveAggregate("sub")},
+                    class: 'btn btn-primary'
+                });
+            }
+            x.push({
+                id: 'cancelSaveButton',
+                label: $scope.editAggregateAccess?'Cancel':'Close',
+                function: function(){$scope.toggleAddAggregate()},
+                class: 'btn'
+            });
+
+            return x;
+        };
+
+        $scope.addSubAggregateButtons;
+
+        $scope.searchAggregatesButtons =
+        [
+            {
+                id: 'cancelSearchButton',
+                label: 'Close',
+                function: function(){$scope.toggleSearchAggregates()},
+                class: 'btn'
+            }
+        ];
+
+        $scope.toggleAddAggregate = function toggleAddAggregate()
+        {
+            RA.UI.doClearMessages($scope);
+            $scope.aggregate = {funded: true, intermediateDeductible: false, splitInvoicing: false};
+            $scope.aggregateModalTitle = "Add Aggregate";
+            $scope.isAddAggregateOpen = !$scope.isAddAggregateOpen;
+            RA.UI.doClearMessages($scope);
+
+            if ($scope.isAddAggregateOpen == true) {
+                $scope.$emit('modalOpened');
+            } else {
+                $scope.$emit('modalClosed');
+            }
+        };
+
+         function isHavingAlphas(inputValue)
+         {
+             return !!String(inputValue).match(/[a-z]/i);
+         }
+
+         function isHavingSymbols(inputValue){
+             return /[~.@`!#$%\^&*+=\-\[\]\\';,/{}|":<>?]/g.test(inputValue);
+         }
+
+        function isInputValueValid(){
+
+            var aggSearchType = $scope.search.aggSearchType;
+            var aggSearchValue = $scope.search.searchValue;
+            var isInvalid;
+            if(aggSearchValue)
+            {
+                if('AGGID' !== aggSearchType && aggSearchValue.length < 4){
+                    alert("Please enter a minimum of 4 characters.");
+                    return true;
+                }
+
+                switch (aggSearchType) {
+                    case 'AGGID':
+                         if(isHavingAlphas(aggSearchValue) || isHavingSymbols(aggSearchValue))
+                         {
+                             alert("Aggregate ID should contain only numbers.");
+                             isInvalid = true;
+                         }
+                         break;
+                    case 'POLNO':
+                         if(isHavingSymbols(aggSearchValue))
+                         {
+                             alert("Policy Number cannot contain symbols.");
+                             isInvalid = true;
+                         }
+                         break;
+                    default:
+                         isInvalid = false;
+                         break;
+                }
+            }
+
+            return isInvalid;
+        }
+
+        $scope.toggleSearchAggregates = function toggleSearchAggregates()
+        {
+            $scope.isSearchAggregatesOpen = !$scope.isSearchAggregatesOpen;
+            if ($scope.isSearchAggregatesOpen) {
+
+                if(isInputValueValid())
+                {
+                    $scope.isSearchAggregatesOpen = false;
+                    return;
+                }
+
+                $scope.doSearchAggregates(false);
+                $scope.$emit('modalOpened');
+            } else {
+                $scope.$emit('modalClosed');
+            }
+        };
+
+        $scope.doApplySearchResults = function doApplySearchResults(index, session, indexName)
+        {
+            $scope.aggregateIndex = index;
+            $scope.isSearchAggregatesOpen = false;
+            $scope.selectedResult = $scope.searchResults[index];
+            $scope.$emit('modalClosed');
+
+            if(session && indexName)
+            {
+                var rpmObject = $rootScope.getRpmObjects(session, indexName);
+                rpmObject.getField('aggregateId').setValue($scope.selectedResult.aggregateID);
+            }
+        };
+
+        $scope.doEditAggregate = function doEditAggregate(index, isCopy, readOnly)
+        {
+            RA.UI.doClearMessages($scope);
+            $scope.isAddAggregateOpen = true;
+            $scope.aggregateModalTitle = readOnly?"View Aggregate":"Edit Aggregate";
+            $scope.aggregate = angular.copy($scope.searchResults[index]);
+            $scope.aggregate.aggregateDeductibleLimit = accounting.unformat($scope.aggregate.aggregateDeductibleLimit);
+            var isMidTerm = $scope.aggregate.largeDeductibleType === 'MTERM';
+            $scope.hideYear2 = !isMidTerm;
+            $scope.$emit('modalOpened');
+
+            if(isCopy)
+            {
+                $scope.aggregate.aggregateID = undefined;
+            }
+            if($scope.aggregate.aggregateID)
+            {
+                Account.findDistinctPoliciesFromAggregateId($scope.aggregate.aggregateID, function(result)
+                {
+                    $scope.relatedAggregates = RA.Service.handleServiceResult(result, $scope);
+                    $timeout(angular.noop);
+                });
+            }
+        };
+
+        $scope.doRemoveAggregate = function doRemoveAggregate()
+        {
+            $scope.searchResults = [];
+            $scope.selectedResult = undefined;
+            $scope.aggregate = {funded: true, intermediateDeductible: false, splitInvoicing: false};
+            var submissionObject = $rootScope.getRpmObjects('submission', 'Submission');
+            if(submissionObject)
+                submissionObject.getField('aggregateId').setValue(undefined);
+        };
+
+        $scope.largeDeductibleChanged = function largeDeductibleChanged()
+        {
+            $scope.hideYear2 = $scope.aggregate.largeDeductibleType !== 'MTERM';
+            if($scope.hideYear2)
+            {
+                $scope.aggregate.aggLimitRateYear2 = undefined;
+                $scope.aggregate.minAggregateYear2 = undefined;
+            }
+        };
+
+        $scope.intermediateChanged = function intermediateChanged()
+        {
+            $scope.aggDeductClass = 'required';
+            $scope.disableAggDeduct = $scope.aggregate.intermediateDeductible;
+            if($scope.disableAggDeduct)
+            {
+                $scope.aggregate.aggregateDeductibleLimit = undefined;
+                $scope.aggDeductClass = '';
+            }
+        };
+
+        $scope.doSearchAggregates = function doSearchAggregates(setSelectedResults)
+        {
+            // called from submission page , aggregate search
+            var aggHyperlink = '';
+            var searchData = [];
+
+            if(isInputValueValid())
+            {
+               return;
+            }
+
+            $rootScope.showPageLoading();
+            Account.findAggregates($scope.search.aggSearchType, $scope.search.searchValue, function(result)
+            {
+                var data = RA.Service.handleServiceResult(result, $scope);
+                $scope.searchResults = [];
+                searchData = [];
+
+                for(var i = 0; i < data.length; i++)
+                {
+                    var agg = data[i];
+                    agg.aggLimitTermEffectiveDate  = agg.aggLimitTermEffectiveDate ? RA.UI.doMakeDateMMDDYYYY(agg.aggLimitTermEffectiveDate) : '';
+                    agg.aggLimitTermExpirationDate = agg.aggLimitTermExpirationDate ? RA.UI.doMakeDateMMDDYYYY(agg.aggLimitTermExpirationDate) : '';
+                    agg.aggregateDeductibleLimit = accounting.formatMoney(agg.aggregateDeductibleLimit,"$",0);
+                    agg.largeDeductibleTypeLabel = EMPTY_STRING;
+                    if ($scope.deductibleTypeList && $scope.deductibleTypeList.length > 0)
+                        agg.largeDeductibleTypeLabel = RA.UI.doFindLabelFromValue(agg.largeDeductibleType,$scope.deductibleTypeList);
+                    agg.splitLabel = agg.splitInvoicing ? 'Yes' : 'No';
+                    aggHyperlink = "<a ng-click=\"doApplySearchResults(" + i + ", 'submission', 'Submission')\" >" + agg.aggregateID + "</a>";
+
+                    searchData.push([aggHyperlink, agg.aggregateName, agg.largeDeductibleTypeLabel, agg.aggLimitTermEffectiveDate, agg.aggLimitTermExpirationDate, agg.variableFeePercent + "%", accounting.formatMoney(agg.aggregateDeductibleLimit), agg.splitLabel]);
+                    $scope.searchResults.push(agg);
+                    $scope.search = {};
+                }
+                $timeout(angular.noop);
+                buildTableSub(searchData);
+                $rootScope.hidePageLoading();
+
+                if (setSelectedResults && data && data.length > 0) {
+                    $scope.selectedResult = $scope.searchResults[0];
+                }
+
+            });
+        };
+
+        $scope.doSearchAggregatesTable = function doSearchAggregatesTable(clearMessages)
+        {
+            if(clearMessages)
+            {
+                RA.UI.doClearMessages($scope);
+            }
+
+            if(isInputValueValid()) {
+                return;
+            }
+
+            // called from add aggregate groups from top nav
+            $rootScope.showPageLoading();
+            Account.findAggregates($scope.search.aggSearchType, $scope.search.searchValue, function(result)
+            {
+                buildTable(RA.Service.handleServiceResult(result, $scope));
+                $rootScope.hidePageLoading();
+            });
+        };
+
+        $scope.doLoadAggregateById = function(aggId)
+        {
+            if(aggId)
+            {
+                $scope.foundAggId = true;
+                $scope.search.searchValue = aggId;
+                $scope.search.aggSearchType = 'AGGID';
+                $scope.doSearchAggregates(true);
+                $scope.aggregateIndex = 0;
+                $scope.showOthers = true;
+            }
+        };
+
+        $scope.saveAggregate = function saveAggregate(pageSource)
+        {
+            var func = $scope.aggregate.aggregateID ? Account.doUpdateAggregate : Account.doCreateAggregate;
+            var method = $scope.aggregate.aggregateID ? 'AccountController.doUpdateAggregate' : 'AccountController.doCreateAggregate';
+            func($scope.aggregate, function(result)
+            {
+                RA.UI.doClearMessages($scope);
+                RA.Service.handleServiceResult(result, $scope);
+                var data = result.data[method];
+                $scope.isAddAggregateOpen = !data.status;
+
+                if (data.status) {
+                    if (pageSource == "aggregate") {
+                        // execute the search, to refresh the data
+                        $scope.search.searchValue = $scope.aggregate.aggregateName;
+                        $scope.search.aggSearchType = 'AGGNM';
+                        $scope.doSearchAggregatesTable(false);
+                    }
+                    else {
+                        // if you are on the submission screen, and you "add" an aggregate.  Set that one to the selected result and add it to the submission
+                        if (!$scope.aggregate.aggregateID) {
+                            $scope.doLoadAggregateById(data.data);
+                            var rpmObject = $rootScope.getRpmObjects('submission', 'Submission');
+                            rpmObject.getField('aggregateId').setValue(data.data);
+                        }
+
+                        // if you are currently editing the aggregate that is selected, refresh the page
+                        if ($scope.selectedResult && $scope.selectedResult.aggregateID && $scope.aggregate.aggregateID &&
+                            ($scope.selectedResult.aggregateID == $scope.aggregate.aggregateID)) {
+                            $scope.doLoadAggregateById($scope.aggregate.aggregateID);
+                        }
+                    }
+                }
+
+                $timeout(angular.noop);
+            });
+        };
+
+        $rootScope.policyTypeChanged = function policyTypeChanged()
+        {
+            var submission = $rootScope.getRpmObjects('submission', 'Submission');
+            if(submission)
+            {
+                $scope.showOthers = ['LRGFLATDIV', 'LRGDEDUCT', 'INTDEDUCT', 'INCLOSSRET', 'PDLOSSRET'].indexOf(submission.getValue('policyType')) > -1;
+                if (!$scope.showOthers) {
+                    submission.getField('aggregateId').setValue(undefined);
+                    submission.getField('defaultOccurrenceLimit').setValue(undefined);
+                    $scope.searchResults = undefined;
+                    $scope.selectedResult = undefined;
+                }
+            }
+        };
+
+        $scope.navigate = function navigate(index)
+        {
+            var row = $scope.relatedAggregates[index];
+            var sessionVars = RA.Session.buildSelectedPolicyObject(RA.UI.doMakeDateMMDDYYYY(row.policyTermEffectiveDate),
+                                                                   RA.UI.doMakeDateMMDDYYYY(row.policyTermExpirationDate),
+                                                                   row.submissionId,
+                                                                   row.customerNumber,
+                                                                   row.policyNumber,
+                                                                   row.policyMod,
+                                                                   row.policySymbol,
+                                                                   row.policyVersion);
+            RA.Session.addSelectedPolicy(sessionVars);
+            RA.Session.addSubmissionIdSearch(row.submissionId + '');
+            $scope.applyLayout('manageActivities');
+        }
+    }
+
+    $scope.inactiveChanged = function inactiveChanged()
+    {
+        var account = $rootScope.getRpmObjects('account', 'Account');
+        $scope.disableInactiveDate = !account.getValue('isInactive');
+        if($scope.disableInactiveDate)
+        {
+            account.getField('deductibleInactiveDate').setValue(undefined);
+        }
+        $timeout(function(){$rootScope.$broadcast('inactiveChanged');});
+    };
+
+    $scope.saveInactive = function saveInactive()
+    {
+        var rootAccount = $rootScope.rpmSessionMap.account;
+
+        $rootScope.showPageLoading();
+        Account.updateAccountSession($scope.accountSummary.accountId, rootAccount, function(result)
+        {
+            $rootScope.hidePageLoading();
+        });
+    };
+
+    filterTable = function (tableBodyId, text)
+    {
+        var dataTable;
+        if (tableBodyId == 'aggregateTable')
+            dataTable = tableReader.toDataTable();
+        else
+            dataTable = tableReaderSub.toDataTable();
+        dataTable.fnFilter(text);
+    };
+
+    function buildTableSub(data)
+    {
+            var tableSub = tableReaderSub.initDataTable(
+                {
+                    "bLengthChange": false,
+                    "bSortClasses": false,
+                    "bRetrieve": true,
+                "oLanguage": { "sInfo": "_TOTAL_ Records" , "sInfoEmpty": "&nbsp;&nbsp;0 Records" ,  "sInfoFiltered": "&nbsp;" },
+                    "sDom": '<"rowsFound"i>',
+                    "bPaginate": false,
+                    "aaSorting": [[1, 'asc']]
+                }, data);
+            $compile(tableSub)($scope);
+        }
+
+    function buildTable(data)
+    {
+        if(!data) return;
+
+        var aaData = [];
+        $scope.searchResults = [];
+        for(var i = 0; i < data.length; i++)
+        {
+            var menu = '<gaig-context-menu>' +
+                       '    <button class="btn">' +
+                       '        <span class="caret"></span>' +
+                       '    </button>' +
+                       '    <ul>' +
+                       '        <li id="viewLink' + i + '"><a href="#" ng-click="doEditAggregate(' + i + ', false, true)" ng-show="!editAggregateAccess">View...</a></li>' +
+                       '        <li id="editLink' + i + '"><a href="#" ng-click="doEditAggregate(' + i + ', false)" ng-show="editAggregateAccess">Edit...</a></li>' +
+                       '        <li id="copyLink_' + i + '"><a href="#" class="pull-left" ng-click ="doEditAggregate(' + i + ', true)" ng-show="editAggregateAccess">Copy...</a></li>' +
+                       '    </ul>' +
+                       '</gaig-context-menu>';
+
+            var agg = data[i];
+
+            $scope.searchResults.push(agg);
+            var effDate = agg.aggLimitTermEffectiveDate ? RA.UI.doMakeDateMMDDYYYY(agg.aggLimitTermEffectiveDate) : '';
+            var expDate = agg.aggLimitTermExpirationDate ? RA.UI.doMakeDateMMDDYYYY(agg.aggLimitTermExpirationDate) : '';
+            var split = agg.splitInvoicing ? 'Yes' : 'No';
+
+            var type = EMPTY_STRING;
+            for(var j = 0; j < $scope.deductibleTypeList.length; j++)
+            {
+                var item = $scope.deductibleTypeList[j];
+                if(item.value === agg.largeDeductibleType)
+                {
+                    type = item.label;
+                    break;
+                }
+            }
+            aaData.push([menu, agg.aggregateID, agg.aggregateName, type, effDate, expDate, agg.variableFeePercent + "%", accounting.formatMoney(agg.aggregateDeductibleLimit,"$",0), split]);
+        }
+
+        var table = tableReader.initDataTable(
+        {
+            "bLengthChange":false,
+            "bSortClasses":false,
+            "bRetrieve":true,
+            "aoColumnDefs":
+                [
+                    {"bSortable":false, 'aTargets':[0]},
+                    {"bSearchable":false, 'aTargets':[0]}
+                ],
+            "oLanguage": { "sInfo": "_TOTAL_ Records" , "sInfoEmpty": "&nbsp;&nbsp;0 Records" ,  "sInfoFiltered": "&nbsp;" },
+            "sDom":'<"rowsFound"i>',
+            "bPaginate": false,
+            "aaSorting": [[2,'asc']]
+        }, aaData);
+        $compile(table)($scope);
+    }
+
+    function initPageLoad()
+    {
+        async.auto
+        (
+            {
+                aggregatesSearchType:function(callback)
+                {
+                    Presentation.findAggregatesSearchType(function(result)
+                    {
+                        var data = RA.Service.handleServiceResult(result, $scope);
+                        callback(null, data);
+                    });
+                },
+                deductType: function(callback)
+                {
+                    Presentation.findLargeDeductibleType(function(result)
+                    {
+                        var data = RA.Service.handleServiceResult(result, $scope);
+                        callback(null, data);
+                    });
+                },
+                editAggregateAccess: function(callback)
+                {
+                    Presentation.hasPermission({'resource':'aggregate','action':'edit'}, function(result)
+                    {
+                        var data = RA.Service.handleServiceResult(result, $scope);
+                        callback(NO_ERRORS, data);
+                    });
+                }
+            },
+            function(err, results)
+            {
+                $scope.editAggregateAccess = results.editAggregateAccess;
+                $scope.addSubAggregateButtons = $scope.createSubAggregateButtons();
+                $scope.addAggregateButtons = $scope.createAddAggregateButtons();
+
+                $scope.aggregatesSearchTypeList = RA.UI.rpmEnumToList(results.aggregatesSearchType);
+                $scope.deductibleTypeList = RA.UI.rpmEnumToList(results.deductType);
+
+                $scope.aggregatesSearchTypeList.sort(function (a, b) {
+                    var result = (b.label > a.label) ? -1 : 0;
+                    return (a.label > b.label) ? 1 : result
+                });
+
+                $scope.aggregatesSearchTypeList.forEach( function (item)
+                {
+                    if('Insured Name' === item.label) {
+                        $scope.search.aggSearchType = item.value;
+                    }
+                });
+
+                $timeout(function(){$rootScope.$broadcast('inactiveChanged');});
+                buildTable([]); // want the "empty table" information to display on page load.
+
+                $rootScope.$on('sessionChanged', $rootScope.policyTypeChanged);
+                $scope.pageLoaded = 'YES';
+                $rootScope.hidePageLoading();
+            }
+        );
+    }
+}

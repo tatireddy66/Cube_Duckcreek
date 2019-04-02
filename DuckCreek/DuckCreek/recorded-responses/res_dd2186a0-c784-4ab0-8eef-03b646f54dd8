@@ -1,0 +1,220 @@
+function ConfirmTransactionController($scope, $rootScope, Activity) {
+
+    $scope.workActivity = function(){};
+
+    $scope.confirmEarlierInactiveButtons =
+        [
+            {
+                "label": CONTINUE,
+                "function": function ()
+                {
+                    $scope.setConfirmEarlierInactiveValue(CONTINUE);
+                },
+                "class": "btn btn-primary",
+                "id": "confirmEarlierInactiveButtonYes"
+            },
+            {
+                "label": CANCEL,
+                "function": function ()
+                {
+                    $scope.setConfirmEarlierInactiveValue(CANCEL);
+                },
+                "class": "btn",
+                "id": "confirmEarlierInactiveButtonCancel"
+            }
+        ];
+
+    $scope.confirmPendingRateChangeButtons =
+        [
+            {
+                "label": CONTINUE,
+                "function": function ()
+                {
+                    $scope.setConfirmPendingRateChangeValue(CONTINUE);
+                },
+                "class": "btn btn-primary",
+                "id": "confirmPendingRateChangeButtonYes"
+            },
+            {
+                "label": CANCEL,
+                "function": function ()
+                {
+                    $scope.setConfirmPendingRateChangeValue(CANCEL);
+                },
+                "class": "btn",
+                "id": "confirmPendingRateChangeButtonCancel"
+            }
+        ];
+
+    $scope.confirmOutOfSequenceButtons =
+        [
+            {
+                "label": CONTINUE,
+                "function": function ()
+                {
+                    $scope.setConfirmOutOfSequenceValue(CONTINUE);
+                },
+                "class": "btn btn-primary",
+                "id": "confirmOutOfSequenceButtonYes"
+            },
+            {
+                "label": CANCEL,
+                "function": function ()
+                {
+                    $scope.setConfirmOutOfSequenceValue(CANCEL);
+                },
+                "class": "btn",
+                "id": "confirmOutOfSequenceButtonCancel"
+            }
+        ];
+    $scope.confirmCommissionOutOfSequenceButtons =
+        [
+            {
+                "label": CONTINUE,
+                "function": function ()
+                {
+                    $scope.setConfirmCommissionOutOfSequenceValue(CONTINUE);
+                },
+                "class": "btn btn-primary",
+                "id": "confirmCommissionOutOfSequenceButtonYes"
+            },
+            {
+                "label": CANCEL,
+                "function": function ()
+                {
+                    $scope.setConfirmCommissionOutOfSequenceValue(CANCEL);
+                },
+                "class": "btn",
+                "id": "confirmCommissionOutOfSequenceButtonCancel"
+            }
+        ];
+
+    $scope.toggleConfirmOutOfSequenceModal = function() {
+        $scope.isConfirmOutOfSequenceOpen = !$scope.isConfirmOutOfSequenceOpen;
+    };
+           
+    $scope.toggleConfirmCommissionOutOfSequenceModal = function() {
+        $scope.isConfirmCommissionOutOfSequenceOpen = !$scope.isConfirmCommissionOutOfSequenceOpen;
+    };
+    $scope.toggleConfirmEarlierInactiveModal = function() {
+        $scope.isConfirmEarlierInactiveOpen = !$scope.isConfirmEarlierInactiveOpen;
+    };
+    $scope.toggleConfirmPendingRateChangeModal = function() {
+        $scope.isConfirmPendingRateChange = !$scope.isConfirmPendingRateChange;
+    };
+
+    $scope.toggleTimeoutModal = function() {
+        $scope.isTimeoutOpen = !$scope.isTimeoutOpen;
+    };
+
+    $scope.setConfirmOutOfSequenceValue = function (buttonPicked) {
+        switch (buttonPicked)
+        {
+            case CONTINUE:
+                $scope.toggleConfirmOutOfSequenceModal();
+                $scope.workActivityCheckEarlierActive($scope.submissionId);
+                break;
+
+            case CANCEL:
+                $scope.toggleConfirmOutOfSequenceModal();
+                break;
+        }
+    };
+    $scope.setConfirmCommissionOutOfSequenceValue = function (buttonPicked) {
+        switch (buttonPicked)
+        {
+            case CONTINUE:
+                $scope.toggleConfirmCommissionOutOfSequenceModal();
+                $scope.workActivityCheckEarlierActive($scope.submissionId);
+                break;
+
+            case CANCEL:
+                $scope.toggleConfirmCommissionOutOfSequenceModal();
+                break;
+        }
+    };
+
+    $scope.setConfirmEarlierInactiveValue = function (buttonPicked) {
+        switch (buttonPicked)
+        {
+            case CONTINUE:
+                $scope.toggleConfirmEarlierInactiveModal();
+                $scope.workActivity($scope.submissionId);
+                break;
+
+            case CANCEL:
+                $scope.toggleConfirmEarlierInactiveModal();
+                break;
+        }
+    };
+
+    $scope.setConfirmPendingRateChangeValue = function (buttonPicked) {
+        switch (buttonPicked)
+        {
+            case CONTINUE:
+                $scope.toggleConfirmPendingRateChangeModal();
+                $scope.workActivity($scope.submissionId);
+                break;
+
+            case CANCEL:
+                $scope.toggleConfirmPendingRateChangeModal();
+                break;
+        }
+    };
+
+    $scope.workActivityCheckOutOfSequence = function (submissionId, callback) {
+        $scope.workActivity = callback;
+        $scope.submissionId = submissionId;
+        Activity.doCheckForOutOfSequence(submissionId, function (result) {
+            var isOutOfSequence = RA.Service.handleServiceResult(result, $scope);
+            if (null === isOutOfSequence) {
+                $scope.workActivityCheckEarlierActive(submissionId, callback);
+            } else if ("oos" === isOutOfSequence || true === isOutOfSequence) {
+                $scope.toggleConfirmOutOfSequenceModal();
+                $scope.$apply();
+            }
+             else if ("COMMCHG" === isOutOfSequence) {
+                $scope.toggleConfirmCommissionOutOfSequenceModal();
+                $scope.$apply();
+            }else {
+                $scope.toggleTimeoutModal();
+                $scope.$apply();
+            }
+        });
+    };
+
+    $scope.workActivityCheckEarlierActive = function (submissionId, callback) {
+        Activity.doCheckForEarlierActiveTransactions(submissionId, function (result) {
+            var isEarlierTransaction = RA.Service.handleServiceResult(result, $scope);
+            if (null === isEarlierTransaction) {
+                $scope.workActivityCheckPendingRateChange(submissionId, callback);
+            } else if (true === isEarlierTransaction) {
+                $scope.toggleConfirmEarlierInactiveModal();
+                $scope.$apply();
+            } else {
+                $scope.toggleTimeoutModal();
+                $scope.$apply();
+            }
+        });
+    };
+
+    $scope.workActivityCheckPendingRateChange = function (submissionId, callback) {
+        Activity.doCheckForPendingRateChange(submissionId, function (result) {
+            var isPendingRateChange = RA.Service.handleServiceResult(result, $scope)
+            if (true === isPendingRateChange)  {
+                $scope.toggleConfirmPendingRateChangeModal();
+                $scope.$apply();
+            } else if (null === isPendingRateChange) {
+                $scope.workActivity(submissionId);
+            } else {
+                $scope.toggleTimeoutModal();
+                $scope.$apply();
+            }
+        });
+    };
+
+    $rootScope.confirmTransaction = function(submissionId, callback) {
+      $scope.workActivityCheckOutOfSequence(submissionId, callback);
+    };
+}
+

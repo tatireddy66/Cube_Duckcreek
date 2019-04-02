@@ -1,0 +1,2043 @@
+function topNavController($rootScope, $scope, $timeout, Presentation, Search, Renewal, Admin, DomManip)
+{
+    // The keydown event timeout (in milliseconds) for the auto-complete shallow search field
+    var SEARCH_KEYPRESS_TIMEOUT_MS = 750;
+    // Last search text value sent to server shallow search request
+    var lastShallowText = null;
+
+    //initialize data
+    var dispatcher = new RA.Service.Dispatcher('directivesTopNav_init');
+    var timer = null;
+    var editAccess = false;
+    var producerLookUpBu;
+
+    $scope.model = {};
+    $('#searchButton').attr('disabled', true);
+    $scope.renewalSearchDto = {};
+    $scope.profitCenterList = [];
+    $scope.producerHierarchyList = [];
+    $scope.renewalSearchDto.insuredName = EMPTY_STRING;
+    $scope.renewalSearchDto.facRe = false;
+    $scope.renewalSearchDto.claimsExist = false;
+    $scope.selectedEffFromDate = EMPTY_STRING;
+    $scope.selectedEffToDate = EMPTY_STRING;
+    $scope.selectedExpFromDate = EMPTY_STRING;
+    $scope.selectedExpToDate = EMPTY_STRING;
+    $scope.selectedStartExpDateRenewal = EMPTY_STRING;
+    $scope.selectedExpDateRenewal = EMPTY_STRING;
+    $scope.businessUnitListForProducerLookUp = [];
+    $scope.producerLookUpBuRenewal = EMPTY_STRING_AS_VALUE;
+    $scope.producerLookUpBuSubmission = EMPTY_STRING_AS_VALUE;
+    $scope.producerLookUpBuSubmissionSearchModal = EMPTY_STRING_AS_VALUE;
+    $scope.producerLookUpBuRenewalSearchModal = EMPTY_STRING_AS_VALUE;
+    $scope.businessUnitList = [];
+    $scope.obsoleteSubmObjectHolder = {};
+    $scope.logInfo = {};
+    $scope.logLevels =
+    [
+        {label: 'Debug', value: 'debug'},
+        {label: 'Info', value: 'info'},
+        {label: 'Warn', value: 'warn'},
+        {label: 'Error', value: 'error'}
+    ];
+    $scope.logButtons =
+    [
+        {
+            label: 'Change',
+            onClick: function(){changeLogLevel();},
+            css: 'btn btn-primary'
+        }
+    ];
+    $scope.userDetails = {'producerCodesInput': EMPTY_STRING, 'isExternalUser': true, hasITAdmin: false};
+    $scope.userDetails.userTypeRadioOptions = [
+        { "value": true, "label": "External"},
+        { "value": false, "label": "Internal"}
+    ];
+    $scope.userDetails.producerSecurityRadioOptions = [
+        { "value": true, "label": "On"},
+        { "value": false, "label": "Off"}
+    ];
+    $scope.userDetailsFunctions = {};
+
+    $scope.userDetailsFunctions.onOpen = function() {
+        delete $scope.userDetails['producerCodesInput'];
+        delete $scope.userDetails['isExternalUser'];
+
+        $rootScope.showPageLoading();
+        Admin.doGetUserDetails(function(result)
+        {
+            RA.UI.doClearMessages($scope);
+            var data = RA.Service.handleServiceResult(result, $scope);
+            var isValid = RA.Service.isValidResult(result);
+            if(isValid && data) {
+                $scope.userDetails.producerCodesInput = data.producerCodes == null ? EMPTY_STRING : RA.UI.formattedTextFromList(data.producerCodes, ', ');
+                $scope.userDetails.profitCenters = data.profitCenters == null ? ' - None -' : RA.UI.formattedTextFromList(data.profitCenters, ', ');
+                $scope.userDetails.isExternalUser = data.isExternalUser;
+                $scope.userDetails.businessDivisionCode = data.businessDivisionCode;
+                $scope.userDetails.roles = data.roles;
+                $scope.userDetails.userID = data.userID;
+                $scope.userDetails.availableRoles = data.availableRoles;
+                $scope.userDetails.hasITAdmin = data.hasITAdmin;
+                $scope.userDetails.isProducerSecurityEnabled = data.isProducerSecurityEnabled;
+                $scope.isTimeoutOpen = false;
+            }
+            $rootScope.hidePageLoading();
+        });
+    };
+
+    $scope.userDetailsFunctions.onCancel = function() {
+        $scope.isTimeoutOpen = false;
+    };
+
+    $scope.userDetailsFunctions.onSave = function() {
+        $rootScope.showPageLoading();
+
+        var list = RA.UI.getListFromDelimitedText($scope.userDetails.producerCodesInput);
+        Admin.doSetUserDetails({isExternalUser: $scope.userDetails.isExternalUser, producerCodes: list}, function(result)
+        {
+            RA.UI.doClearMessages($scope);
+            RA.Service.handleServiceResult(result, $scope);
+            $rootScope.hidePageLoading();
+            $scope.isTimeoutOpen = false;
+        });
+    };
+
+    $scope.producerLookupColumnHeadings =
+        [
+            {"sTitle": "Agency Name"},
+            {"sTitle": "DBA"},
+            {"sTitle": "Producer Code", "sClass": "alignRight"},
+            {"sTitle": "City"},
+            {"sTitle": "State, Country", "sClass": "wordWrap"},
+            {"sTitle": "ZIP Code"},
+            {"sTitle": "Phone #"},
+            {"sTitle": "Profit Center", "sClass": "wordWrap"},
+            {"sTitle": "Territory", "sClass": "wordWrap"},
+            {"sTitle": "Field", "sClass": "wordWrap"},
+            {"sTitle": "Producer Status"}
+        ];
+    $scope.producerLookupColumnHeadingsDef = [
+        {'bVisible': false, 'aTargets': [11]}
+    ];
+
+    /**
+     * Keydown event handler for the shallow search field
+     */
+    $('#globalSearch').keydown(function (e) {
+        var keycode = e.keyCode;
+
+        // filter out keystrokes for non-printable characters
+        var valid =
+            keycode == 8                     || // backspace / delete
+            (keycode > 47 && keycode < 58)   || // number keys
+            keycode == 32 || keycode == 13   || // spacebar & return key(s)
+            (keycode > 64 && keycode < 91)   || // letter keys
+            (keycode > 95 && keycode < 112)  || // numpad keys
+            (keycode > 185 && keycode < 193) || // ;=,-./` (in order)
+            (keycode > 218 && keycode < 223);   // [\]' (in order)
+
+        if (valid) {
+            if (timer !== null) {
+                // cancel any pending search requests
+                clearTimeout(timer);
+            }
+            // dispatch the next search request after the specified delay
+            timer = setTimeout($scope.searchShallow, SEARCH_KEYPRESS_TIMEOUT_MS);
+        }
+    });
+
+    $scope.setBusinessUnitName = function (data)
+    {
+        if (data !== null)
+        {
+            RA.Session.addBusinessUnit(data);
+            $scope.businessUnitName = data;
+        }
+    };
+
+    $scope.getTrueLinkAddress = function (linkAddress, allParams) {
+        var varToReplace, replaceValue,paramText, start = 0, end = 0, keepGoing = true;
+        const PARAM_START = 'paramStart_';
+        const PARAM_END = '_paramEnd';
+        while (keepGoing) {
+            start = linkAddress.indexOf(PARAM_START, start);
+            if (start === -1) {
+                keepGoing = false;
+                continue;
+            }
+            end = linkAddress.indexOf(PARAM_END, start);
+            paramText = linkAddress.substring(start, end + PARAM_END.length);
+            varToReplace = paramText.split('_')[1];
+            replaceValue = allParams[varToReplace] ?  allParams[varToReplace] : '';
+            linkAddress = linkAddress.replace(paramText, replaceValue);
+            start = end + 1;
+        }
+        if (replaceValue === '' && linkAddress.indexOf('?customerNumber=') !== -1) {
+            linkAddress = linkAddress.substring(0, linkAddress.indexOf('?'))
+        };
+        return linkAddress;
+    };
+
+    var getCustomerNumber = function() {
+        if (sessionStorage.mainDisplayPage === 'dashboard') return;
+        if (sessionStorage.mainDisplayPage === 'submission') {
+            var customerNum = $('#customerNumber').val();
+            if (customerNum) {
+                return customerNum
+            } else {
+                return RA.Session.getCustomerNumber();
+            }
+        }
+        return RA.Session.getCustomerNumber();
+    }
+
+    $scope.doOpenLinkInNewWindowsWithParams = function(linkAddress) {
+        // You only need to add new entry to allParams in future if you want to pass params from the application
+        // see the test 'Should create a true link for report url' to check how it works
+        var allParams = {
+            customerNumber : getCustomerNumber()
+        };
+
+        window.open($scope.getTrueLinkAddress(linkAddress, allParams) , 'ExternalWebSite', 'dependent=yes menubar=yes, toolbar=yes, resizable=yes, scrollbars=yes location=yes');
+    };
+
+    $scope.doOpenLinkInNewWindow = function (linkAddress, e)
+    {
+        var webSite = EMPTY_STRING;
+
+        if (e != null)
+        {
+            e.preventDefault();
+        }
+
+        if (linkAddress)
+        {
+            if (linkAddress.url)
+            {
+                webSite = linkAddress.url;
+            }
+            else
+            {
+                webSite = linkAddress;
+            }
+        }
+
+        if (webSite == null || webSite == EMPTY_STRING)
+        {
+            return "";
+        }
+        else if (webSite.indexOf('UwdRefApp=') === 0)
+        {
+            var page = webSite.substring(10);
+            $scope.doOpenLinkInExistingWindow(page)
+        }
+        else
+        {
+            webSite = webSite.replace(/^\s+|\s+|\s+$/g, "");
+            window.open(webSite, 'ExternalWebSite', 'dependent=yes menubar=yes, toolbar=yes, resizable=yes, scrollbars=yes location=yes');
+        }
+
+    };
+
+    $scope.doOpenLinkInExistingWindow = function (linkAddress)
+    {
+        if ($scope.applyLayout)
+            $scope.applyLayout(linkAddress);
+        else
+            (function(){sessionStorage.setItem('mainDisplayPage', linkAddress); RA.UI.doNavigation('/UwdRefApp/dyn/html/main');})();
+    };
+
+
+    $scope.setBusinessUnitDisplayName = function (data)
+    {
+        if (data !== null)
+        {
+            $scope.businessUnitDisplayName = data;
+        }
+    };
+
+    // Set UnderWriter List - Additional Search List Box
+    $scope.setUnderWriterListSearch = function (data)
+    {
+        if (data !== null)
+        {
+            $scope.underWriterListSearch = data;
+        }
+    };
+
+    // Set State/Province List - Additional Search List Box
+    $scope.setStateProvinceListSearch = function (data)
+    {
+        $("#stateProvinceSearchLabel").text(STATE_LABEL);
+        $("#stateLookupInputLabelSearch").text(STATE_LABEL);
+        if (data !== null)
+        {
+            $scope.stateProvinceListSearch = data;
+
+        }
+        // Dynamically Change Label
+        if ($scope.advancedSearchDto.country == UNITED_STATES)
+        {
+            $("#zipPostalCodeSearchLabel").text(ZIP_CODE_LABEL);
+            $("#stateProvinceSearchLabel").text(STATE_LABEL);
+        }
+        if ($scope.advancedSearchDto.country == CANADA)
+        {
+            $("#zipPostalCodeSearchLabel").text(POSTAL_CODE_LABEL);
+            $("#stateProvinceSearchLabel").text(PROVINCE_LABEL);
+        }
+        if ($scope.isAgencyLookupOpenSearch && $scope.countryLeftHandNavSearch.value == UNITED_STATES)
+        {
+            $("#stateLookupInputLabelSearch").text(STATE_LABEL);
+        }
+        if ($scope.isAgencyLookupOpenSearch && $scope.countryLeftHandNavSearch.value == CANADA)
+        {
+            $("#stateLookupInputLabelSearch").text(PROVINCE_LABEL);
+        }
+        $scope.$apply();
+    };
+
+
+    // Set State/Province List - Renewal
+    $scope.setStateProvinceListForRenewal = function (data)
+    {
+        $("#stateLookupLabelRenewal").text(STATE_LABEL);
+        $("#stateLookupInputLabelRenewal").text(STATE_LABEL);
+
+        if (data !== null)
+        {
+            $scope.stateProvinceListForRenewal = data;
+            // Dynamically Change Label
+            if ($scope.renewalSearchDto.policyCountry == UNITED_STATES)
+            {
+                $("#stateLookupLabelRenewal").text(STATE_LABEL);
+            }
+            if ($scope.renewalSearchDto.policyCountry == CANADA)
+            {
+                $("#stateLookupLabelRenewal").text(PROVINCE_LABEL);
+            }
+            if ($scope.isAgencyLookupOpenSearch && $scope.countryLeftHandNavRenewal.value == UNITED_STATES)
+            {
+                $("#stateLookupInputLabelRenewal").text(STATE_LABEL);
+            }
+            if ($scope.isAgencyLookupOpenSearch && $scope.countryLeftHandNavRenewal.value == CANADA)
+            {
+                $("#stateLookupInputLabelRenewal").text(PROVINCE_LABEL);
+            }
+            $scope.$apply();
+        }
+    };
+
+    $scope.doPreviousSearch = function ()
+    {
+        $scope.searchDeep('s:' + RA.Session.popLocalStorageStack('previousSearchResult'));
+    }
+
+    $scope.convertProducerDataSearch = function (producerList)
+    {
+        var producerRowDataArray = [];
+        if (producerList != null)
+        {
+            angular.forEach(producerList, function (producer)
+            {
+                var theField = producer.field;
+                if (theField == null)
+                {
+                    theField = EMPTY_STRING;
+                }
+                var theFieldName = producer.fieldName;
+                if (theFieldName == null)
+                {
+                    theFieldName = EMPTY_STRING;
+                }
+                var producerName = ANCHOR_OPEN_TAG + producer.name + ANCHOR_CLOSE_TAG;
+                var producerStateCountry = producer.state + COMMA + ONE_SPACE + producer.country;
+                var producerProfitCenter = producer.profitCenter + TERM_DIVIDER + producer.profitCenterName;
+                var producerTerritory = producer.territory + TERM_DIVIDER + producer.territoryName;
+                var producerField = theField + TERM_DIVIDER + theFieldName;
+                if (producerField == TERM_DIVIDER)
+                {
+                    producerField = EMPTY_STRING;
+                }
+                var producerRow = [producerName, producer.dba, producer.code, producer.city, producerStateCountry,
+                    producer.postalCode, producer.phone, producerProfitCenter, producerTerritory,
+                    producerField, producer.producerStatus, producer.name];
+                producerRowDataArray.push(producerRow);
+            });
+        }
+        return producerRowDataArray;
+    };
+
+    $scope.isAdditionalFieldsOpen = false;
+    $scope.viewOnlyModeSearchAdvanced = false;
+    //Additional Search Fields Dto
+    $scope.advancedSearchDto = {"address": EMPTY_STRING, "agencyName": EMPTY_STRING, "city": EMPTY_STRING, "country": EMPTY_STRING, "customerNumber": EMPTY_STRING, "fein": EMPTY_STRING,
+        "insuredName": EMPTY_STRING, "policyNumber": EMPTY_STRING, "policyEffectiveDateFrom": EMPTY_STRING, "policyEffectiveDateTo": EMPTY_STRING,
+        "policyExpirationDateFrom": EMPTY_STRING, "policyExpirationDateTo": EMPTY_STRING, "policyMod": EMPTY_STRING, "phone": EMPTY_STRING,
+        "producerCode": EMPTY_STRING, "state": EMPTY_STRING, "submissionId": EMPTY_STRING, "underwriter": EMPTY_STRING, "zip": EMPTY_STRING};
+    // Clear Submission - Pop-up Modal will allow user option to carry over Advanced Search Fields when creating New Submission
+    $scope.isClearSubmissionOpen = false;
+    $scope.clearSubmission = {"includeSearchFields": EMPTY_STRING};
+    $scope.isObsoleteSubmissionsModalOpen = false;
+    $scope.isChangeSubmissionStatusModalOpen = false;
+    $scope.isUserDetailsModalOpen = false;
+    $scope.changeTransactionTypeData = {"submissionId" : EMPTY_STRING, "transactionType" : EMPTY_STRING, "transactionSubType" : EMPTY_STRING};
+
+    $scope.doClearMessages = function ()
+    {
+        //No need to check for the tabs as they share the same page scope.
+        RA.UI.doClearMessages($scope);
+        //Clear out filled in fields when changing between tabs
+        $scope.doClearFields();
+    };
+
+
+    $scope.doClearFields = function ()
+    {
+        var activeTabBoolean = $('.tab-pane.active').attr('id');
+        if (activeTabBoolean === 'submissionTab')
+        {
+            $scope.advancedSearchDto.insuredName = EMPTY_STRING;
+            $scope.advancedSearchDto.policyNumber = EMPTY_STRING;
+            $scope.advancedSearchDto.customerNumber = EMPTY_STRING;
+            $scope.advancedSearchDto.underwriter = null;
+            $scope.advancedSearchDto.phone = EMPTY_STRING;
+            $scope.advancedSearchDto.producerCode = EMPTY_STRING;
+            $scope.advancedSearchDto.agencyName = EMPTY_STRING;
+            $scope.advancedSearchDto.submissionId = EMPTY_STRING;
+            $scope.advancedSearchDto.fein = EMPTY_STRING;
+            $scope.advancedSearchDto.country = null;
+            $scope.advancedSearchDto.address = EMPTY_STRING;
+            $scope.advancedSearchDto.zip = EMPTY_STRING;
+            $scope.advancedSearchDto.city = EMPTY_STRING;
+            $scope.advancedSearchDto.state = null;
+            $scope.advancedSearchDto.policyEffectiveDateFrom = null;
+            $scope.advancedSearchDto.policyEffectiveDateTo = null;
+            $scope.advancedSearchDto.policyExpirationDateFrom = null;
+            $scope.advancedSearchDto.policyExpirationDateTo = null;
+            $scope.advancedSearchDto.fein = EMPTY_STRING;
+            $scope.stateLeftHandNavSearch = {"value": EMPTY_STRING};
+            $scope.countryLeftHandNavSearch = {"value": EMPTY_STRING};
+            $("#zipPostalCodeSearchLabel").text(ZIP_CODE_LABEL);
+            $("#stateProvinceSearchLabel").text(STATE_LABEL);
+
+        }
+        if (activeTabBoolean === 'launchRenewalTab')
+        {
+            $scope.renewalSearchDto = {};
+            $scope.renewalSearchDto.insuredName = EMPTY_STRING;
+            $scope.renewalSearchDto.facRe = false;
+            $scope.renewalSearchDto.claimsExist = false;
+            $scope.stateLeftHandNavRenewal = {"value": EMPTY_STRING};
+            $scope.countryLeftHandNavRenewal = {"value": EMPTY_STRING};
+            $("#producerLookupRenewalName").val(EMPTY_STRING);
+        }
+    };
+
+    $scope.doProcessPolicyExceptionReport = function ()
+    {
+        //No need to check for the tabs as they share the same page scope.
+        //RA.UI.doClearMessages($scope);
+
+        $rootScope.showPageLoading();
+
+        //  Async Call - Process Renewal Policy Exception Report Request
+        Renewal.doProcessRenewalExceptionReport(function (result)
+        {
+            var data = RA.Service.handleServiceResult(result, $scope);
+            if (data != null && data != MESSAGE_ERROR && data != TIMEOUT)
+            {
+                // Return Report Id -- spreadsheet saved as Blob on Server
+                var reportId = data;
+                // Perform Http Get to obtain spreadsheet from server
+                $scope.doRunExportHttpGet(reportId);
+                $rootScope.hidePageLoading();
+            }
+        });
+
+    };
+
+    $scope.doRunExportHttpGet = function (reportId)
+    {
+        var form = DomManip.buildForm('dispatch/xls/doDispatchBin/ReportController:doReturnExportSpreadsheet', 'newWindow', {reportId: reportId});
+        form.submit();
+    };
+
+    $scope.doValidateEffectiveDateRange = function ()
+    {
+        //TODO ... show messages as they have been UX'd
+        var effDateFromString = $scope.advancedSearchDto.policyEffectiveDateFrom;
+        var effDateToString = $scope.advancedSearchDto.policyEffectiveDateTo;
+
+        if (effDateFromString != undefined && effDateFromString != null && effDateToString != undefined && effDateToString != null
+            && (effDateFromString != $scope.selectedEffFromDate || effDateToString != $scope.selectedEffToDate))
+        {
+            if (effDateFromString.length == 10 && effDateToString.length == 10)
+            {
+                var effFromDate = new Date(effDateFromString);
+                var effToDate = new Date(effDateToString);
+                $scope.selectedEffFromDate = effDateFromString;
+                $scope.selectedEffToDate = effDateToString;
+                if (effFromDate > effToDate)
+                {
+                    alert(EFFECTIVE_FROM_GREATER_EQUAL_EFFECTIVE_TO);
+                    return false;
+                }
+            }
+        }
+    };
+
+    $scope.doValidateExpirationDateRange = function ()
+    {
+        var expDateFromString = $scope.advancedSearchDto.policyExpirationDateFrom;
+        var expDateToString = $scope.advancedSearchDto.policyExpirationDateTo;
+
+        if (expDateFromString != undefined && expDateFromString != null && expDateToString != undefined && expDateToString != null
+            && (expDateFromString != $scope.selectedExpFromDate || expDateToString != $scope.selectedExpToDate))
+        {
+            if (expDateFromString.length == 10 && expDateToString.length == 10)
+            {
+                var expFromDate = new Date(expDateFromString);
+                var expToDate = new Date(expDateToString);
+                $scope.selectedExpFromDate = expDateFromString;
+                $scope.selectedExpToDate = expDateToString;
+
+                if (expFromDate > expToDate)
+                {
+                    alert(EXPIRATION_FROM_GREATER_EQUAL_EXPIRATION_TO);
+                    return false;
+                }
+            }
+        }
+    };
+
+    $scope.doValidateStartDateRenewal = function ()
+    {
+        var startExpDateRenewal = $scope.renewalSearchDto.startExpDateRenewal;
+        if (startExpDateRenewal != undefined && startExpDateRenewal != null &&
+            startExpDateRenewal != $scope.selectedStartExpDateRenewal)
+        {
+            if (startExpDateRenewal.length == 10)
+            {
+                var startExpDate = new Date(startExpDateRenewal);
+                $scope.selectedStartExpDateRenewal = startExpDateRenewal;
+                if (RA.UI.isDateGreaterThan6MonthsInTheFuture(startExpDateRenewal, $scope.systemDate))
+                {
+                    alert(RENEWAL_EXPIRATION_TO_6_MONTHS_FUTURE);
+                    return false;
+                }
+                if (RA.UI.isDateGreaterThan4MonthsAgo(startExpDateRenewal, $scope.systemDate))
+                {
+                    alert(RENEWAL_EXPIRATION_FROM_4_MONTHS_PAST);
+                    return false;
+                }
+            }
+        }
+    };
+
+    $scope.doValidateExpirationDateRenewal = function ()
+    {
+        var startExpDateRenewal = $scope.renewalSearchDto.startExpDateRenewal;
+        var expDateRenewal = $scope.renewalSearchDto.endExpDateRenewal;
+
+        if (startExpDateRenewal != undefined && startExpDateRenewal != null && expDateRenewal != undefined && expDateRenewal != null
+            && (startExpDateRenewal != $scope.selectedStartExpDateRenewal || expDateRenewal != $scope.selectedExpDateRenewal))
+        {
+            if (startExpDateRenewal.length == 10 && expDateRenewal.length == 10)
+            {
+                var startExpDate = new Date(startExpDateRenewal);
+                var endExpDate = new Date(expDateRenewal);
+                $scope.selectedStartExpDateRenewal = startExpDateRenewal;
+                $scope.selectedExpDateRenewal = expDateRenewal;
+                if (startExpDate >= endExpDate)
+                {
+                    alert(EXPIRATION_FROM_GREATER_EXPIRATION_TO);
+                    return false;
+                }
+                if (RA.UI.isDateGreaterThan6MonthsInTheFuture(expDateRenewal, $scope.systemDate))
+                {
+                    alert(RENEWAL_EXPIRATION_TO_6_MONTHS_FUTURE);
+                    return false;
+                }
+                if (RA.UI.isDateGreaterThan4MonthsAgo(expDateRenewal, $scope.systemDate))
+                {
+                    alert(RENEWAL_EXPIRATION_FROM_4_MONTHS_PAST);
+                    return false;
+                }
+            }
+        }
+    };
+
+    //next four functions are for the search button on Additional Search Fields Modal
+    //Would like to figure out a more succinct way to accomplish this, but this is what I came up with for now
+    $scope.doSetActiveTab = function ()
+    {
+        var activeTabBoolean = $('.tab-pane.active').attr('id');
+        if (activeTabBoolean === 'launchRenewalTab')
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    };
+
+    $scope.doSetAddressValid = function ()
+    {
+        var advancedAddress = $scope.advancedSearchDto.address;
+        if (advancedAddress.length > 0 && advancedAddress.length < 3)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    };
+
+    $scope.doSetInsuredValid = function ()
+    {
+        var advancedInsuredName = $scope.advancedSearchDto.insuredName;
+        if (advancedInsuredName.length > 0 && advancedInsuredName.length < 3)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    };
+
+    $scope.doSetRenewalInsuredValid = function ()
+    {
+        var advancedRenewalInsuredName = $scope.renewalSearchDto.insuredName;
+
+        if (advancedRenewalInsuredName != null && advancedRenewalInsuredName.length > 0 && advancedRenewalInsuredName.length < 3)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    };
+
+    $scope.doSetRenewalInsuredNameIsBlank = function ()
+    {
+        var advancedRenewalInsuredName = $scope.renewalSearchDto.insuredName;
+
+        if (advancedRenewalInsuredName.length == null || advancedRenewalInsuredName.length == EMPTY_STRING)
+        {
+            return true;
+        }
+    }
+
+    $scope.doSetSearchDisabled = function ()
+    {
+        var isActiveTabSubmission = $scope.doSetActiveTab();
+        var isInsuredValid = $scope.doSetInsuredValid();
+        var isAddressValid = $scope.doSetAddressValid();
+        var isRenewalInsuredValid = $scope.doSetRenewalInsuredValid();
+        var isRenewalInsuredNameBlank = $scope.doSetRenewalInsuredNameIsBlank();
+        var adsearch = $scope.advancedSearchDto;
+        var renewSearch = $scope.renewalSearchDto;
+
+        if (isActiveTabSubmission == true)
+        {
+
+            if (isInsuredValid == true || isAddressValid == true)
+            {
+                return true;
+            }
+            else if (adsearch.insuredName.length < 3 &&
+                adsearch.address.length < 3 &&
+                adsearch.policyNumber == EMPTY_STRING &&
+                adsearch.customerNumber == EMPTY_STRING &&
+                adsearch.phone == EMPTY_STRING &&
+                adsearch.producerCode == EMPTY_STRING &&
+                adsearch.submissionId == EMPTY_STRING &&
+                adsearch.fein == EMPTY_STRING &&
+                adsearch.zip == EMPTY_STRING &&
+                adsearch.city == EMPTY_STRING &&
+                (adsearch.policyEffectiveDateFrom == null || adsearch.policyEffectiveDateFrom == EMPTY_STRING) &&
+                (adsearch.policyEffectiveDateTo == null || adsearch.policyEffectiveDateTo == EMPTY_STRING) &&
+                (adsearch.policyExpirationDateFrom == null || adsearch.policyExpirationDateFrom == EMPTY_STRING) &&
+                (adsearch.policyExpirationDateTo == null || adsearch.policyExpirationDateTo == EMPTY_STRING) &&
+                (adsearch.underwriter == EMPTY_STRING || adsearch.underwriter == null) &&
+                (adsearch.country == EMPTY_STRING || adsearch.country == null) &&
+                (adsearch.state == EMPTY_STRING || adsearch.state == null))
+            {
+                return true;
+            }
+        }
+        else if (isActiveTabSubmission == false)
+        {
+
+            if (isRenewalInsuredValid == true)
+            {
+                return true;
+            }
+            else if (isRenewalInsuredNameBlank == true)
+            {
+                if ((renewSearch.startExpDateRenewal == null || renewSearch.startExpDateRenewal == EMPTY_STRING) &&
+                    (renewSearch.endExpDateRenewal == null || renewSearch.endExpDateRenewal == EMPTY_STRING) &&
+                    (renewSearch.display == null || renewSearch.display == EMPTY_STRING) &&
+                    (renewSearch.currentProfitCenter == null || renewSearch.currentProfitCenter == EMPTY_STRING) &&
+                    (renewSearch.territoryCode == null || renewSearch.territoryCode == EMPTY_STRING) &&
+                    (renewSearch.fieldCode == null || renewSearch.fieldCode == EMPTY_STRING) &&
+                    (renewSearch.policySymbol == null || renewSearch.policySymbol == EMPTY_STRING) &&
+                    (renewSearch.policyNumber == null || renewSearch.policyNumber == EMPTY_STRING) &&
+                    (renewSearch.customerNumber == null || renewSearch.customerNumber == EMPTY_STRING) &&
+                    (renewSearch.policyCountry == null || renewSearch.policyCountry == EMPTY_STRING) &&
+                    (renewSearch.policyState == null || renewSearch.policyState == EMPTY_STRING) &&
+                    (renewSearch.expiringPremium == null || renewSearch.expiringPremium == EMPTY_STRING) &&
+                    (renewSearch.lossRatio == null || renewSearch.lossRatio == EMPTY_STRING) &&
+                    (renewSearch.incurredAmount == null || renewSearch.incurredAmount == EMPTY_STRING) &&
+                    (renewSearch.producerNumber == null || renewSearch.producerNumber == EMPTY_STRING) &&
+                    (renewSearch.autoFastInd == null || renewSearch.autoFastInd == EMPTY_STRING) &&
+                    (renewSearch.auditFreq == null || renewSearch.auditFreq == EMPTY_STRING) &&
+                    (renewSearch.sicCode == null || renewSearch.sicCode == EMPTY_STRING) &&
+                    (renewSearch.claimsExist == null || renewSearch.claimsExist == false) &&
+                    (renewSearch.facRe == null || renewSearch.facRe == false))
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
+        else
+        {
+            return false;
+        }
+    };
+
+    $scope.findProducerInformationSearch = function (type, callback)
+    {
+        var producer, fullName;
+
+        RA.UI.doClearMessages($scope);
+        $scope.pageLoaded = null;
+
+        if (type == "submission")
+        {
+            producer = $scope.advancedSearchDto.producerCode;
+            fullName = $scope.advancedSearchDto.agencyName;
+            producerLookUpBu = $scope.producerLookUpBuSubmission.value;
+        }
+        else if (type == "launchRenewal")
+        {
+            producer = $scope.renewalSearchDto.producerNumber;
+            fullName = $scope.model.agencyNameRenewal;
+            producerLookUpBu = $scope.producerLookUpBuRenewal.value;
+        }
+        else
+        {
+            return false;
+        }
+
+        if (producer != null && producer.length == 6 && (fullName == EMPTY_STRING || fullName == null))
+        {
+            Search.findProducersListWithBu(fullName, producer, EMPTY_STRING, EMPTY_STRING, PRODUCER_APPOINTED, producerLookUpBu, function (result)
+            {
+                var data = RA.Service.handleServiceResult(result, $scope);
+
+                if (data != null && data.length == 1)
+                {
+                    if (type == "submission")
+                    {
+                        $scope.advancedSearchDto.agencyName = data[0].name;
+                    }
+                    else if (type == "launchRenewal")
+                    {
+                        $scope.model.agencyNameRenewal = data[0].name;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (type == "submission")
+                    {
+                        $scope.advancedSearchDto.agencyName = EMPTY_STRING;
+                    }
+                    else if (type == "launchRenewal")
+                    {
+                        $scope.model.agencyNameRenewal = EMPTY_STRING;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+
+                $scope.$apply();
+
+                if (callback != undefined && callback != null)
+                    callback(null);
+            });
+        }
+        else
+        {
+            if (callback != undefined && callback != null)
+                callback(null);
+        }
+        //$scope.pageLoaded = YES;
+    };
+
+    $scope.changeTransactionType = function()
+    {
+        RA.UI.doClearMessages($scope);
+        $rootScope.showPageLoading();
+
+        var submissionId = $scope.changeTransactionTypeData.submissionId;
+        var transactionType = $scope.changeTransactionTypeData.transactionType;
+        var transactionSubType = $scope.changeTransactionTypeData.transactionSubType;
+        Admin.changeTransactionType(submissionId, transactionType, transactionSubType, function (result) {
+            var data = RA.Service.handleServiceResult(result, $scope);
+            if (data !== null)
+            {
+                submissionId = data.submissionId;
+            }
+            $rootScope.hidePageLoading();
+        });
+    };
+
+    $scope.searchAdvanced = function () {
+        var activeTab = $('.tab-pane.active').attr('id');
+        if (activeTab === 'launchRenewalTab')
+        {
+            $scope.selectedStartExpDateRenewal = EMPTY_STRING;
+            $scope.selectedExpDateRenewal = EMPTY_STRING;
+            $scope.renewalSearchDto.businessUnit = $scope.producerLookUpBuRenewal.value;
+            var renewalSearchNamesArray = $scope.loadRenewalSearchNames();
+            RA.Session.addRenewalSearchCharms(JSON.stringify(RA.UI.doCreateCharmsList($scope.renewalSearchDto, renewalSearchNamesArray)));
+            RA.Session.addRenewalSearch(JSON.stringify($scope.renewalSearchDto));
+            applyLayoutOrNavigate('renewals');
+            $scope.isAdditionalFieldsOpen = false;
+
+        }
+        else
+        {
+            if (activeTab === 'submissionTab')
+            {
+                //Ensure Valid Date Range Entered before performing search
+                $scope.selectedEffFromDate = EMPTY_STRING;
+                $scope.selectedEffToDate = EMPTY_STRING;
+                $scope.selectedExpFromDate = EMPTY_STRING;
+                $scope.selectedExpToDate = EMPTY_STRING;
+                var effectiveDateRangeValid = $scope.doValidateEffectiveDateRange();
+                if (effectiveDateRangeValid == false)
+                {
+                    // Invalid Effective Date Range -- Do Not Perform Search
+                }
+                else
+                {
+                    var expirationDateRangeValid = $scope.doValidateExpirationDateRange();
+                    if (expirationDateRangeValid == false)
+                    {
+                        // Invalid Expiration Date Range -- Do Not Perform Search
+                    }
+                    else
+                    {
+                        //create the breadcrumb info, and put on session
+                        //var dirtyCheck = $rootScope.raDirtyCheck;
+                        //if (!dirtyCheck || dirtyCheck()) {
+                        var advancedSearchNamesArray = $scope.loadAdvancedSearchNames();
+                        RA.Session.addAdvancedSearchCharms(JSON.stringify(RA.UI.doCreateCharmsList($scope.advancedSearchDto, advancedSearchNamesArray)));
+                        RA.Session.addAdvancedSearch(JSON.stringify($scope.advancedSearchDto));
+                        RA.Session.removeSearchString();
+                        applyLayoutOrNavigate('search');
+                        $scope.isAdditionalFieldsOpen = false;
+                        //}
+                    }
+                }
+                isSearchForSubId();
+            }
+        }
+    };
+
+    function isSearchForSubId()
+    {
+        RA.Session.addIsSearchForSubmissionId(false);
+        if($scope.advancedSearchDto.submissionId && $scope.advancedSearchDto.submissionId !== "")
+        {
+            RA.Session.addIsSearchForSubmissionId(true);
+        }
+    };
+
+    $scope.loadAdvancedSearchNames = function ()
+    {
+        var mappingList = [];
+        mappingList.push({"value": "insuredName", "label": "Insured Name"});
+        mappingList.push({"value": "policyNumber", "label": "Policy #"});
+        mappingList.push({"value": "customerNumber", "label": "Customer #"});
+        mappingList.push({"value": "underwriter", "label": "Underwriter", "arrayValues": $scope.underWriterListSearch});
+        mappingList.push({"value": "phone", "label": "Phone #"});
+        mappingList.push({"value": "producerCode", "label": "Producer Code"});
+        mappingList.push({"value": "submissionId", "label": "Submission ID"});
+        mappingList.push({"value": "fein", "label": "FEIN"});
+        mappingList.push({"value": "country", "label": "Country", "arrayValues": $scope.countryListSearch});
+        mappingList.push({"value": "address", "label": "Mailing Address"});
+        mappingList.push({"value": "zip", "label": "Zip Code"});
+        mappingList.push({"value": "city", "label": "City"});
+        mappingList.push({"value": "state", "label": "State", "arrayValues": $scope.stateProvinceListSearch});
+        mappingList.push({"value": "policyEffectiveDateFrom", "label": "Effective Date - From"});
+        mappingList.push({"value": "policyEffectiveDateTo", "label": "Effective Date - To"});
+        mappingList.push({"value": "policyExpirationDateFrom", "label": "Expiration Date - From"});
+        mappingList.push({"value": "policyExpirationDateTo", "label": "Expiration Date - To"});
+        return mappingList;
+    };
+
+    $scope.loadRenewalSearchNames = function ()
+    {
+        var mappingList = [];
+        mappingList.push({"value": "startExpDateRenewal", "label": "Expiring Date Range - From"});
+        mappingList.push({"value": "endExpDateRenewal", "label": "Expiring Date Range - To"});
+        mappingList.push({"value": "display", "label": "Display", "arrayValues": $scope.displayTypeList});
+        mappingList.push({"value": "currentProfitCenter", "label": "Profit Center", "arrayValues": $scope.profitCenterList});
+        mappingList.push({"value": "territoryCode", "label": "Territory", "arrayValues": $scope.territoryList});
+        mappingList.push({"value": "fieldCode", "label": "Field", "arrayValues": $scope.fieldList});
+        mappingList.push({"value": "insuredName", "label": "Insured Name"});
+        mappingList.push({"value": "policySymbol", "label": "Policy Symbol", "arrayValues": $scope.policySymbolsList});
+        mappingList.push({"value": "policyNumber", "label": "Policy #"});
+        mappingList.push({"value": "customerNumber", "label": "Customer #"});
+        mappingList.push({"value": "policyCountry", "label": "Country", "arrayValues": $scope.countryList});
+        mappingList.push({"value": "policyState", "label": "State", "arrayValues": $scope.stateProvinceListForRenewal});
+        mappingList.push({"value": "claimsExist", "label": "Claims? "});
+        mappingList.push({"value": "facRe", "label": "Fac Re?"});
+        mappingList.push({"value": "expiringPremium", "label": "Total Written Prem.", "arrayValues": $scope.writtenPremiumList});
+        mappingList.push({"value": "lossRatio", "label": "Loss Ratio", "arrayValues": $scope.lossTypeList});
+        mappingList.push({"value": "incurredAmount", "label": "Incurred Amt", "arrayValues": $scope.incurredAmountList});
+        mappingList.push({"value": "producerNumber", "label": "Producer Lookup"});
+        mappingList.push({"value": "autoFastInd", "label": "Renewal Proc. Type", "arrayValues": $scope.renewalProcessingCodeList});
+        mappingList.push({"value": "auditFreq", "label": "Audit Type", "arrayValues": $scope.auditTypeList});
+        mappingList.push({"value": "sicCode", "label": "SIC Code"});
+        mappingList.push({"value": "businessUnit", "label": "Business Unit", "arrayValues": $scope.businessUnitListForProducerLookUp});
+
+        return mappingList;
+    };
+
+
+    $scope.updateTerritoryList = function ()
+    {
+        var selectedProfitCenter = $scope.renewalSearchDto.currentProfitCenter;
+        var territoryList = [];
+        if (selectedProfitCenter != null && selectedProfitCenter != 0)
+        {
+            for (var index in $scope.producerHierarchyList)
+            {
+                if (index.indexOf('@') === -1)
+                {
+                    if (index == selectedProfitCenter)
+                    {
+                        var selectedTerritory = $scope.producerHierarchyList[index];
+
+                        for (var index2 in selectedTerritory)
+                        {
+                            if (index2.indexOf('@') === -1)
+                            {
+                                territoryList.push(index2);
+                            }
+                        }
+                    }
+                }
+            }
+            $scope.territoryList = territoryList;
+            $scope.fieldList = [];
+        }
+    };
+
+    $scope.updateFieldList = function ()
+    {
+        var selectedProfitCenter = $scope.renewalSearchDto.currentProfitCenter;
+        var selectedTerritory = $scope.renewalSearchDto.territoryCode;
+
+        if (selectedProfitCenter != null && selectedProfitCenter != 0)
+        {
+            for (var index in $scope.producerHierarchyList)
+            {
+                if (index.indexOf('@') === -1)
+                {
+                    if (index == selectedProfitCenter)
+                    {
+                        var territoryList = $scope.producerHierarchyList[index];
+                        for (var index2 in territoryList)
+                        {
+                            if (index2.indexOf('@') === -1)
+                            {
+                                if (index2 == selectedTerritory)
+                                    $scope.fieldList = territoryList[index2];
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
+    };
+
+
+    /**
+     * Called from view
+     * @param e
+     */
+    $scope.updateProducerListSearch = function (e)
+    {
+        RA.UI.doClearMessages($scope);
+
+        if (e != null)
+            e.preventDefault();	// to prevent the required fields from highlighting on button click
+
+        $scope.producerListSearch = [];
+        var agentParty = $scope.advancedSearchDto.agencyName;
+        var producerCode = $scope.advancedSearchDto.producerCode;
+        if ((agentParty == null || agentParty == EMPTY_STRING) && (producerCode == null || producerCode == EMPTY_STRING))
+        {
+            alert(AGENCY_NAME_PRODUCER_REQUIRED_MESSAGE);
+            $scope.scrollProducerInformationSection();
+            return false;
+        }
+        else if (producerCode != null && producerCode.length < 3 && (agentParty == null || agentParty == EMPTY_STRING))
+        {
+            alert(PRODUCER_3_DIGITS_MESSAGE);
+            $scope.scrollProducerInformationSection();
+            return false;
+        }
+        else
+        {
+            $rootScope.showPageLoading();
+            producerLookUpBu = $scope.producerLookUpBuSubmissionSearchModal.value;
+
+            var countrySelection = RA.UI.doFindLabelFromValue($scope.countryLeftHandNavSearch.value, $scope.countryListSearch);
+            var stateSelection = RA.UI.doFindLabelFromValue($scope.stateLeftHandNavSearch.value, $scope.stateProvinceListSearch);
+
+            if (countrySelection == SELECT_OPTION)
+            {
+                countrySelection = "";
+            }
+            if (stateSelection == SELECT_OPTION)
+            {
+                stateSelection = "";
+            }
+
+            async.series(
+                {
+                    producerList: function (callback)
+                    {
+                        //producer full name is sometimes abbreviated for print(preferred name)(limit 40 chars)
+                        //So if producer code is 6 digits, fullname is assigned to null.
+                        if (producerCode != null && producerCode.length == 6)
+                        {
+                            agentParty = null;
+                        }
+                        Search.findProducersListWithBu(agentParty, producerCode, countrySelection, stateSelection, PRODUCER_APPOINTED, producerLookUpBu, function (result)
+                        {
+                            var data = RA.Service.handleServiceResult(result, $scope);
+                            callback(null, data);
+                        });
+                    }
+                },
+                function (err, result)
+                {
+                    var data = result.producerList;
+
+                    if (data != null && data.length > 0)
+                    {
+                        $scope.producerListSearch = $scope.convertProducerDataSearch(data);
+                    }
+
+                    $rootScope.hidePageLoading();
+                }
+            );
+        }
+    };
+
+
+    /**
+     * Called from view
+     * @param e
+     */
+    $scope.updateProducerListRenewal = function (e)
+    {
+        RA.UI.doClearMessages($scope);
+
+        if (e != null)
+            e.preventDefault();	// to prevent the required fields from highlighting on button click
+
+        $scope.producerListSearch = [];
+        var agentParty = $("#agencyNameLookupInputSearchRenewal").val();
+        var producerCode = $("#producerCodeLookupInputSearchRenewal").val();
+        if ((agentParty == null || agentParty == EMPTY_STRING) && (producerCode == null || producerCode == EMPTY_STRING))
+        {
+            alert(AGENCY_NAME_PRODUCER_REQUIRED_MESSAGE);
+            $scope.scrollProducerInformationSection();
+            return false;
+        }
+        else if (producerCode != null && producerCode.length < 3 && (agentParty == null || agentParty == EMPTY_STRING))
+        {
+            alert(PRODUCER_3_DIGITS_MESSAGE);
+            $scope.scrollProducerInformationSection();
+            return false;
+        }
+        else
+        {
+            $rootScope.showPageLoading();
+            producerLookUpBu = $scope.producerLookUpBuRenewalSearchModal.value;
+
+            var countrySelection = RA.UI.doFindLabelFromValue($scope.countryLeftHandNavRenewal.value, $scope.countryListSearch);
+            var stateSelection = RA.UI.doFindLabelFromValue($scope.stateLeftHandNavRenewal.value, $scope.stateProvinceListForRenewal);
+
+            if (countrySelection == SELECT_OPTION)
+            {
+                countrySelection = "";
+            }
+            if (stateSelection == SELECT_OPTION)
+            {
+                stateSelection = "";
+            }
+
+            async.series(
+                {
+                    producerList: function (callback)
+                    {
+                        //producer full name is sometimes abbreviated for print(preferred name)(limit 40 chars)
+                        //So if producer code is 6 digits, fullname is assigned to null.
+                        if (producerCode != null && producerCode.length == 6)
+                        {
+                            agentParty = null;
+                        }
+                        Search.findProducersListWithBu(agentParty, producerCode, countrySelection, stateSelection, PRODUCER_APPOINTED, producerLookUpBu, function (result)
+                        {
+                            var data = RA.Service.handleServiceResult(result, $scope);
+                            callback(null, data);
+                        });
+                    }
+                },
+                function (err, result)
+                {
+                    var data = result.producerList;
+
+                    if (data != null && data.length > 0)
+                    {
+                        $scope.producerListSearch = $scope.convertProducerDataSearch(data);
+                    }
+
+                    $rootScope.hidePageLoading();
+                }
+            );
+        }
+    };
+
+    $scope.scrollProducerInformationSection = function ()
+    {
+        $('html, body').animate({
+            scrollTop: $("#producerInformationSection").offset().top
+        }, 200);
+    };
+
+    $scope.convertTopNavLinks = function convertTopNavLinks(topNavLinks)
+    {
+        $scope.topNavLinks = [];
+        var linkAction = "";
+        if (topNavLinks)
+        {
+            for (var i in topNavLinks)
+            {
+                if (i.indexOf('@') === -1)
+                {
+                    linkAction = topNavLinks[i].action + "('" + topNavLinks[i].urlBase + topNavLinks[i].urlLink + "')";
+                    var newItem = {"action": linkAction, "label": topNavLinks[i].displayName};
+
+                    // Assign Column Values to Table (based upon Map Stored in NCUBE)
+                    $scope.topNavLinks.push(newItem);
+                }
+            }
+        }
+    };
+
+
+    $scope.convertTopNavReports = function convertTopNavReports(topNavReports)
+    {
+        $scope.topNavReports = [];
+        var reportAction = "";
+
+        if (topNavReports)
+        {
+            for (var i in topNavReports)
+            {
+                if (i.indexOf('@') === -1)
+                {
+                    reportAction = topNavReports[i].action + "('" + topNavReports[i].urlBase + topNavReports[i].urlLink + "')";
+                    var newItem = {"action": reportAction, "label": topNavReports[i].displayName};
+                    $scope.topNavReports.push(newItem);
+                }
+            }
+        }
+    };
+
+
+    $scope.convertRenewalOptions = function convertRenewalOptions(renewalLinks, useBoth)
+    {
+        $scope.renewalLinksList = [];
+
+        if (renewalLinks)
+        {
+            for (var i in renewalLinks)
+            {
+                if (i.indexOf('@') === -1)
+                {
+                    var newItem = null;
+                    if (useBoth)
+                    {
+                        newItem = {"label": renewalLinks[i], "value": renewalLinks[i]};
+                    }
+                    else
+                    {
+                        newItem = {"label": i, "value": renewalLinks[i]};
+                    }
+                    $scope.renewalLinksList.push(newItem);
+                }
+            }
+        }
+
+        return $scope.renewalLinksList;
+    };
+
+    dispatcher.dispatch(
+        {
+            findCountryList: RA.Service.dispatcherFunctionNoArgs(Presentation.findCountryList, dispatcher, $scope),
+            findUnderwriterList: RA.Service.dispatcherFunctionNoArgs(Presentation.findUnderwriterList, dispatcher, $scope),
+            findWrittenPremiumList: RA.Service.dispatcherFunctionNoArgs(Presentation.findWrittenPremiumList, dispatcher, $scope),
+            findRenewalProcessingCodeList: RA.Service.dispatcherFunctionNoArgs(Presentation.findRenewalProcessingCodeList, dispatcher, $scope),
+            findAuditTypeList: RA.Service.dispatcherFunctionNoArgs(Presentation.findAuditTypeList, dispatcher, $scope),
+            findBusinessUnitListForProducerLookUp: RA.Service.dispatcherFunctionNoArgs(Presentation.findBusinessUnitListForProducerLookUp, dispatcher, $scope),
+            findDisplayTypeList: RA.Service.dispatcherFunctionNoArgs(Presentation.findDisplayTypeList, dispatcher, $scope),
+            findLossTypeList: RA.Service.dispatcherFunctionNoArgs(Presentation.findLossTypeList, dispatcher, $scope),
+            findIncurredAmountList: RA.Service.dispatcherFunctionNoArgs(Presentation.findIncurredAmountList, dispatcher, $scope),
+            findPolicySymbolsForRenewals: RA.Service.dispatcherFunctionNoArgs(Presentation.findPolicySymbolsForRenewals, dispatcher, $scope),
+            findBusinessUnitName: RA.Service.dispatcherFunctionNoArgs(Presentation.findBusinessUnitName, dispatcher, $scope),
+            findBusinessUnitDisplayName: RA.Service.dispatcherFunctionNoArgs(Presentation.findBusinessUnitDisplayName, dispatcher, $scope),
+            findProducerHierarchy: RA.Service.dispatcherFunctionNoArgs(Search.findProducerHierarchy, dispatcher, $scope),
+            findTopNavLinks: RA.Service.dispatcherFunctionNoArgs(Presentation.findTopNavLinks, dispatcher, $scope),
+            findTopNavReports: RA.Service.dispatcherFunctionNoArgs(Presentation.findTopNavReports, dispatcher, $scope),
+            findBusinessUnits: RA.Service.dispatcherFunctionNoArgs(Presentation.findBusinessUnits, dispatcher, $scope)
+        },
+        function (err, results)
+        {
+            //Find Country List - Additional Search List Box
+            $scope.countryListSearch = results.findCountryList;
+            $scope.countryList = results.findCountryList;
+
+            $scope.businessUnitList.length = 0;
+            for (var bu in results.findBusinessUnits) {
+                if (bu !== '@type')
+                $scope.businessUnitList.push({label: bu, value: results.findBusinessUnits[bu]});
+            }
+
+            $scope.setUnderWriterListSearch(results.findUnderwriterList);
+
+            //Find written premium List - Additional renewal List Box
+            $scope.writtenPremiumList = results.findWrittenPremiumList;
+
+            //Find renewal processing code List - Additional renewal List Box
+            $scope.renewalProcessingCodeList = results.findRenewalProcessingCodeList;
+
+
+            var listSize = $scope.renewalProcessingCodeList.length;
+            for (var i = 0; i < listSize; i++)
+            {
+                if ($scope.renewalProcessingCodeList[i].itemDescriptionShort == 'Auto')
+                {
+                    $scope.renewalProcessingCodeList[i].itemDescriptionShort = 'Automatic';
+                }
+            }
+
+            //Find audit type List - Additional renewal List Box
+            $scope.auditTypeList = results.findAuditTypeList;
+
+            //Find Display type List - Additional renewal List Box
+            $scope.displayTypeList = $scope.convertRenewalOptions(results.findDisplayTypeList, false);
+
+            //Find Loss type List - Additional renewal List Box
+            $scope.lossTypeList = $scope.convertRenewalOptions(results.findLossTypeList, false);
+
+            //Find incurred type List - Additional renewal List Box
+            $scope.incurredAmountList = $scope.convertRenewalOptions(results.findIncurredAmountList, false);
+
+            //Find Policy Symbols for Renewals - Additional renewal List Box
+            $scope.policySymbolsList = $scope.convertRenewalOptions(results.findPolicySymbolsForRenewals, true);
+
+            //Find business unit List - Additional renewal List Box
+            $scope.businessUnitListForProducerLookUp = $scope.convertRenewalOptions(results.findBusinessUnitListForProducerLookUp, false);
+
+            $scope.setBusinessUnitName(results.findBusinessUnitName);
+
+            $scope.setBusinessUnitDisplayName(results.findBusinessUnitDisplayName);
+
+            var producerHierarchy = results.findProducerHierarchy;
+
+            if (producerHierarchy != null)
+            {
+                $scope.producerHierarchyList = producerHierarchy;
+
+                for (var index in producerHierarchy)
+                {
+                    if (index.indexOf('@') === -1)
+                    {
+                        $scope.profitCenterList.push(index);
+                    }
+                }
+            }
+
+            $scope.convertTopNavLinks(results.findTopNavLinks);
+            $scope.convertTopNavReports(results.findTopNavReports);
+            var hostName = location.hostname;
+            $scope.showDevLinks = hostName === 'localhost' || hostName.includes('docker');
+            $scope.devLinks = [
+                {label:'Reload NCubes', action: 'ncubes'},
+                {label:'Reload NCube...', action: 'ncube'},
+                {label:'Reload NCubes + Page', action: 'ncubesAndRefresh'},
+                {label:'Reload NCube + Page...', action: 'ncubeAndRefresh'},
+                {label:'Admin Page', action: 'adminPage'},
+                {label:'Autofill', action: 'autofill'},
+                {label:'Autofill All', action: 'autofillAll'},
+                {label:'Obsolete/Unobsolete Submissions...', action: 'doObsoleteSubmissions'},
+                {label:'Change Submission Status...', action: 'changeSubmissionStatus'},
+                {label:'Change Business Unit...', action: 'changeBU'},
+                {label:'Change Transaction Type...', action: 'changeTransactionType'},
+                {label:'Change Log Level...', action: 'changeLogLevel'},
+                {label:'User Details...', action: 'userDetails'}
+            ];
+
+            $scope.$apply();
+        }
+    );
+
+
+    var reloadAllNcubes = function(reload) {
+        if (location.hostname === 'localhost' || confirm('This will cause configuration data to be refreshed. This could cause some unexpected side effects if this action was not prompted by a developer/architect. Are you sure you wish to proceed with this action?'))
+        {
+            $scope.showPageLoading();
+            Admin.reloadCubes(function (result) {
+                reloadNCubeResultHandler(result, reload);
+            })
+        }
+    };
+
+    var reloadSelectNCube = function(reload) {
+        var ncubeToClear = prompt("Clear which ncube(s) - comma separated?");
+        if (ncubeToClear) {
+            $scope.showPageLoading();
+            Admin.reloadSelectCubes($.map(ncubeToClear.split(','), $.trim), function(result) {
+                reloadNCubeResultHandler(result, reload);
+            })
+        }
+    };
+
+    function reloadNCubeResultHandler(result, reload) {
+        if (result.status) {
+            if (RA.Service.handleServiceResult(result, $scope)) {
+                delete sessionStorage.mainDisplayConfig;
+                $scope.hidePageLoading();
+                if (reload) {
+                    location.reload();
+                }
+            }
+            else {
+                $scope.hidePageLoading();
+            }
+        }
+        else {
+            $scope.hidePageLoading();
+        }
+    }
+
+    var autofillAndCheck = function(all) {
+        var auto = $rootScope.developerAutofill;
+        if (!auto)
+        {
+            alert('Autofill is not implemented for the current page.');
+            return;
+        }
+        auto(all);
+    };
+
+    var changeLogLevel = function changeLogLevel()
+    {
+        var logInfo = $scope.logInfo;
+        Admin.doChangeLogLevel({appender: logInfo.appender, logLevel: logInfo.logLevel}, function(result)
+        {
+            logInfo.showComplete = true;
+            $timeout(angular.noop);
+        });
+    };
+
+    $scope.doDeveloperAction = function doDeveloperAction(action)
+    {
+        switch (action)
+        {
+            case 'ncubes':
+                reloadAllNcubes(false);
+                break;
+            case 'ncubesAndRefresh':
+                reloadAllNcubes(true);
+                break;
+            case 'ncube':
+                reloadSelectNCube(false);
+                break;
+            case 'ncubeAndRefresh':
+                reloadSelectNCube(true);
+                break;
+            case 'autofill':
+                autofillAndCheck(false)
+                break;
+            case 'autofillAll':
+                autofillAndCheck(true);
+                break;
+            case 'adminPage':
+                RA.UI.doNavigation('/UwdRefApp/dyn/html/admin');
+                break;
+            case 'changeBU':
+                $scope.changeBusiness = {};
+                $scope.isChangeBusinessUnitOpen = true;
+                break;
+            case 'doObsoleteSubmissions':
+                $scope.isObsoleteSubmissionsModalOpen = true;
+                break;
+            case 'changeSubmissionStatus':
+                $scope.isChangeSubmissionStatusModalOpen = true;
+                break;
+            case 'changeTransactionType':
+                $rootScope.toggleChangeSubmissionTransactionTypeModal();
+                break;
+            case 'userDetails':
+                $scope.isUserDetailsModalOpen = true;
+                break;
+            case 'changeLogLevel':
+                $scope.isChangeLogLevelOpen = true;
+                break;
+            default:
+                alert('Action: ' + action + ' is not supported.');
+        }
+    };
+
+    $scope.$watchGroup(['advancedSearchDto.country', 'renewalSearchDto.policyCountry'], function() {
+        $scope.advancedSearchDto.zip = $scope.advancedSearchDto.city = $scope.advancedSearchDto.state = null;
+        $scope.renewalSearchDto.policyState = null;
+    });
+
+    //Find State/Province List - Additional Search List Box
+    $scope.updateAgencyLookupStateProvListSearch = function ()
+    {
+        $scope.stateProvinceListSearch = [];
+        var lookupCountryCode;
+
+        var submissionProducerCodeLookup = $("#countryLookupInputSearch").val();
+
+        if ($scope.advancedSearchDto.country != null && $scope.advancedSearchDto.country.length > 0)
+        {
+            lookupCountryCode = $scope.advancedSearchDto.country;
+        }
+        if (($scope.isAgencyLookupOpenSearch) && submissionProducerCodeLookup != null && submissionProducerCodeLookup.length > 0)
+        {
+            lookupCountryCode = submissionProducerCodeLookup;
+        }
+        if (lookupCountryCode != null)
+        {
+            Presentation.findStateProvinceList(lookupCountryCode, function (result)
+            {
+                $scope.setStateProvinceListSearch(RA.Service.handleServiceResult(result, $scope));
+
+            });
+        }
+    }
+
+    $scope.updateAgencyLookupStateProvListForRenewal = function ()
+    {
+        $scope.stateProvinceListForRenewal = [];
+        var lookupCountryCode;
+
+        var submissionProducerCodeLookup = $("#countryLookupInputSearchRenewal").val();
+
+        if ($scope.renewalSearchDto.policyCountry != null && $scope.renewalSearchDto.policyCountry.length > 0)
+        {
+            lookupCountryCode = $scope.renewalSearchDto.policyCountry;
+        }
+        if (($scope.isAgencyLookupOpenSearch) && submissionProducerCodeLookup != null && submissionProducerCodeLookup.length > 0)
+        {
+            lookupCountryCode = submissionProducerCodeLookup;
+        }
+        if (lookupCountryCode != null)
+        {
+            Presentation.findStateProvinceList(lookupCountryCode, function (result)
+            {
+                $scope.setStateProvinceListForRenewal(RA.Service.handleServiceResult(result, $scope));
+            });
+        }
+    };
+
+    $scope.searchShallow = function ()
+    {
+        var text = $('#globalSearch').val().trim();
+        text = text.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+
+        // skip if equal to last search performed
+        if (lastShallowText != null && text.toLowerCase() === lastShallowText.toLowerCase())
+            return;
+
+        if (text.length > 3 && !$scope.isFunctionalSearch(text))
+        {
+            lastShallowText = text;
+
+            $('#searchButton').attr('disabled', false);
+            $('#globalSearch').css('cursor', 'progress');
+
+            Search.searchShallow(text, function (result)
+            {
+                $('#globalSearch').css('cursor', 'text');
+
+                if (result.status == null || result.status === false)
+                {
+                    return;
+                }
+                var currentShallowText = $('#globalSearch').val().trim();
+                currentShallowText = currentShallowText.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+
+                // Only display when currentShallowText is equal to the text used for this result set.
+                // Handles situation where async shallow searches may return results out of sequence.
+                // Do not process results of "older" shallow searches.
+                if (lastShallowText != null && currentShallowText !== lastShallowText) {
+                    return;
+                }
+
+                var ul = $('<ul/>').attr({'id': 'searchReplace', 'class': 'dropdown-menu', 'style': 'width:265px;'});
+                var policies = RA.Service.handleServiceResult(result, $scope);
+                var search = $('#searchReplace');
+
+                if (policies != null && Array.isArray(policies))
+                {
+                    var divider = '<li class="no-bullets divider"></li>';
+                    var lineBreak = $('<br/>');
+                    var toggleId = 0;
+
+                    for (var i = 0; i < policies.length; i++)
+                    {
+                        var ins = policies[i];
+                        var primary = !(ins.policyNumMatch) ? (ins.primary ? '<span style="background:url(dyn/images/primary.png); background-repeat:repeat-x; width: 20px; height: 22px; position:relative; padding-right: 2px; margin-right:-10px; margin-top:-1px;" class="pull-right"><div>&nbsp;</div></span>' :
+                            '<span style="background:url(dyn/images/secondary.png); background-repeat:repeat-x; width: 20px; height: 22px; position:relative; padding-right: 2px; margin-right:-10px; margin-top:-1px;" class="pull-right"><div>&nbsp;</div></span>') : '';
+                        var li = $('<li/>').attr({'class': 'dropdown-submenuSearch no-bullets'});
+                        var a = $('<a/>').attr({'href': '#', 'style': 'overflow:hidden;text-overflow:ellipsis;'});
+                        a.html(ins.html + primary);
+                        li.append(a);
+                        ul.append(li);
+
+                        a.click(function (event)
+                        {
+                            if (angular.isDefined(event))
+                            {
+                                event.preventDefault();
+                            }
+                            // Perform deep search for Insured Name or Policy item clicked in shallow search list
+                            var itemClicked = $(this).text().trim();
+                            $scope.searchDeep(itemClicked);
+                        });
+
+                        if (ins.relatedPolicies)
+                        {
+                            var innerUL = $('<ul/>').attr({'class': 'dropdown-menu', 'style': 'overflow-y:scroll;max-height:500px;width:250px'});
+                            var innerLI = $('<li/>').attr({'class': 'no-bullets'});
+                            var related = $('<b/>').html('Related Policies...').attr({'class': 'spanFull', 'style': 'background-color:#555555; border-bottom: 1px solid black; line-height: 25px; position:relative; margin-left:0px; margin-bottom:10px; color:white; font-style:italic;'});
+                            innerUL.append(innerLI);
+                            innerLI.append(related);
+                            innerUL.append(lineBreak);
+
+                            for (var j = 0; j < ins.relatedPolicies.length; j++)
+                            {
+                                var pol = ins.relatedPolicies[j];
+                                if (!pol) continue;
+                                var addrHTML = '';
+                                if (pol.addresses)
+                                {
+                                    addrHTML += '<li class="no-bullets"><b>Addresses</b></li>';
+                                    for (var k = 0; k < pol.addresses.length; k++)
+                                    {
+                                        var addr = pol.addresses[k];
+                                        if (addr.addressLine1 == null)
+                                        {
+                                            addrHTML += '<li class="no-bullets">(none)</li>';
+                                        }
+                                        else
+                                        {
+                                            addrHTML += '<li class="no-bullets">' + addr.addressLine1 + '<br/>' + addr.city + ', ' + addr.state + ' ' + addr.postalCode + ' ' + addr.countryCode + '</li>';
+                                        }
+
+                                        if ((k + 1) < ins.relatedPolicies.length)
+                                        {
+                                            addrHTML += divider + '<br/>';
+                                        }
+                                    }
+                                }
+
+                                var str = pol.policyTermEffectiveDate + '|' + pol.policyTermExpirationDate + '|' + pol.submissionId + '|' + pol.customerNumber + '|' + pol.policyNumber + '|' + pol.policyModule + '|' + pol.policySymbol;
+
+                                var bold = $('<b/>');
+                                var podLI;
+                                if (pol.policyNumber)
+                                {
+                                    podLI = $('<a/>').attr({'value': str, 'href': '#'}).html(RA.UI.nvl(pol.policySymbol, 'N/A') + ' ' + RA.UI.nvl(pol.policyNumber, '') + ' ' + RA.UI.nvl(pol.policyModule, '') + ' ' + RA.UI.nvl(pol.policyRewriteVersion, ''));
+                                }
+                                else
+                                {
+                                    podLI = $('<a/>').attr({'value': str, 'href': '#'}).html(RA.UI.nvl(pol.policySymbol, 'N/A') + ' ' + RA.UI.nvl(pol.policyTermEffectiveDate, 'N/A') + ' ' + pol.submissionStatus);
+                                }
+                                var chevron = $('<div/>').attr({'id': toggleId, 'class': 'icon-chevron-right'});
+
+                                var innerPodLI = $('<li/>').attr({'class': 'no-bullets collapse', 'id': 'toggle_' + toggleId}).html(divider + '<b>Agency Name/Producer Code</b><br>' + pol.agencyName + (pol.producerCode ? '/' + pol.producerCode : '') + divider + addrHTML);
+                                toggleId++;
+
+                                chevron.click(function (e)
+                                {
+                                    var id = $(this).attr('id');
+                                    e.stopPropagation();
+                                    if ($('#toggle_' + id).hasClass('in'))
+                                    {
+                                        $(this).removeClass('icon-chevron-down');
+                                        $(this).addClass('icon-chevron-right');
+                                        $("#toggle_" + id).collapse('hide');
+                                    }
+                                    else
+                                    {
+                                        $(this).removeClass('icon-chevron-right');
+                                        $(this).addClass('icon-chevron-down');
+                                        $("#toggle_" + id).collapse('show');
+                                    }
+                                });
+
+
+                                bold.append(podLI);
+                                bold.append(chevron);
+                                innerUL.append(bold);
+                                innerUL.append(innerPodLI);
+                                li.append(innerUL);
+
+                                podLI.click(function (event)
+                                {
+                                    if (angular.isDefined(event))
+                                    {
+                                        event.preventDefault();
+                                    }
+                                    // TODO - use object instead of string
+                                    var policyInfo = $(this).text().split(' ');
+                                    var sessionVarsData = $(this).attr('value').split("|");
+
+                                    var sessionVars = RA.Session.buildSelectedPolicyObject(sessionVarsData[0],
+                                        sessionVarsData[1],
+                                        sessionVarsData[2],
+                                        sessionVarsData[3],
+                                        sessionVarsData[4],
+                                        sessionVarsData[5],
+                                        sessionVarsData[6],
+                                        policyInfo[3]);
+
+                                    RA.Session.addSubmissionId(sessionVarsData[2]);
+                                    RA.Session.addSelectedPolicy(sessionVars);
+                                    RA.Session.pushLocalStorageStack('previousSearchResult', pol.submissionId);
+                                    RA.Session.addSessionMode(SESSION_POLICY_MODE);
+                                    RA.Session.removeQuoteId();
+                                    //Remove Selected Quoted Id which was added in Quote List if it exist
+                                    RA.Session.removeSelectedQuoteId();
+                                    $scope.applyLayout('manageActivities');
+                                });
+                            }
+                        }
+                    }
+
+                    if (ins && ins.excessResultsIndicator)
+                    {
+                        ul.append('<br/>');
+                        ul.append('<li class="disabled"><i>' + 10 + ' rows out of ' + ins.totalRows + ' total</i></li>')
+                    }
+                    search.replaceWith(ul);
+                } else {
+                    // no results returned
+                    search.replaceWith('<ul id="searchReplace" class="dropdown-menu" style="width:265px"><li class="disabled" style="font-style: italic">(no matches found)</li></ul>');
+                }
+
+                if ($('#searchReplace:visible').length == 0)
+                {
+                    $('#searchReplace').dropdown('toggle');
+                }
+            });
+        }
+        else
+        {
+            if ($('#searchReplace:visible').length > 0)
+            {
+                $('#searchReplace').dropdown('toggle');
+                $('#searchReplace').replaceWith('<ul id="searchReplace" class="search-query" style="width:0px"/>');
+            }
+            $('#searchButton').attr('disabled', !$scope.isFunctionalSearch(text));
+        }
+    };
+
+
+    $scope.searchDeep = function (otherSearch)
+    {
+        // put search string in session
+        var searchString = otherSearch ? otherSearch : $('#globalSearch').val();
+        if (!searchString)
+        {
+            alert('Please enter Search Criteria.');
+        }
+        else if ($scope.isFunctionalSearch(searchString))
+        {
+            $scope.applyFunctionalSearch(searchString);
+        }
+        else
+        {
+            RA.Session.addSearchString(searchString);
+            applyLayoutOrNavigate('search');
+        }
+    };
+
+    $scope.isFunctionalSearch = function (searchString)
+    {
+        var tokens = searchString.split(' ');
+        if (tokens.length == 1 || tokens.length == 2)
+        {
+            return tokens[0].indexOf(':') > -1;
+        }
+        else
+        {
+            return false;
+        }
+    };
+
+    $scope.applyFunctionalSearch = function (searchString)
+    {
+        var type = searchString.substring(0, 1);
+        var search = searchString.substring(searchString.indexOf(':') + 1);
+        if (type == 's')
+        {
+            // why is there goofy looking code here...because apparently IE8 is incapable
+            // of simply trimming whitespace from the end of a string
+            RA.Session.addSubmissionIdSearch(search.replace(/^\s\s*/, '').replace(/\s\s*$/, ''));
+            applyLayoutOrNavigate('submission');
+        }
+        else if (type = 'w')
+        {
+            if (search == 'admin')
+            {
+                window.open('/UwdRefApp/dyn/html/admin', 'Ref App Admin Page');
+            }
+        }
+        else if (type == 'f')
+        {
+            var func = search.substring(0, search.indexOf('('));
+            var openParen = search.indexOf('(');
+            var closeParen = search.indexOf(')');
+            var insideParen = search.substring(openParen + 1, closeParen);
+            var params = insideParen.split(',');
+
+            if (func == 'status')
+            {
+                Submission.updatePolicyStatus(params, function (result)
+                {
+
+                });
+            }
+        }
+    };
+
+    $scope.selectAgencyFromList = function (event, producerCode, agent, profitCenter, territory, field, producerStatus)
+    {
+        if (event != null)
+        {
+            event.preventDefault();	// prevents IE from executing twice
+        }
+
+        var activeTab = $('.tab-pane.active').attr('id');
+        if (activeTab == 'submissionTab')
+        {
+            $scope.advancedSearchDto.producerCode = producerCode;
+            $scope.advancedSearchDto.agencyName = agent;
+        }
+        else if (activeTab == 'launchRenewalTab')
+        {
+            $scope.renewalSearchDto.producerNumber = producerCode;
+            $scope.model.agencyNameRenewal = agent;
+        }
+        $scope.toggleAgencyLookupOpenSearchWithBu();
+    };
+
+    $scope.obsoleteSubmCancel = function()
+    {
+        $scope.isObsoleteSubmissionsModalOpen = false;
+        $scope.obsoleteSubmObjectHolder.clearForm();
+    };
+
+    $scope.logLevelCancel = function logLevelCancel()
+    {
+        $scope.isChangeLogLevelOpen = false;
+        $scope.logInfo = {};
+    };
+
+    $scope.toggleChangeSubmissionStatusModal = function ()
+    {
+        $scope.isChangeSubmissionStatusModalOpen = false;
+        RA.UI.doClearMessages($scope);
+    };
+
+    $scope.closeUserDetailsModal = function ()
+    {
+        $scope.isUserDetailsModalOpen = false;
+        RA.UI.doClearMessages($scope);
+    };
+
+    $rootScope.toggleChangeSubmissionTransactionTypeModal = function ()
+    {
+        $scope.isChangeSubmissionTransactionTypeModalOpen = !$scope.isChangeSubmissionTransactionTypeModalOpen;
+        $scope.changeTransactionTypeData.submissionId = "";
+        $scope.changeTransactionTypeData.transactionType = "";
+        $scope.changeTransactionTypeData.transactionSubType = "";
+        RA.UI.doClearMessages($scope);
+    };
+
+    $rootScope.toggleAdditionalFieldsModal = function ()
+    {
+        $scope.isAdditionalFieldsOpen = !$scope.isAdditionalFieldsOpen;
+        RA.UI.doClearMessages($scope);
+        if ($scope.isAdditionalFieldsOpen)
+        {
+            $scope.doClearFields();
+            $scope.loadDefaultData();
+            $('#additionalTab a:first').tab('show');
+        }
+    };
+
+    $scope.loadDefaultData = function()
+    {
+        var buDefaultVal = getSessionItem('businessUnit');
+        $scope.producerLookUpBuRenewal.value = buDefaultVal;
+        $scope.producerLookUpBuSubmission.value  = buDefaultVal;
+        $scope.renewalSearchDto.businessUnit = buDefaultVal;
+     };
+
+    $scope.toggleAgencyLookupOpenSearchSubmission = function ()
+    {
+        $scope.producerLookUpBuSubmissionSearchModal.value = $scope.producerLookUpBuSubmission.value;
+        $scope.toggleAgencyLookupOpenSearchWithBu($scope.advancedSearchDto.producerCode, $scope.advancedSearchDto.agencyName, $scope.producerLookUpBuSubmission.value);
+    };
+
+    $scope.toggleAgencyLookupOpenSearchRenewals = function ()
+    {
+        $scope.producerLookUpBuRenewalSearchModal.value = $scope.producerLookUpBuRenewal.value;
+        $scope.toggleAgencyLookupOpenSearchWithBu($scope.renewalSearchDto.producerNumber, $scope.model.agencyNameRenewal, $scope.producerLookUpBuRenewal.value);
+    };
+
+    $scope.toggleAgencyLookupOpenSearchWithBu = function (producerCode, agencyName, businessUnit)
+    {
+        RA.UI.doClearMessages($scope);
+
+        if (!$scope.isAgencyLookupOpenSearch)
+        {
+            if ((producerCode == null || producerCode === EMPTY_STRING) && (agencyName == null || agencyName === EMPTY_STRING))
+            {
+                alert(AGENCY_PRODUCER_REQUIRED_MESSAGE);
+                return false;
+            }
+
+            if ((producerCode != null && producerCode.length < 3) && (agencyName == null || agencyName === EMPTY_STRING))
+            {
+                alert(PRODUCER_3_DIGITS_MESSAGE);
+                return false;
+            }
+            else
+            {
+                producerLookUpBu = businessUnit ? businessUnit : getSessionItem('businessUnit') ;
+                $rootScope.showPageLoading();
+                // YOU only want to show the modal pane if the producer list returns data, otherwise, don't toggle
+                // the modal pane and show the message on the screen.
+                async.series(
+                    {
+                        producerList: function (callback)
+                        {
+                            //producer full name is sometimes abbreviated for print(preferred name)(limit 40 chars)
+                            //So if producer code is 6 digits, fullname is assigned to null.
+                            if (producerCode != null && producerCode.length === 6)
+                            {
+                                agencyName = null;
+                            }
+                            Search.findProducersListWithBu(agencyName, producerCode, EMPTY_STRING, EMPTY_STRING, PRODUCER_APPOINTED, producerLookUpBu, function (result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                callback(null, data);
+                            });
+                        }
+                    },
+                    function (err, result)
+                    {
+                        var data = result.producerList;
+
+                        if (data != null && data.length > 1)
+                        {
+                            $scope.producerListSearch = $scope.convertProducerDataSearch(data);
+                            $scope.isAgencyLookupOpenSearch = !$scope.isAgencyLookupOpenSearch;
+                            $scope.countryLeftHandNavSearch = {"value": EMPTY_STRING};
+                            $scope.stateLeftHandNavSearch = {"value": EMPTY_STRING};
+                            $scope.countryLeftHandNavRenewal = {"value": EMPTY_STRING};
+                            $scope.stateLeftHandNavRenewal = {"value": EMPTY_STRING};
+                            $scope.$apply();
+                        }
+                        else if (data != null && data.length == 1)
+                        {
+                            $scope.producerListSearch = $scope.convertProducerDataSearch(data);
+                            var producer = $scope.producerListSearch[0];
+                            var activeTabBoolean = $('.tab-pane.active').attr('id');
+                            if (activeTabBoolean === 'submissionTab')
+                            {
+                                $scope.advancedSearchDto.producerCode = producer[2];
+                                //Set Agency Name
+                                $scope.advancedSearchDto.agencyName = producer[11];
+                            }
+                            if (activeTabBoolean === 'launchRenewalTab')
+                            {
+                                $scope.renewalSearchDto.producerNumber = producer[2];
+                                //Set Agency Name
+                                $scope.model.agencyNameRenewal = producer[11];
+                            }
+                        }
+
+                        $rootScope.hidePageLoading();
+                    }
+                );
+            }
+        }
+        else
+        {
+            $scope.isAgencyLookupOpenSearch = !$scope.isAgencyLookupOpenSearch;
+            if (!$scope.$$phase)
+            {
+                $scope.$apply();
+            }
+        }
+    };
+
+    $rootScope.toggleClearSubmissionModal = function (e)
+    {
+        var advancedSearchDto = JSON.parse(RA.Session.getAdvancedSearch());
+        // Use Windows Location Object to Determine URL Path
+        var path = $(location).attr('pathname').split('/');
+
+        if (!editAccess)
+        {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        // If Advanced Search Dto Exists and User clicks "Create New Submission" from Search screen, pop-up "Include Fields" Modal
+        if (advancedSearchDto != null)
+        {
+            // Determine Whether User is Clicking Create New Submission from Search screen.
+            if (path.length > 1 && path[2] == SEARCH_LOCATION)
+            {
+                $scope.isClearSubmissionOpen = !$scope.isClearSubmissionOpen;
+                if ($scope.isClearSubmissionOpen == false)
+                {
+                    if ($scope.clearSubmission.includeSearchFields == true)
+                    {
+                        // User Has Elected to Include Search Criteria.  Do Not Remove Dto from Session.
+                        $scope.clearSubmission.includeSearchFields = false;
+                    }
+                    else
+                    {
+                        // User Has Elected Not to Include Search Criteria.  Remove Dto from Session.
+                        RA.Session.removeAdvancedSearch();
+                    }
+                    applyLayoutOrNavigate('submission');
+                }
+            }
+            else
+            {
+                // If User Not Clicking Create New Submission from Search screen, remove Advanced Search Dto from Session
+                RA.Session.removeAdvancedSearch();
+            }
+        }
+        // If Modal not Open, render Submission screen
+        if (path[2] === SUBMISSION_LOCATION)
+        {
+            RA.Session.removeSubmissionId();
+            RA.Session.removeSubmissionIdSearch();
+            RA.Session.removeQuoteId();
+            //Remove Selected Quoted Id which was added in Quote List if it exist
+            RA.Session.removeSelectedQuoteId();
+            var dirtyCheck = $rootScope.raDirtyCheck;
+            if (!dirtyCheck || dirtyCheck())
+            {
+                applyLayoutOrNavigate('submission');
+            }
+        }
+        else if ($scope.isClearSubmissionOpen == false)
+        {
+            RA.Session.removeSubmissionId();
+            RA.Session.removeSubmissionIdSearch();
+            RA.Session.removeQuoteId();
+            //Remove Selected Quoted Id which was added in Quote List if it exist
+            RA.Session.removeSelectedQuoteId();
+            applyLayoutOrNavigate('submission');
+        }
+    };
+
+    $scope.toggleChangeBusinessModal = function toggleChangeBusinessModal()
+    {
+        $scope.isChangeBusinessUnitOpen = false;
+        $timeout(angular.noop);
+    };
+
+    $scope.doChangeBusinessUnit = function doChangeBusinessUnit()
+    {
+        Admin.doChangeBusinessUnit($scope.changeBusiness.code, function(result)
+        {
+            $scope.applyLayout('dashboard');
+        });
+    };
+
+    var applyLayoutOrNavigate = function applyLayoutOrNavigate(pageId)
+    {
+        if ($scope.applyLayout)
+            $scope.applyLayout(pageId);
+        else
+            (function(){sessionStorage.setItem('mainDisplayPage', pageId); RA.UI.doNavigation('/UwdRefApp/dyn/html/main');})();
+    };
+
+    async.series(
+        {
+            editAccess: function (callback)
+            {
+                Presentation.hasPermission({'resource': 'submission', 'action': 'edit'}, function (result)
+                {
+                    var data = RA.Service.handleServiceResult(result, $scope);
+                    callback(null, data);
+                })
+            }
+        },
+        function (err, results)
+        {
+            editAccess = results.editAccess;
+            if (!editAccess)
+            {
+                $("#createSubmission").addClass("disabled");
+            }
+        }
+    );
+
+}
+
+//# sourceURL=topNavController.js

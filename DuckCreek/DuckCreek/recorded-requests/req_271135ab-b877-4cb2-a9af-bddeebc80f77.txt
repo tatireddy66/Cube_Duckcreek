@@ -1,0 +1,15 @@
+POST https://uncd63.duckcreekondemand.com:443/Policy/default.aspx?_windowGuid=4411e9b9-7975-450d-b80c-0e75e12c3df3 HTTP/1.1
+Host: uncd63.duckcreekondemand.com
+Connection: keep-alive
+Content-Length: 637
+Origin: https://uncd63.duckcreekondemand.com
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Content-Type: Ajax/xml; charset=UTF-8
+Accept: */*
+Referer: https://uncd63.duckcreekondemand.com/Policy/default.aspx
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: ASP.NET_SessionId=ufgjwvs3cnvtcavuq5zqwruq
+
+<AjaxRequest><action>Carrier_CommercialAuto_Pages_US_10_17_0_0_MainInterview_LineDetail_onBlur</action><currentPageID>D2CA60ABE1264FD687AE0F4A9F355548</currentPageID><popUp>false</popUp><clientChanges>{"items":[{"path":"/@value","id":"_focusField","value":"f_r9A78221AA4764683894E7B461D612190E7_3_1","type":"change"},{"path":"/div/@data-value","id":"f_r9A78221AA4764683894E7B461D612190E7_3_1Cmp","value":"100","type":"change"}]}</clientChanges><fieldChanges><field id="" index="E7" path="" fieldId="f_r9A78221AA4764683894E7B461D612190E7_3_1" cacheId="E7" value="100" iterativeIndex="0" formattedValue="100"/></fieldChanges></AjaxRequest>

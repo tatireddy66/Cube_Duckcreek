@@ -1,0 +1,149 @@
+<div class="container-fixed">
+	<div class="row-form">
+		<table class="table gaig-table">
+			<thead>
+			    <th></th>
+				<th>Policy</th>
+                <th>Policy Term</th>
+				<th>Status</th>
+				<th></th>
+			</thead>
+			<tbody>
+				<tr ng-repeat="rows in table" ng-class="{true:'row-alt'}[$index%2!=0]">
+				    <td class="centerColumn"><img ng-src="{{rows.valid}}" ng-cloak/></td>
+					<td>{{rows.policy}}</td>
+                    <td>{{rows.term}}</td>
+					<td>{{rows.type}}</td>
+					<td class="centerColumn"><button type="button" class="redClose" ng-click="removeRow($index, toggleCreateActivityModal, 'policyTermTable');">X</button></td>
+				<tr>
+			</tbody>
+		</table>
+	</div>
+			
+	<div class="row-form">
+		<div class="row-fluid">	
+			<label for="activitySelector">Activity</label>
+				<select id="activitySelector" class="input-large"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="selectedTypeHolder.selectedType"
+                        ng-disabled="viewOnlyMode"
+                        on-change="toggleActivityForm('activitySelector')"
+						data-placeholder="--Select--">
+                     	<option ng-repeat="item in activityTypes" value="{{item.value}}">{{item.label}}</option>
+                </select>				
+		</div>
+	</div>
+	
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="form-cell span3">
+				<label for="transactionEffectiveDate" class="required"> TRN Effective Date</label>
+				<gaig-datepicker id="transactionEffectiveDate" ng-model="activity.transactionEffectiveDate"
+					ng-disabled="OnlyForExtensionActivity()">
+				</gaig-datepicker>
+			</div>
+			<div class="form-cell span3">
+				<label for="receivedDate" class="required">Received Date</label>
+				<gaig-datepicker id="receivedDate" ng-model="activity.receivedDate"
+					ng-change="doValidateReceivedDate()" date-caption="Received date"
+					ng-disabled="viewOnlyMode">
+				</gaig-datepicker>
+			</div>
+			<div class="form-cell span3">
+				<label for="needByDate">Need By Date</label>
+				<gaig-datepicker id="needByDate" ng-model="activity.needByDate"
+					ng-change="doValidateQuoteNeedByDate()"	date-caption="Quote needed by" 
+					ng-disabled="viewOnlyMode">
+				</gaig-datepicker>
+			</div>
+		</div>
+	</div>
+	
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="form-cell">
+				<label for="endorsementType" class="required">Type</label>
+				<select id="endorsementType" class="input-xlarge"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.endorsementTypeRefCode"
+						on-change="fillOutExtensionTrnEffDate()"
+						data-placeholder="--Select--">
+						<option></option>
+                     	<option ng-repeat="item in endorsementTypeList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>				
+			</div>
+			<div class="form-cell">
+				<label for="endorsementSubType" class="required">Sub-Type</label>
+				<select id="endorsementSubType" class="input-medium"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.endorsementSubTypeRefCode"
+						data-placeholder="--Select--">
+						<option></option>
+                     	<option ng-repeat="item in endorsementSubTypeList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>				
+			</div>
+		</div>
+	</div>
+
+	<div class="row-form" ng-show="OnlyForExtensionActivity()">
+		<div class="form-cell">
+			<label for="subExpirationDate" class="required">Policy Extension Expiration Date</label>
+			<div class="dateTopMargin">
+				<div class="topMargin5">
+					<gaig-datepicker id="extensionEffDate"
+									 ng-model="activity.policyTermExpirationDate"
+									 on-select="validateTRNDate()"
+									 ng-disabled=""><!--Need requirements for this-->
+					</gaig-datepicker>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="span12">
+				<label for="endorsementReason">Explanation</label>
+				<textarea rows="4" id="endorsementReason" class="span12"
+					ng-model="activity.activityReasonComments" maxlength="250" ng-disabled="viewOnlyMode"
+					gaig-maxlength="250"></textarea>
+			</div>
+		</div>
+	</div>	
+	
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="form-cell">
+				<label for="assignToEndorsement" class="required">Assign To</label>
+				<select id="assignToEndorsement" class="input-large"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.assignToHid"
+						data-placeholder="">
+						<option value=""></option>
+                     	<option ng-repeat="item in assignToList" value="{{item.hid}}">{{item.lastName}}, {{item.firstName}}</option>
+                </select>						
+			</div>
+			<div class="form-cell">
+				<label for="assignmentReasonEndorsement">Assignment Reason</label>
+				<select id="assignmentReasonEndorsement" class="input-xlarge"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.assignmentReasonCode"
+						data-placeholder="">
+						<option value=""></option>
+                     	<option ng-repeat="item in assignmentReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+			</div>
+		</div>
+	</div>	
+
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="span12">
+				<label for="endorsementCommentsRemarks">Comments</label>
+				<textarea rows="4" id="endorsementCommentsRemarks" class="span12"
+					ng-model="activity.userComments" maxlength="4000" ng-disabled="viewOnlyMode"
+					gaig-maxlength="4000"></textarea>
+			</div>
+		</div>
+	</div>								
+</div>	

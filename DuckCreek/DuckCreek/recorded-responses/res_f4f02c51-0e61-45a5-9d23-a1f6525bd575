@@ -1,0 +1,43 @@
+var app = angular.module('refAppDirectives');
+
+app.service('RpmConfig', function()
+{
+    function rpmConfig()
+    {
+        this.getRpmClassNames = function getRpmClassNames()
+        {
+            var rpmClassNames =
+                [
+                    {primaryInsured: 'party.PrimaryInsured'},
+                    {primaryPlaces: 'party.PrimaryInsured.places'},
+                    {alternateMailing: 'party.AlternateMailing'},
+                    {alternatePlaces: 'party.AlternateMailing.places'},
+                    {primaryContact: 'party.PrimaryContact'},
+                    {producerContact: 'party.ProducerContact'},
+                    {prospectProducer: 'party.ProspectProducer'},
+                    {prospectPlaces: 'party.ProspectProducer.places'},
+                    {prospectContact: 'party.ProspectProducerContact'},
+                    {profitCenter: 'party.ProfitCenter'},
+                    {territory: 'party.Territory'},
+                    {field: 'party.Field'},
+                    {underwriter: 'party.Underwriter'},
+                    {renewalUnderwriter: 'party.RenewalUnderwriter'},
+                    {csr: 'party.CSR'},
+                    {businessDeveloper: 'party.BusinessDeveloper'},
+                    {delegate: 'party.Delegate'},
+                    {lostToAgent: 'party.LostToAgent'},
+                    {lostToCarrier: 'party.LostToCarrier'},
+                    {moreNamedInsured: 'partyrole.MoreNamedInsured.Parties'},
+                    {fundedDeductible: 'party.FundedDeductible'},
+                    {fundedPlaces: 'party.FundedDeductible.places'},
+                    {lossPrevention: 'party.LossPrevention'},
+                    {accountManager: 'party.AccountManager'},
+                    {primaryDBA: 'party.PrimaryInsured.dba'},
+                    {primaryUnemployment: 'party.PrimaryInsured.unemployment'}
+                ];
+            return rpmClassNames;
+        }
+    }
+
+    return new rpmConfig();
+});

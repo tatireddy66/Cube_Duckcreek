@@ -1,0 +1,55 @@
+Ext.define('DCT.Ajax2', {
+	override: 'DCT.Ajax',
+	
+	processFieldsNew: function (responseArray) {
+		Ext.env.Ready.block();
+		var me = this;
+		var fieldArray = Ext.query(".controlContainer", true, Ext.getDom("body"));
+		var fieldCollection = Ext.create('Ext.util.MixedCollection', {});
+		(DCT.Util.shiftKeyUsed) ? fieldCollection.addAll(fieldArray.reverse()) : fieldCollection.addAll(fieldArray);
+			
+		var itemArray = responseArray.items;
+		var pendingClassChanges = me.collectPendingClassChanges(itemArray);
+		DCT.Sections.backupCollapsedStates();
+		
+		/* BEGIN BIS code: make sure AJAX plays nicely with our dropdown */
+		function isNotPageNav(item, index, arr) {
+			return (item.id != "pageNav");
+		}
+		// If there are any pageNav items,
+		if(!itemArray.every(isNotPageNav)) {
+			// move any li's from moreNavs to pageNav
+			DCT.Custom.topNav.undoDropdown();
+		}
+		/* END BIS code */
+		
+		Ext.each(itemArray, function (item, index) {
+			var me = this;
+			var idElem = me.getIdedElement(item.id);
+			me.processResponseItem(item, idElem, pendingClassChanges);
+		}, this);
+		me.handleRemainingClassChanges(pendingClassChanges);
+
+		me.cleanupToolTips();
+
+		DCT.Util.processOnLoad();
+		DCT.Util.generateControls();
+		Ext.env.Ready.unblock();
+		
+		if (DCT.notifyMessage) {
+			DCT.Util.removeTabs(true);
+			Ext.create('DCT.AlertMessage', {
+					msg: DCT.notifyMessage,
+					fn: function () { 
+						DCT.notifyMessage = "";
+					}
+			}).show();
+		}
+
+		me.assignFieldFocus(fieldCollection);
+		Ext.defer(function () {
+			DCT.hubEvents.fireEvent('ajaxcomplete');
+		}, 1);
+	}
+	
+});

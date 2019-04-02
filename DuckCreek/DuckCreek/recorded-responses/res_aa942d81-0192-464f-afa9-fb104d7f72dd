@@ -1,0 +1,19 @@
+var appObsoleteSubm = angular.module('refAppDirectivesObsoleteSubm', ['adminServices']);
+
+appObsoleteSubm.directive('obsoleteSubm', function ()
+{
+
+    return ({
+        restrict: 'E',
+        transclude: true,
+        scope: {
+            clearForm: "="
+        },
+        controller: 'obsoleteSubmController',
+        link: function (scope, element, attrs){
+
+        },
+        templateUrl: 'dyn/html/templates/directives/directivesObsoleteSubm'
+    });
+
+});

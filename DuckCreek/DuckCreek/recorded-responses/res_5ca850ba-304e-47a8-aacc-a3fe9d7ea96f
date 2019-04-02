@@ -1,0 +1,2529 @@
+// V3.0 Header for identification purposes only
+
+Dynamis = function ()
+{
+};
+
+Dynamis.ActivationStatus = { ACTIVE:'ACTIVE', INACTIVE:'INACTIVE', ALL:'ALL' };
+
+Dynamis.RpmSession = function RpmSession(rpmSession)
+{
+	this['@id'] = Dynamis.Util.UniqueIdGenerator();
+    this.rpmObjects = {};
+    this.rpmObjectRels = {};
+    this.sourceRel = {};
+    this.targetRel = {};
+    this.namedObjects = {};
+    this.namedRoots = {};
+    this.processedDeltas = null;
+    this.rawDeltas = null;
+    this.inactiveObjects = {};
+    this.inactiveObjectRels = {};
+    this.inactiveSourceRel = {};
+    this.inactiveTargetRel = {};
+    this.effectiveVersion = null;
+
+    if (rpmSession)
+    {
+        //objects are public
+        this['@id'] = rpmSession['@id'];
+        this.effectiveVersion = rpmSession.effectiveVersion;
+        this._buildRelIndex(rpmSession.sourceRel,this.sourceRel,'sourceRel');
+        this._buildRelIndex(rpmSession.targetRel,this.targetRel,'targetRel');
+        this._buildRelIndex(rpmSession.inactiveSourceRel,this.inactiveSourceRel,'inactiveSourceRel');
+        this._buildRelIndex(rpmSession.inactiveTargetRel,this.inactiveTargetRel,'inactiveTargetRel');
+
+        this._hydrateObjects(this,this.rpmObjects,rpmSession.rpmObjects);
+        this._hydrateObjects(this,this.inactiveObjects,rpmSession.inactiveObjects);
+        this._hydrateObjectRels(this,this.rpmObjectRels,rpmSession.rpmObjectRels);
+        this._hydrateObjectRels(this,this.inactiveObjectRels,rpmSession.inactiveObjectRels);
+
+        this.namedObjects = {};
+        for (var name in rpmSession.namedObjects) {
+            if (name.charAt(0) == '@')
+                continue;
+
+            var obj = rpmSession.namedObjects[name];
+            var type = Dynamis.IO.getMappedType(obj['@type']);
+            if (type==='com.gaic.bue.rpm.RpmObject' || type==='com.gaic.bue.rpm.RpmObjectRel') {
+                this.namedObjects[name] = this.getObjectById(obj.id);
+            }
+            else {
+                this.namedObjects[name] = obj;
+            }
+        }
+
+        if (rpmSession.processedDeltas) {
+            this.processedDeltas = {};
+            this._hydrateDeltas(this, this.processedDeltas, rpmSession.processedDeltas);
+        }
+
+        if (rpmSession.rawDeltas) {
+            this.rawDeltas = {};
+            this._hydrateDeltas(this, this.rawDeltas, rpmSession.rawDeltas);
+        }
+
+        var roots = {};
+        for(var root in rpmSession.namedRoots)
+        {
+            if(root.charAt(0)==='@')
+            {
+                continue;
+            }
+            roots[root] = {'@type': 'java.util.LinkedHashSet', '@items': rpmSession.namedRoots[root]};
+        }
+        roots['@type'] = 'java.util.LinkedHashMap';
+        this.namedRoots = roots;
+    }
+};
+Dynamis.RpmSession.prototype['@type'] = 'com.gaic.bue.rpm.RpmSession';
+
+Dynamis.RpmSession.prototype.getEffectiveVersion = function getEffectiveVersion()
+{
+    return this.effectiveVersion;
+}
+
+Dynamis.RpmSession.prototype.getRpmObjects = function getRpmObjects(status)
+{
+    if (status===undefined) {
+        status = Dynamis.ActivationStatus.ACTIVE;
+    }
+
+    var objs = {};
+    if (status!=Dynamis.ActivationStatus.INACTIVE) {
+        Dynamis.Util.addAll(objs,this.rpmObjects);
+    }
+    if (status!=Dynamis.ActivationStatus.ACTIVE) {
+        Dynamis.Util.addAll(objs,this.inactiveObjects);
+    }
+    return objs;
+};
+
+Dynamis.RpmSession.prototype.getRpmObjectRels = function getRpmObjectRels(status)
+{
+    if (status===undefined) {
+        status = Dynamis.ActivationStatus.ACTIVE;
+    }
+
+    var rels = {};
+    if (status!=Dynamis.ActivationStatus.INACTIVE) {
+        Dynamis.Util.addAll(rels,this.rpmObjectRels);
+    }
+    if (status!=Dynamis.ActivationStatus.ACTIVE) {
+        Dynamis.Util.addAll(rels,this.inactiveObjectRels);
+    }
+    return rels;
+};
+
+Dynamis.RpmSession.prototype.getNamedObjects = function getNamedObjects()
+{
+    return this.namedObjects;
+};
+
+Dynamis.RpmSession.prototype.getNamedRoots = function getNamedRoots()
+{
+    var named = {};
+    for(var rootName in this.namedRoots)
+    {
+        var root = this.namedRoots[rootName];
+        named[rootName] = root['@items'];
+    }
+    return named;
+};
+
+Dynamis.RpmSession.prototype.getNamedRoot = function getNamedRoot(rootName, status)
+{
+    status = status || Dynamis.ActivationStatus.ACTIVE;
+    var roots = [];
+
+    var named = this.namedRoots[rootName]['@items'];
+    for(var i = 0; i < named.length; i++)
+    {
+        var rpmObject = this.getObjectById(named[i]);
+        if(status === Dynamis.ActivationStatus.ALL ||
+            (status === Dynamis.ActivationStatus.ACTIVE && rpmObject.isActive()) ||
+            (status === Dynamis.ActivationStatus.INACTIVE && !rpmObject.isActive()))
+        {
+            roots.push(rpmObject);
+        }
+    }
+    return roots;
+};
+
+Dynamis.RpmSession.prototype.getRpmObjectById = function getRpmObjectById(id)
+{
+    return this.getObjectById(id);
+};
+
+Dynamis.RpmSession.prototype.getObjectById = function getObjectById(id)
+{
+    if (this.rpmObjects.hasOwnProperty(id)) {
+        return this.rpmObjects[id];
+    }
+    else if (this.rpmObjectRels.hasOwnProperty(id)) {
+        return this.rpmObjectRels[id];
+    }
+    else if (this.inactiveObjects.hasOwnProperty(id)) {
+        return this.inactiveObjects[id];
+    }
+    else if (this.inactiveObjectRels.hasOwnProperty(id)) {
+        return this.inactiveObjectRels[id];
+    }
+    return null;
+};
+
+Dynamis.RpmSession.prototype.getRelById = function getRelById(id)
+{
+    if (this.rpmObjectRels.hasOwnProperty(id)) {
+        return this.rpmObjectRels[id];
+    }
+    else if (this.inactiveObjectRels.hasOwnProperty(id)) {
+        return this.inactiveObjectRels[id];
+    }
+    return null;
+};
+
+Dynamis.RpmSession.prototype.isDeltaTrackingEnabled = function isDeltaTrackingEnabled()
+{
+    return this.processedDeltas!==null;
+};
+
+Dynamis.RpmSession.prototype.enableDeltaTracking = function enableDeltaTracking()
+{
+    if (this.processedDeltas===null) {
+        this.processedDeltas = {};
+        this.rawDeltas = {};
+    }
+};
+
+Dynamis.RpmSession.prototype.disableDeltaTracking = function disableDeltaTracking()
+{
+    if (this.processedDeltas!==null) {
+        this.processedDeltas = null;
+        this.rawDeltas = null;
+    }
+};
+
+Dynamis.RpmSession.prototype.getRelBySource = function getRelBySource(rpmObject, name, status)
+{
+    if (status===undefined) {
+        status = Dynamis.ActivationStatus.ACTIVE;
+    }
+    if(!rpmObject) return [];
+
+    var relIds = [];
+    if (status!=Dynamis.ActivationStatus.INACTIVE) {
+        var rels = this.sourceRel[rpmObject.getId()]||[];
+        relIds = relIds.concat(rels);
+    }
+    if (status!=Dynamis.ActivationStatus.ACTIVE) {
+        var rels = this.inactiveSourceRel[rpmObject.getId()]||[];
+        relIds = relIds.concat(rels);
+    }
+
+    var retArray = [];
+    for(var i = 0; i < relIds.length; i++)
+    {
+        var rel = this.getRelById(relIds[i]);
+        if(!name || name===rel.getRpmField().getName())
+        {
+            retArray.push(rel);
+        }
+    }
+    return retArray;
+};
+
+Dynamis.RpmSession.prototype.getRelByTarget = function getRelByTarget(rpmObject, name, status)
+{
+    if (status===undefined) {
+        status = Dynamis.ActivationStatus.ACTIVE;
+    }
+    if(!rpmObject) return [];
+
+    var relIds = [];
+    if (status!=Dynamis.ActivationStatus.INACTIVE) {
+        var rels = this.targetRel[rpmObject.getId()]||[];
+        relIds = relIds.concat(rels);
+    }
+    if (status!=Dynamis.ActivationStatus.ACTIVE) {
+        var rels = this.inactiveTargetRel[rpmObject.getId()]||[];
+        relIds = relIds.concat(rels);
+    }
+
+    var retArray = [];
+    for(var i = 0; i < relIds.length; i++)
+    {
+        var rel = this.getRelById(relIds[i]);
+        if(!name || name===rel.getRpmField().getName())
+        {
+            retArray.push(rel);
+        }
+    }
+    return retArray;
+};
+
+Dynamis.RpmSession.prototype.getTargets = function getTargets(rpmObject, name, status)
+{
+    var objRels = this.getRelBySource(rpmObject, name, status);
+
+    var retArray = [];
+    for (var i=0; i<objRels.length; i++) {
+        retArray.push( objRels[i].getTarget() );
+    }
+    return retArray;
+};
+
+Dynamis.RpmSession.prototype.findRel = function findRel(sourceId, targetId)
+{
+    var retRel = null;
+    var sourceIds = this.sourceRel[sourceId] || [];
+    for(var i = 0; i < sourceIds.length; i++)
+    {
+        var rel = this.rpmObjectRels[sourceIds[i]];
+        var target = rel.getTarget();
+        if(target.getId() === targetId)
+        {
+            retRel =  rel;
+            break;
+        }
+    }
+    return retRel;
+};
+
+Dynamis.RpmSession.prototype.getRpmObjectByName = function getRpmObjectByName(name)
+{
+    var objects = [];
+    for(var obj in this.namedObjects[name])
+    {
+        objects.push(this.getRpmObjectById(this.namedObjects[name][obj]));
+    }
+    return objects;
+};
+
+Dynamis.RpmSession.prototype.getRpmObjectRelById = function getRpmObjectRelById(id)
+{
+    return this.rpmObjectRels[id];
+};
+
+Dynamis.RpmSession.prototype.getProcessedDeltasForObject = function getProcessedDeltasForObject(obj) {
+    if (this.processedDeltas===null) {
+        return null;
+    }
+
+    var deltas = this.processedDeltas[obj.getId()];
+    if (deltas===undefined) {
+        return [];
+    }
+    return deltas;
+};
+
+Dynamis.RpmSession.prototype.getRawDeltasForObject = function getRawDeltasForObject(obj) {
+    if (this.rawDeltas===null) {
+        return null;
+    }
+
+    var changes = this.rawDeltas[obj.getId()];
+    if (changes===undefined) {
+        return [];
+    }
+    return changes;
+};
+
+Dynamis.RpmSession.prototype._recordDelta = function _recordDelta(delta) {
+    if (this.rawDeltas===null) {
+        return;
+    }
+
+    var targetObj = this._validateDelta(delta);
+    var existing = this.rawDeltas[delta.id];
+    if (existing == undefined) {
+        existing = [];
+        this.rawDeltas[delta.id] = existing;
+    }
+
+    if (!this._handleExisting(targetObj,delta,existing)) {
+        existing.push(delta);
+    }
+};
+
+Dynamis.RpmSession.prototype._validateDelta = function validateDelta(delta) {
+    if (delta===null) {
+        throw 'Dynamis.RpmSession.validateDelta: IllegalArgument - delta is required';
+    }
+
+    var targetObj = this.getObjectById(delta.id);
+    if (targetObj==null) {
+        throw 'Dynamis.RpmSession.validateDelta: The Delta.id must match an RpmObject.id from this RpmSession';
+    }
+    return targetObj;
+};
+
+Dynamis.RpmSession.prototype._handleExisting = function handleExisting(obj, newDelta, existing) {
+    for (var i=0; i<existing.length; i++) {
+        var origDelta = existing[i];
+        if (origDelta.fieldName !== newDelta.fieldName) {
+            continue;
+        };
+
+        var origCmd = origDelta.cmd;
+        if ( origCmd==newDelta.cmd && (origCmd==Dynamis.Delta.Command.OBJECT_FIELD_ASSIGN || origCmd==Dynamis.Delta.Command.OBJECT_META_ASSIGN)) {
+            if (newDelta.targetValue == origDelta.srcValue) {
+                existing.splice(i,1);
+                return true;
+            }
+            else {
+                origDelta.targetValue = newDelta.targetValue;
+                return true;
+            }
+        };
+    };
+
+    return false;
+};
+
+Dynamis.RpmSession.prototype.purge = function purge(rpmObjectsOrObjectRels)
+{
+    var isArray = Array.isArray(rpmObjectsOrObjectRels);
+    var objectsToPurge =  isArray ? rpmObjectsOrObjectRels : [rpmObjectsOrObjectRels];
+
+    while(objectsToPurge.length > 0)
+    {
+        var rpmObject = objectsToPurge.pop();
+        var id = rpmObject.id;
+
+        // stop processing object if it is already removed from the session
+        if (rpmObject.rpmSession===null)
+            continue;
+
+        if (this.rpmObjectRels.hasOwnProperty(id))
+            delete this.rpmObjectRels[id];
+        else if (this.rpmObjects.hasOwnProperty(id))
+            delete this.rpmObjects[id];
+        else if (this.inactiveObjectRels.hasOwnProperty(id))
+            delete this.inactiveObjectRels[id];
+        else if (this.inactiveObjects.hasOwnProperty(id))
+            delete this.inactiveObjects[id];
+        else if (!(rpmObject instanceof Dynamis.RpmObject))
+            throw 'Dynamis.RpmSession.purge: IllegalArgument - argument=' + rpmObject.toString() + ' is not a Dynamis.RpmObject or Dynamis.RpmObjectRel';
+        else
+            continue;   // object already purged from (or isn't part of) the session
+
+        // clear backpointer to session
+        rpmObject.rpmSession = null;
+
+        // if relationship, remove from the list and clean up the relationship indexes
+        if (rpmObject instanceof Dynamis.RpmObjectRel) {
+            this._removeObjectFromIndex(this.sourceRel, rpmObject.getSource().getId(), id);
+            this._removeObjectFromIndex(this.inactiveSourceRel, rpmObject.getSource().getId(), id);
+            this._removeObjectFromIndex(this.targetRel, rpmObject.getTarget().getId(), id);
+            this._removeObjectFromIndex(this.inactiveTargetRel, rpmObject.getTarget().getId(), id);
+
+            if (this.isDeltaTrackingEnabled()) {
+                var deltas = this.processedDeltas[rpmObject.getSource().getId()];
+                if (deltas!=null) {
+                    var deltasToRemove = [];
+                    for (var i=0;i<deltas.length;i++) {
+                        var d = deltas[i];
+                        if (d.cmd===Dynamis.Delta.Command.OBJECT_SET_ADD && d.targetValue===rpmObject.getTarget()) {
+                            deltasToRemove.push(i);
+                        }
+                        else if (d.cmd===Dynamis.Delta.Command.OBJECT_SET_REMOVE && d.srcValue===rpmObject.getTarget()) {
+                            deltasToRemove.push(i);
+                        }
+                    }
+                    while(deltasToRemove.length>0) {
+                        var i = deltasToRemove.shift();
+                        deltas.splice(i,1);
+                    }
+                }
+
+                var deltas = this.rawDeltas[rpmObject.getSource().getId()];
+                if (deltas!=null) {
+                    var deltasToRemove = [];
+                    for (var i=0;i<deltas.length;i++) {
+                        var d = deltas[i];
+                        if (d.cmd===Dynamis.Delta.Command.OBJECT_SET_ADD && d.targetValue===rpmObject.getTarget()) {
+                            deltasToRemove.push(i);
+                        }
+                        else if (d.cmd===Dynamis.Delta.Command.OBJECT_SET_REMOVE && d.srcValue===rpmObject.getTarget()) {
+                            deltasToRemove.push(i);
+                        }
+                    }
+                    while(deltasToRemove.length>0) {
+                        var i = deltasToRemove.shift();
+                        deltas.splice(i,1);
+                    }
+                }
+            }
+        }
+
+        // remove relationships to/from this RpmObject or RpmObjectRel
+        var objRels = [].concat(this.getRelBySource(rpmObject,false,Dynamis.ActivationStatus.ALL),this.getRelByTarget(rpmObject,false,Dynamis.ActivationStatus.ALL));
+        for (var i=0;i<objRels.length;i++) {
+            objectsToPurge.push(objRels[i]);
+        }
+
+        this._clearObjectIndex(this.sourceRel, id);
+        this._clearObjectIndex(this.inactiveSourceRel, id);
+        this._clearObjectIndex(this.targetRel, id);
+        this._clearObjectIndex(this.inactiveTargetRel, id);
+
+        if (this.isDeltaTrackingEnabled()) {
+            if (this.processedDeltas.hasOwnProperty(id)) {
+                delete this.processedDeltas[id];
+            }
+            if (this.rawDeltas.hasOwnProperty(id)) {
+                delete this.rawDeltas[id];
+            }
+        }
+
+        for(key in this.namedRoots)
+        {
+            if (key.charAt(0) === '@')
+            {
+                continue;
+            }
+
+            var root = this.namedRoots[key]['@items'];
+            var rootIndex = root.indexOf(id);
+            if(rootIndex > -1)
+            {
+                root.splice(rootIndex, 1);
+                if(root.length === 0)
+                {
+                    delete this.namedRoots[key];
+                }
+            }
+        }
+    };
+};
+
+Dynamis.RpmSession.prototype._removeObjectFromIndex = function removeObjectFromIndex(index, relatedObjectId, objectIdToRemove)
+{
+    if (index.hasOwnProperty(relatedObjectId)) {
+        var rels = index[relatedObjectId];
+        Dynamis.Util.removeFromArray(rels,objectIdToRemove);
+        if (rels.length==0) {
+            delete index[relatedObjectId];
+        }
+    }
+};
+
+Dynamis.RpmSession.prototype._moveObjectIndex = function moveObjectIndex(source, target, objectToMove)
+{
+    if (source.hasOwnProperty(objectToMove)) {
+        var items = source[objectToMove];
+        for (var i=0; i<items.length; i++) {
+            this._addObjectToIndex(target, objectToMove, items[i]);
+        }
+        delete source[objectToMove];
+    }
+};
+
+Dynamis.RpmSession.prototype._addObjectToIndex = function addObjectToIndex(index, rpmObjectId, relIdToAdd)
+{
+    var rels = index[rpmObjectId];
+    if (!rels) {
+        rels = [];
+        index[rpmObjectId] = rels;
+    }
+    else {
+        for (var i = 0; i < rels.length; i++) {
+            if (rels[i] === relIdToAdd) {
+                return; // object already exists in array
+            }
+        }
+    }
+    rels.push(relIdToAdd);
+};
+
+Dynamis.RpmSession.prototype._clearObjectIndex = function clearObjectIndex(index, objectIdToClear)
+{
+    if (index.hasOwnProperty(objectIdToClear)) {
+        delete index[objectIdToClear];
+    }
+};
+
+Dynamis.RpmSession.prototype._changeObjectStatus = function changeObjectStatus(obj, status)
+{
+    if (obj.isActive()===status) {
+        return;     // object already proper status
+    }
+
+    var fromObjects = status ? this.inactiveObjects : this.rpmObjects;
+    var fromRels = status ? this.inactiveObjectRels : this.rpmObjectRels;
+    var toObjects = status ? this.rpmObjects : this.inactiveObjects;
+    var toRels = status ? this.rpmObjectRels : this.inactiveObjectRels;
+    var fromSourceRel = status ? this.inactiveSourceRel : this.sourceRel;
+    var fromTargetRel = status ? this.inactiveTargetRel : this.targetRel;
+    var toSourceRel = status ? this.sourceRel : this.inactiveSourceRel;
+    var toTargetRel = status ? this.targetRel : this.inactiveTargetRel;
+
+    var rpmObjId = obj.getId();
+    if (fromRels.hasOwnProperty(rpmObjId)) {
+        delete fromRels[rpmObjId];
+        toRels[rpmObjId] = obj;
+    }
+    else if (fromObjects.hasOwnProperty(rpmObjId)) {
+        delete fromObjects[rpmObjId];
+        toObjects[rpmObjId] = obj;
+    }
+    else {
+        return; // object not found in session
+    }
+    obj.active = status;
+
+    if (obj instanceof Dynamis.RpmObjectRel) {
+        this._removeObjectFromIndex(fromSourceRel, obj.getSource().getId(), rpmObjId);
+        this._addObjectToIndex(toSourceRel, obj.getSource().getId(), rpmObjId);
+        this._removeObjectFromIndex(fromTargetRel, obj.getTarget().getId(), rpmObjId);
+        this._addObjectToIndex(toTargetRel, obj.getTarget().getId(), rpmObjId);
+
+        var sourceField = obj.getRpmField();
+        var trackable = sourceField.hasTrait(Dynamis.BasicTrait.ORIGIN) ? 'sys'!==sourceField.getTrait(Dynamis.BasicTrait.ORIGIN) : true;
+        if (trackable) {
+            var owner = obj.getSource();
+            if (status) {
+                this._recordDelta(new Dynamis.Delta( {'id':owner.getId(), 'fieldName':sourceField.getName(), 'srcValue':null, 'targetValue':obj.getTarget(), 'cmd':Dynamis.Delta.Command.OBJECT_SET_ADD} ));
+            }
+            else {
+                this._recordDelta(new Dynamis.Delta( {'id':owner.getId(), 'fieldName':sourceField.getName(), 'srcValue':obj.getTarget(), 'targetValue':null, 'cmd':Dynamis.Delta.Command.OBJECT_SET_REMOVE} ));
+            }
+        }
+    }
+
+    this._moveObjectIndex(fromSourceRel, toSourceRel, rpmObjId);
+    this._moveObjectIndex(fromTargetRel, toTargetRel, rpmObjId);
+};
+
+Dynamis.RpmSession.prototype.remove = function remove(rpmObjectsOrObjectRels)
+{
+    var isArray = Array.isArray(rpmObjectsOrObjectRels);
+    var objectsToRemove =  isArray ? rpmObjectsOrObjectRels : [rpmObjectsOrObjectRels];
+    while (objectsToRemove.length>0)
+    {
+        var obj = objectsToRemove.pop();
+        if (obj===null) {
+            throw 'Dynamis.RpmSession.remove: IllegalArgument(RpmObject cannot be null)';
+        }
+        else if (obj instanceof Dynamis.RpmObject) {
+            if (obj.isActive()===false) {
+                return;     // object already proper status
+            }
+        }
+        else {
+            throw 'Dynamis.RpmSession.remove: IllegalArgument(obj=' + obj.toString() + ' is not an RpmObject)';
+        }
+
+        objectsToRemove = objectsToRemove.concat(this.getRelBySource(obj));
+        objectsToRemove = objectsToRemove.concat(this.getRelByTarget(obj));
+
+        this._changeObjectStatus(obj,false);
+    };
+};
+
+Dynamis.RpmSession.prototype.restore = function restore(rpmObjectsOrObjectRels)
+{
+    var isArray = Array.isArray(rpmObjectsOrObjectRels);
+    var objectsToRestore =  isArray ? rpmObjectsOrObjectRels : [rpmObjectsOrObjectRels];
+    while (objectsToRestore.length>0)
+    {
+        var obj = objectsToRestore.pop();
+        if (obj===null) {
+            throw 'Dynamis.RpmSession.restore: IllegalArgument(RpmObject cannot be null)';
+        }
+        else if (obj instanceof Dynamis.RpmObject) {
+            if (obj.isActive()===true) {
+                return;     // object already proper status
+            }
+
+            if (obj instanceof Dynamis.RpmObjectRel) {
+                objectsToRestore.push(obj.getSource());
+                objectsToRestore.push(obj.getTarget());
+            }
+        }
+        else {
+            throw 'Dynamis.RpmSession.restore: IllegalArgument(obj=' + obj.toString() + ' is not an RpmObject)';
+        }
+
+        this._changeObjectStatus(obj,true);
+    };
+};
+
+Dynamis.RpmSession.prototype._buildRelIndex = function buildRelIndex(source, dest, desc)
+{
+    for (var key in source) {
+        if (key.charAt(0) === '@')
+            continue;
+
+        var rels = source[key];
+        if (rels) {
+            if (Array.isArray(rels) && rels.length>0) {
+                dest[key] = rels.slice(0);
+            }
+            else if (Object.keys(rels).length>0) {
+                throw 'Dynamis.RpmSession.' + desc + ' was expecting an array for key:' + key;
+            }
+        }
+    }
+};
+
+Dynamis.RpmSession.prototype._hydrateObjects = function buildObjects(session, dest, source)
+{
+    for (var key in source)
+    {
+        if (key.charAt(0) === '@')
+            continue;
+
+        var object = source[key];
+        if(object)
+        {
+            dest[object.id] = new Dynamis.RpmObject(object, session);
+        }
+    }
+};
+
+Dynamis.RpmSession.prototype._hydrateObjectRels = function buildObjectRels(session, dest, source)
+{
+    for (var key2 in source)
+    {
+        if (key2.charAt(0) === '@')
+            continue;
+
+        var temp = source[key2];
+        var rel = new Dynamis.RpmObjectRel(temp, session);
+        rel.setSource(session.getObjectById(temp.source.id));
+        if (rel.getSource()==null) {
+            console.log('Failed to find Source(' + temp.source.id + ') for RpmObjectRel(' + temp.id + ')');
+        }
+        rel.rpmField = rel.getSource().getField(temp.rpmField.name);
+        rel.setTarget(session.getObjectById(temp.target.id));
+        if (rel.getSource() == null || rel.getTarget()==null) {
+            console.log('Failed to find Source(' + temp.source.id + ') or Target(' + temp.target.id + ') for RpmObjectRel(' + temp.id + ')');
+        }
+        dest[rel.getId()] = rel;
+    }
+};
+
+Dynamis.RpmSession.prototype._hydrateDeltas = function hydrateDeltas(session, target, source)
+{
+    for (var objKey in source) {
+        if (objKey.charAt(0) === '@')
+            continue;
+
+        var objectDeltaArray = source[objKey];
+        target[objKey] = [];
+        for (var i=0;i<objectDeltaArray.length;i++) {
+            var delta = new Dynamis.Delta(objectDeltaArray[i]);
+            if (delta.srcValue && (Dynamis.IO.getMappedType(delta.srcValue['@type'])==='com.gaic.bue.rpm.RpmObject' || Dynamis.IO.getMappedType(delta.srcValue['@type'])==='com.gaic.bue.rpm.RpmObjectRel')) {
+                delta.srcValue = session.getObjectById(delta.srcValue['id']);
+            }
+            if (delta.targetValue && (Dynamis.IO.getMappedType(delta.targetValue['@type'])==='com.gaic.bue.rpm.RpmObject' || Dynamis.IO.getMappedType(delta.targetValue['@type'])==='com.gaic.bue.rpm.RpmObjectRel')) {
+                delta.targetValue = session.getObjectById(delta.targetValue['id']);
+            }
+            target[objKey].push(delta);
+        }
+    }
+};
+
+Dynamis.RpmSession.prototype._addRemoveNamedRoot = function addRemoveNamedRoot(rootName, value, oper)
+{
+    if(!rootName || !value)
+    {
+        throw('Both key and value must be present to ' + oper + ' named root...key = ' + rootName + ', value = ' + value);
+    }
+
+    var stack = [value];
+    var roots = this.namedRoots[rootName] ? this.namedRoots[rootName]['@items'] : undefined;
+    roots = roots || [];
+
+    var isRemove = oper === 'remove';
+    var visited = new Dynamis.Util.NoTouchVisitTracker();
+    while(stack.length > 0)
+    {
+        var obj = stack.pop();
+        visited.put(obj);
+        if(obj instanceof Dynamis.RpmObject)
+        {
+            if(!this.getRpmObjects().hasOwnProperty(obj.getId()))
+            {
+                throw('The rpm object you provided does not belong to this session.');
+            }
+
+            if(isRemove)
+            {
+                roots.splice(roots.indexOf(obj.getId()), 1);
+            }
+            else
+            {
+                roots.push(obj.getId());
+            }
+        }
+        else if(typeof obj === 'string') // ids on the client should be strings
+        {
+            if(!this.getRpmObjectById(obj))
+            {
+                throw('The object id you provided does not match an id in this session...id = ' + obj);
+            }
+
+            if(isRemove)
+            {
+                roots.splice(roots.indexOf(obj), 1);
+            }
+            else
+            {
+                roots.push(obj);
+            }
+        }
+        else if(obj instanceof Array)
+        {
+            for(var i = 0; i < obj.length; i++)
+            {
+                if(!visited.containsKey(obj[i]))
+                {
+                    stack.push(obj[i]);
+                }
+            }
+        }
+    }
+
+    if(roots.length === 0)
+    {
+        delete this.namedRoots[rootName];
+    }
+    else
+    {
+        this.namedRoots[rootName] = {'@type': 'java.util.LinkedHashSet', '@items': roots};
+    }
+};
+
+Dynamis.RpmSession.prototype.addNamedRoot = function addNamedRoot(rootName, value)
+{
+    this._addRemoveNamedRoot(rootName, value, 'add');
+};
+
+Dynamis.RpmSession.prototype.removeNamedRoot = function removeNamedRoot(rootName, value)
+{
+    this._addRemoveNamedRoot(rootName, value, 'remove');
+};
+
+Dynamis.RpmSession.prototype.clearNamedRoot = function clearNamedRoot(rootName)
+{
+    delete this.namedRoots[rootName];
+};
+
+Dynamis.RpmClassLoader = function RpmClassLoader() {};
+
+Dynamis.RpmClassLoader.prototype.classCache = {};
+Dynamis.RpmClassLoader.prototype.enumCache = {};
+
+Dynamis.RpmClassLoader.findRpmClass = function findRpmClass(classInfo)
+{
+    var id = classInfo.id;
+
+    if (id && this.prototype.classCache.hasOwnProperty(id)) {
+        return this.prototype.classCache[id];
+    }
+
+    var rpmClass = new Dynamis.RpmClass(classInfo);
+    if (id) {
+        this.prototype.classCache[id] = rpmClass;
+    }
+    return rpmClass;
+};
+
+Dynamis.RpmClassLoader.findRpmEnum = function findRpmEnum(enumInfo)
+{
+    var id = enumInfo.id;
+
+    if (id && this.prototype.enumCache.hasOwnProperty(id)) {
+        return this.prototype.enumCache[id];
+    }
+
+    var rpmEnum = new Dynamis.RpmEnum(enumInfo);
+    if (id) {
+        this.prototype.enumCache[id] = rpmEnum;
+    }
+    return rpmEnum;
+};
+
+Dynamis.RpmClass = function RpmClass(rpmClass, opts)
+{
+    if (!rpmClass)
+        throw 'Dynamis.RpmClass init: argument "rpmField" cannot be undefined or null';
+
+    //opts = opts || {};
+
+    this['@id'] = rpmClass['@id'];
+    this.id = rpmClass.id;
+    this.name = rpmClass.name;
+    this.fields = Dynamis.Util.hydrateClassFields(rpmClass.fields);
+    this.scope = rpmClass.scope;
+};
+Dynamis.RpmClass.prototype['@type'] = 'com.gaic.bue.rpm.RpmClass';
+
+Dynamis.RpmClass.prototype.getId = function getId()
+{
+    return this.id;
+};
+
+Dynamis.RpmClass.prototype.getScope = function getScope()
+{
+    return this.scope;
+};
+
+Dynamis.RpmClass.prototype.getName = function getName()
+{
+    return this.name;
+};
+
+Dynamis.RpmClass.prototype.getScopedName = function getScopedName()
+{
+    var traitValue = this.getClassTrait(Dynamis.BasicTrait.SCOPED_NAME);
+    return typeof traitValue === 'undefined' || traitValue === null ? null : traitValue;
+};
+
+Dynamis.RpmClass.prototype.getEffectiveName = function getEffectiveName()
+{
+    var traitValue = this.getClassTrait(Dynamis.BasicTrait.SCOPED_NAME);
+    return typeof traitValue === 'undefined' || traitValue === null ? this.name : traitValue;
+};
+
+Dynamis.RpmClass.prototype.getFields = function getFields()
+{
+    var retFields = {};
+    for(var name in this.fields)
+    {
+        if(name !== 'CLASS_TRAITS')
+        {
+            retFields[name] = this.fields[name];
+        }
+    }
+    return retFields;
+};
+
+Dynamis.RpmClass.prototype.getField = function getFields(fieldName)
+{
+    return this.fields[fieldName];
+};
+
+Dynamis.RpmClass.prototype.getTraits = function getTraits(fieldName)
+{
+    var field = this.getField(fieldName);
+    if(field)
+    {
+        return field.getTraits();
+    }
+};
+
+Dynamis.RpmClass.prototype.getTrait = function getTrait(key)
+{
+    var traits = this.getTraits(key);
+    return traits ? traits[key] : undefined;
+};
+
+Dynamis.RpmClass.prototype.getClassTraits = function getClassTraits()
+{
+    return this.getTraits('CLASS_TRAITS');
+};
+
+Dynamis.RpmClass.prototype.hasClassTrait = function hasClassTrait(trait)
+{
+    var field = this.getField('CLASS_TRAITS');
+    return field ? field.hasTrait(trait) : false;
+};
+
+Dynamis.RpmClass.prototype.getClassTrait = function getClassTrait(trait)
+{
+    var traits = this.getTraits('CLASS_TRAITS');
+    return traits ? traits[trait] : undefined;
+};
+
+Dynamis.RpmClass.prototype.freeze = function freeze()
+{
+    var classInfo = {
+        '@type': this['@type'],
+        'id': this.id,
+        'name': this.name
+    };
+
+    var hasScope = false;
+    for (var key in this.scope.scope) {
+        if (key.charAt(0) === '@') {
+            hasScope = true;
+            break;
+        }
+    }
+    if (hasScope) {
+        classInfo.scope = this.scope;
+    }
+    return classInfo;
+};
+
+Dynamis.RpmObject = function RpmObject(rpmObject, rpmSession)
+{
+    if (!rpmObject.rpmClass)
+        throw('Dynamis.RpmObject init: input rpmObject must have an "rpmClass"');
+
+    this['@id'] = rpmObject['@id'];
+    this.id = rpmObject.id;
+    this.rpmClass = Dynamis.RpmClassLoader.findRpmClass(rpmObject.rpmClass); //new Dynamis.RpmClass(rpmObject.rpmClass);
+    this.rpmSession = rpmSession;
+    this.active = rpmObject.active===undefined ? true : rpmObject.active;
+
+    //fields,class, and id are public
+    this.fields = Dynamis.Util.hydrateObjectFields(this, rpmObject);
+};
+Dynamis.RpmObject.prototype['@type']='com.gaic.bue.rpm.RpmObject';
+
+Dynamis.RpmObject.prototype.getId = function getId()
+{
+    return this.id;
+};
+
+Dynamis.RpmObject.prototype.getRpmClass = function getRpmClass()
+{
+    return this.rpmClass;
+};
+
+Dynamis.RpmObject.prototype.getValue = function getValue(fieldName)
+{
+    return this.getField(fieldName).getValue();
+};
+
+Dynamis.RpmObject.prototype.getDefaultValue = function getDefaultValue(fieldName)
+{
+    var field = this.getField(fieldName);
+    return field ? field.getTrait(Dynamis.RpmTrait.DEFAULT) : undefined;
+};
+
+Dynamis.RpmObject.prototype.isActive = function isActive()
+{
+    return this.active;
+};
+
+Dynamis.RpmObject.prototype.setActive = function setActive(value)
+{
+    if (this.active==value) {
+        return;
+    }
+
+    if (this.rpmSession!=null) {
+        if (value) {
+            this.rpmSession.restore(this);
+        }
+        else {
+            this.rpmSession.remove(this);
+        }
+    }
+    else {
+        this.active = value;
+    }
+};
+
+Dynamis.RpmObject.prototype.hasField = function hasField(fieldName)
+{
+    return this.fields && this.fields.hasOwnProperty(fieldName);
+};
+
+Dynamis.RpmObject.prototype.hasTrait = function hasTrait(fieldName, rpmTrait)
+{
+    return this.hasField(fieldName) && this.getField(fieldName).getTraits()[rpmTrait] !== undefined;
+};
+
+Dynamis.RpmObject.prototype.getFields = function getFields()
+{
+    return this.fields;
+};
+
+Dynamis.RpmObject.prototype.getField = function getField(fieldName)
+{
+    return this.fields[fieldName];
+};
+
+Dynamis.RpmObject.prototype.getTraits = function getTraits(fieldName)
+{
+    var field = this.getField(fieldName);
+    return field ? field.getTraits() : undefined;
+};
+
+Dynamis.RpmObject.prototype.getTrait = function getTrait(fieldName, rpmTrait)
+{
+    var field = this.getField(fieldName);
+    return field ? field.getTrait(rpmTrait) : undefined;
+};
+
+Dynamis.RpmObjectRel = function RpmObjectRel(rpmObjectRel, rpmSession)
+{
+    //this.parent.constructor.call(this, {'id': rpmObjectRel.id, 'rpmClass': rpmObjectRel.rpmClass, 'fields': rpmObjectRel.fields}, rpmSession);
+    Dynamis.RpmObject.call(this, rpmObjectRel,rpmSession);
+
+    this['@id'] = rpmObjectRel['@id'];
+    this.source;
+    this.target;
+    this.id = rpmObjectRel.id;
+    this.active = rpmObjectRel.active;
+    this.rpmField = new Dynamis.RpmObjectField(rpmObjectRel.rpmField);
+};
+Dynamis.RpmObjectRel.prototype = Object.create(Dynamis.RpmObject.prototype);
+Dynamis.RpmObjectRel.prototype.constructor = Dynamis.RpmObjectRel;
+Dynamis.RpmObjectRel.prototype['@type']='com.gaic.bue.rpm.RpmObjectRel';
+
+Dynamis.RpmObjectRel.prototype.getSource = function getSource()
+{
+    return this.source;
+};
+
+Dynamis.RpmObjectRel.prototype.setSource = function setSource(newSource)
+{
+    this.source = newSource;
+};
+
+Dynamis.RpmObjectRel.prototype.getTarget = function getTarget()
+{
+    return this.target;
+};
+
+Dynamis.RpmObjectRel.prototype.setTarget = function setTarget(newTarget)
+{
+    this.target = newTarget;
+};
+
+Dynamis.RpmObjectRel.prototype.getRpmField = function getRpmField()
+{
+    return this.rpmField;
+};
+
+Dynamis.RpmEnum = function RpmEnum(rpmEnum)
+{
+    this['@id'] = rpmEnum['@id'];
+    this.name = rpmEnum.name;
+    this.id = rpmEnum.id;
+    this.fields = {};
+
+    if (rpmEnum.fields)
+    {
+        for (var key in rpmEnum.fields)
+        {
+            if (key.charAt(0) === '@')
+                continue;
+
+            var myEnum = rpmEnum.fields[key];
+            this.fields[myEnum.name] = new Dynamis.RpmClassField(myEnum);
+        }
+    }
+};
+Dynamis.RpmEnum.prototype['@type'] = 'com.gaic.bue.rpm.RpmEnum';
+
+Dynamis.RpmEnum.prototype.getName = function getName()
+{
+    return this.name;
+};
+
+Dynamis.RpmEnum.prototype.getFields = function getFields()
+{
+    return this.fields;
+};
+
+Dynamis.RpmTrait =
+{
+    VALUE: 'r:value',
+    DEFAULT: 'r:defaultValue',
+    READ_ONLY: 'r:readOnly',
+    MIN: 'v:min',
+    MAX: 'v:max',
+    EXISTS: 'r:exists',
+    RPM_TYPE: 'r:rpmType'
+};
+
+Dynamis.BasicTrait =
+	{
+		EXISTS:'r:exists',
+	    EXTENDS:'r:extends',
+		RPM_TYPE:'r:rpmType',
+		VALUE:'r:value',
+		DEFAULT_VALUE:'r:defaultValue',
+		READ_ONLY:'r:readOnly',
+		ORDINAL:'r:ordinal',
+	    DESC:'r:desc',
+	    EDGE:'r:edge',
+	    ACTION:'r:action',
+	    ORIGIN:'r:origin',
+        SCOPED_NAME: 'r:scopedName',
+        NAME: 'r:name'
+	};
+
+var AbstractRpmField = function RpmField(rpmField, opts)
+{
+    if (!rpmField)
+        throw 'Dynamis.RpmField init: argument rpmField cannot be undefined or null';
+
+    //opts = opts || {};
+
+    this['@id'] = rpmField['@id'];
+    this.name = rpmField.name;
+
+    var fieldTraits = rpmField.traits || {};
+    this.traits = {};
+    for (var traitName in fieldTraits) {
+        if (traitName.charAt(0) === '@' && traitName!='@type')
+            continue;
+    	this.traits[traitName] = fieldTraits[traitName];
+    }
+    this.owner;
+
+    if (this.traits && this.traits['v:enum'])
+    {
+        this.traits['v:enum'] = Dynamis.RpmClassLoader.findRpmEnum(this.traits['v:enum']);
+    }
+
+};
+
+AbstractRpmField.prototype.getName = function getName()
+{
+    return this.name;
+};
+
+AbstractRpmField.prototype.getOwner = function getOwner()
+{
+    return this.owner;
+};
+
+AbstractRpmField.prototype.setOwner = function setOwner(owner)
+{
+    this.owner = owner;
+};
+
+AbstractRpmField.prototype.getEdgeClass = function getEdgeClass()
+{
+    return this.getTrait('r:edge');
+};
+
+AbstractRpmField.prototype.getType = function getType()
+{
+    return this.getTrait('r:rpmType');
+};
+
+AbstractRpmField.prototype.getMin = function getMin()
+{
+    var min = this.getTrait('v:min');
+    return min ? min : 0;
+};
+
+AbstractRpmField.prototype.getMax = function getMax()
+{
+    var max = this.getTrait('v:max');
+    return max ? max : 1000000000000000;
+};
+
+AbstractRpmField.prototype.isPrimitive = function isPrimitive()
+{
+    var type = this.getType();
+    return type === 'boolean' || type === 'string' || type === 'date' || type === 'long' || type === 'double' || type === 'bigdecimal';
+};
+
+Dynamis.RpmClassField = function RpmClassField(rpmField)
+{
+    AbstractRpmField.call(this, rpmField);
+    this['@id'] = rpmField['@id'];
+};
+Dynamis.RpmClassField.prototype = Object.create(AbstractRpmField.prototype);
+Dynamis.RpmClassField.prototype.constructor = Dynamis.RpmClassField;
+Dynamis.RpmClassField.prototype['@type'] = 'com.gaic.bue.rpm.RpmClassField';
+
+Dynamis.RpmClassField.prototype.getTrait = function getTrait(trait)
+{
+    return this.traits ? this.traits[trait] : undefined;
+};
+
+Dynamis.RpmClassField.prototype.getTraits = function getTraits()
+{
+    return this.traits;
+};
+
+Dynamis.RpmClassField.prototype.hasTrait = function hasTrait(trait)
+{
+    return this.traits[trait] !== undefined;
+};
+
+Dynamis.RpmClassField.prototype.isReference = function isReference()
+{
+    return !this.isPrimitive() && 'CLASS_TRAITS' !== this.getName();
+};
+
+
+Dynamis.RpmObjectField = function RpmObjectField(rpmField)
+{
+    AbstractRpmField.call(this, rpmField);
+    this['@id'] = rpmField['@id'];
+};
+Dynamis.RpmObjectField.prototype = Object.create(AbstractRpmField.prototype);
+Dynamis.RpmObjectField.prototype.constructor = Dynamis.RpmObjectField;
+Dynamis.RpmObjectField.prototype['@type'] = 'com.gaic.bue.rpm.RpmObjectField';
+
+Object.defineProperty(Dynamis.RpmObjectField.prototype, 'value', { get: function() {return this.getValue()}, set: function(v) { this.setValue(v); } });
+
+Dynamis.RpmObjectField.prototype.add = function add(rpmObject)
+{
+    throw 'RpmObjectField - add() not supported';
+};
+
+Dynamis.RpmObjectField.prototype.remove = function(rpmObjectId)
+{
+    this._validate('remove');
+    var owner = this.getOwner();
+    var min = this.getTrait('v:min');
+    //if(rels.length >= min)
+    //{
+    //    throw('Cannot remove rpmObject, v:min reached for this field: ' + this.name + ', rpmObject Id: '+ owner.getId() + ', rpmClass: '+ owner.getRpmClass().getName());
+    //}
+    var rpmSession = owner.rpmSession;
+    var relToRemove = rpmSession.findRel(owner.id,rpmObjectId);
+    // check for RpmObjectRel (for backwards compatibility with originally released API)
+    if (relToRemove===null) {
+        relToRemove=rpmSession.rpmObjectRels[rpmObjectId];
+    }
+    if (relToRemove===null) {
+        console.log('WARN: RpmObject(id=' + rpmObjectId + ') was not found to be removed from RpmObjectField(class=' + owner.getRpmClass().getName() + ',field=' + this.getName() + ',rpmObjectId=' + owner.getId() + ')');
+    }
+    else {
+        rpmSession.remove(relToRemove);
+    }
+};
+
+Dynamis.RpmObjectField.prototype.clear = function()
+{
+    this._validate('clear'); // TODO - min check??
+
+    var owner = this.getOwner();
+    var rpmSession = owner.rpmSession;
+    var rels = rpmSession.getRelBySource(owner, this.getName());
+    rpmSession.remove(rels);
+};
+
+Dynamis.RpmObjectField.prototype.getTrait = function getTrait(trait)
+{
+    var val, type, owner = this.getOwner();
+    if(trait === Dynamis.BasicTrait.VALUE && !this.isPrimitive())
+    {
+        var rpmSession = owner.rpmSession;
+        var targets = [];
+        if(rpmSession)
+        {
+            targets = rpmSession.getTargets(owner, this.getName());
+            var max = this.getTrait('v:max');
+            if(max == 1)
+            {
+                if(targets.length > 1)
+                {
+                    throw('More than one target found for field: ' + this.getName() + ', rpmObject id: ' + owner.getId());
+                }
+                return targets[0];
+            }
+        }
+        return targets;
+    }
+    else if(trait === Dynamis.BasicTrait.VALUE)
+    {
+        val = this.traits[trait];
+        type = this.getType();
+        return Dynamis.Util.convert(val, type);
+    }
+    else if(this.traits.hasOwnProperty(trait))
+    {
+        return this.traits[trait];
+    }
+    else
+    {
+        return this.getOwner().rpmClass.fields[this.name].traits[trait];
+    }
+};
+
+Dynamis.RpmObjectField.prototype.hasTrait = function hasTrait(trait)
+{
+    return this.traits.hasOwnProperty(trait) || this.getOwner().rpmClass.fields[this.name].traits.hasOwnProperty(trait);
+};
+
+Dynamis.RpmObjectField.prototype.setTrait = function setTrait(trait, value)
+{
+    var owner = this.getOwner() || {},
+        ownerSession = owner.rpmSession,
+        trackable, srcValue, type, converted;
+
+    if(!trait)
+    {
+        throw('Trait cannot be empty or null, RpmField being set: ' + owner.getRpmClass().getName() + '.' + this.getName());
+    }
+    else if(!this.isPrimitive())
+    {
+        throw 'RpmObjectField.setTrait - Non-primitive fields not supported';
+    }
+    else
+    {
+        //trait is value, tracking is enabled, origin trait is not equal to sys
+        trackable = trait === Dynamis.BasicTrait.VALUE && ownerSession && ownerSession.isDeltaTrackingEnabled() && 'sys' !==  this.getTrait(Dynamis.BasicTrait.ORIGIN);
+
+        type = this.getType();
+        converted = trait === Dynamis.BasicTrait.VALUE ? Dynamis.Util.convert(value, type) : value;
+
+        if (trackable)
+        {
+            //look in source field values map for original value that is used in the delta
+            srcValue = this.traits[trait];
+
+            var delta = new Dynamis.Delta( {'id':owner.getId(), 'fieldName':this.getName(), 'srcValue':srcValue,
+                'targetValue':converted, 'cmd':Dynamis.Delta.Command.OBJECT_FIELD_ASSIGN} );
+
+            owner.rpmSession._recordDelta(delta);
+        }
+        this.traits[trait] = converted;
+    }
+};
+
+Dynamis.RpmObjectField.prototype.getTraits = function getTraits()
+{
+    var retObj = {};
+    var rpmClass = this.getOwner().getRpmClass();
+    var classTraits = rpmClass.getTraits(this.name);
+    var traits = this.traits;
+
+    for (var prop in classTraits) { retObj[prop] = classTraits[prop]; }
+    for (var prop in traits) { retObj[prop] = traits[prop]; }
+
+    return retObj;
+};
+
+Dynamis.RpmObjectField.prototype.getValue = function getValue()
+{
+    var val = this.getTrait(Dynamis.BasicTrait.VALUE);
+    var isPrimitive = this.isPrimitive();
+    if(isPrimitive && val === undefined)
+    {
+        return null;
+    }
+    return val;
+};
+
+Dynamis.RpmObjectField.prototype.setValue = function setValue(value)
+{
+    this.setTrait(Dynamis.BasicTrait.VALUE, value);
+};
+
+Dynamis.RpmObjectField.prototype.getEdge = function getEdge()
+{
+    var owner = this.getOwner();
+    var rpmSession = owner.rpmSession;
+    var max = this.getTrait('v:max');
+    if(max <= 1)
+    {
+        var rels = rpmSession.getRelBySource(owner, this.getName());
+        if(rels.length > 1)
+        {
+            throw('More than one edge found for the field: ' + this.getName() + ', rpmObject id: ' + rpmObject.getId());
+        }
+        return rels ? rels[0] : undefined;
+    }
+    else
+    {
+        throw('getEdge() method can only be called for v:max <=1. field: ' + this.getName() + ', rpmObject Id: ' + owner.getId() + ', rpmClass: ' + owner.getRpmClass().getName());
+    }
+};
+
+Dynamis.RpmObjectField.prototype.getEdges = function getEdges(status)
+{
+    this._validate('getEdges()');
+    var owner = this.getOwner();
+    return owner.rpmSession.getRelBySource(owner, this.getName(),status);
+};
+
+Dynamis.RpmObjectField.prototype._validate = function validate(action)
+{
+    var owner = this.getOwner();
+    if(this.isPrimitive())
+    {
+        throw(action + ' method can only be called for non primitive fields . Actual: ' + this.getType() + ', field: ' + this.getName() + ', rpmObject Id: ' + owner.getId() +", rpmClass: "+ owner.getRpmClass().getName());
+    }
+    else
+    {
+        var max = this.getTrait('v:max');
+        if(max <= 1)
+        {
+            throw(action + ' method can only be called for v:max > 1. field: ' + this.getName() + ', rpmObject Id: ' + owner.getId() + ', rpmClass: ' + owner.getRpmClass().getName());
+        }
+    }
+};
+
+Dynamis.Delta = function Delta(delta)
+{
+    this['id']=null;
+    this['fieldName']=null;
+	this['srcPtr']=null;
+    this['srcValue']=null;
+    this['targetValue']=null;
+    this['optionalKey']=null;
+    this['cmd']=null;
+
+	if (delta)
+	{
+	    this['id']=delta.id;
+	    this['fieldName']=delta.fieldName;
+		this['srcPtr']=delta.srcPtr;
+	    this['srcValue']=delta.srcValue;
+	    this['targetValue']=delta.targetValue;
+	    this['optionalKey']=delta.optionalKey;
+	    this['cmd']=delta.cmd;
+	}
+};
+Dynamis.Delta.prototype['@type'] = 'com.gaic.bue.rpm.util.Delta';
+
+Dynamis.Delta.Command =
+	{
+		OBJECT_FIELD_ASSIGN:'object.assignField',
+		OBJECT_SET_ADD:'set.add',
+		OBJECT_SET_REMOVE:'set.remove'
+	};
+
+//*********** utilities ***************8
+
+Dynamis.Util = function ()
+{
+};
+
+Dynamis.Util.resolveRefs = function resolveRefs(jObj, doRecursive)
+{
+    if (typeof doRecursive === 'undefined')
+        doRecursive = true;
+
+    var idsToObjs = [];
+
+    // First pass, store all objects that have an @ID field, mapped to their instance (self)
+    walk(jObj, idsToObjs);
+
+    // Replace all @ref: objects with the object from the association above.
+    substitute(null, null, jObj, idsToObjs);
+
+    idsToObjs = null;
+
+    // merge keys and items into a map, or items into an array
+    var visited = new Dynamis.Util.VisitTracker();
+    jObj = mergeKeysAndItems(jObj);
+    visited.clear();
+    return jObj;
+
+    function walk(jObj, idsToObjs)
+    {
+        if (!jObj)
+            return;
+
+        for (var field in jObj)
+        {
+            var value = jObj[field];
+
+            if (!value)
+                continue;
+
+            if (field === '@id')
+            {
+                idsToObjs[value] = jObj;
+            }
+            else if (doRecursive && typeof(value) === 'object')
+            {
+                walk(value, idsToObjs);
+            }
+        }
+    }
+
+    function substitute(parent, fieldName, jObj, idsToObjs)
+    {
+        if (!jObj)
+            return;
+
+        for (var field in jObj)
+        {
+            var value = jObj[field];
+
+            if (!value)
+                continue;
+
+            if (field === '@ref')
+            {
+                if (parent && fieldName)
+                {
+                    parent[fieldName] = idsToObjs[jObj['@ref']];
+                }
+            }
+            else if (doRecursive && typeof(value) === 'object')
+            {
+                substitute(jObj, field, value, idsToObjs);
+            }
+        }
+    }
+
+    function mergeKeysAndItems(jObj)
+    {
+        var resolved;
+        var fieldValue;
+
+        var type = !jObj ? null : typeof jObj;
+
+        if (!type || (type !== 'object'))
+            return jObj;
+
+        if (isPrimitive(jObj))
+            return jObj.value;
+
+        var keys = jObj['@keys'];
+        var items = jObj['@items'];
+
+        if (keys && items)
+        {
+            resolved = {};
+
+            for (var i = 0; i < keys.length; i++)
+            {
+                if (doRecursive && typeof items[i] === 'object')
+                    items[i] = mergeKeysAndItems(items[i]);
+
+                resolved[keys[i]] = items[i];
+            }
+
+            return resolved;
+        }
+        else if (items)
+        {
+            resolved = [];
+
+            for (var i = 0; i < items.length; i++)
+            {
+                if (doRecursive && typeof items[i] === 'object')
+                    items[i] = mergeKeysAndItems(items[i]);
+
+                resolved.push(items[i]);
+            }
+
+            return resolved;
+        }
+
+        if (visited.containsKey(jObj)) {
+            return jObj;
+        }
+        visited.put(jObj, null);
+
+        if (doRecursive)
+        {
+            var i,field,keys=Object.keys(jObj);
+            for (i=0; i<keys.length; i++) {
+                field = keys[i];
+                fieldValue = jObj[field];
+
+                if (!fieldValue)
+                    continue;
+
+                if (isEmptyObject(fieldValue))
+                {
+                    jObj[field] = resolveEmptyObject(fieldValue);
+                    continue;
+                }
+                var xyz = undefined;
+                if ((typeof fieldValue === 'object') && !visited.containsKey(fieldValue))
+                    jObj[field] = mergeKeysAndItems(jObj[field]);
+            }
+        }
+
+        if (jObj.rpmSession && !jObj.hasOwnProperty('rpmClass'))
+            jObj.rpmSession = new Dynamis.RpmSession(jObj.rpmSession);
+
+        return jObj;
+    }
+
+    function isEmptyObject(jObj)
+    {
+        //check input object has only @type, or @type and @id fields
+        var id = jObj['@id'];
+        var type = jObj['@type'];
+        var keys = typeof jObj === 'object' ? Object.keys(jObj) : [];
+
+        return ((id && type && keys.length == 2) || (type && keys.length == 1));
+    }
+
+    function isPrimitive(jObj)
+    {
+        var type = jObj['@type'];
+
+        return type === 'int' ||
+               type === 'date' ||
+               type === 'long';
+    }
+
+    function resolveEmptyObject(jObj)
+    {
+        var type = jObj['@type'];
+
+        if (!type)
+            return null;
+
+        if (type === 'java.util.ArrayList')
+            return [];
+
+        return {};
+        // replace when clearArrayObjects is corrected
+//        return jObj['@type'] === 'java.util.ArrayList' ? [] : jObj;
+    }
+};
+
+Dynamis.Util.hydrateClassFields = function hydrateClassFields(rpmFields, opts)
+{
+    //opts = opts || {};
+
+    var field;
+    var fields = {};
+    for (var key in rpmFields)
+    {
+        if (key.charAt(0) === '@')
+            continue;
+
+        field = rpmFields[key];
+        fields[field.name] = new Dynamis.RpmClassField(field);
+    }
+
+    return fields;
+};
+
+Dynamis.Util.hydrateObjectFields = function hydrateObjectFields(type, rpmObject, opts)
+{
+    //opts = opts || {};
+
+    var field;
+    var fields = {};
+    var rpmFields = rpmObject.fields;
+    for (var key in rpmFields)
+    {
+        if (key.charAt(0) === '@')
+            continue;
+
+        field = rpmFields[key];
+        fields[field.name] = new Dynamis.RpmObjectField(field);
+        fields[field.name].setOwner(type);
+        if (fields[field.name].isPrimitive() && fields[field.name].traits['r:value'] != undefined) {
+            fields[field.name].traits['r:value'] = Dynamis.Util.convert(fields[field.name].traits['r:value'], fields[field.name].getType());
+        }
+    }
+    return fields;
+};
+
+Dynamis.Util.serialize = function serialize(root)
+{
+    var objects = [];
+
+    return (function inner(object)
+    {
+        var copy;
+
+        if (typeof object === 'object' && object !== null &&
+            !(object instanceof Boolean) &&
+            !(object instanceof Date)    &&
+            !(object instanceof Number)  &&
+            !(object instanceof RegExp)  &&
+            !(object instanceof String))
+        {
+            for (var i = 0; i < objects.length; i += 1)
+            {
+                if (objects[i] === object && objects[i]['@id'])
+                {
+                    return {'@ref': objects[i]['@id']};
+                }
+            }
+
+            objects.push(object);
+
+            if (Object.prototype.toString.apply(object) === '[object Array]')
+            {
+                copy = [];
+                for (i = 0; i < object.length; i += 1)
+                {
+                    copy[i] = inner(object[i]);
+                }
+            }
+            else
+            {
+                copy = {};
+                var i,field,keys=Object.keys(object);
+                for (i=0;i<keys.length;i++) {
+                    field = keys[i];
+
+                    copy[field] = inner(object[field]);
+                }
+            }
+            return copy;
+        }
+        return object;
+    })(root);
+};
+
+Dynamis.Util.IdentityHashMap = function IdentityHashMap() {
+    this._data = {};
+    this.clear();
+};
+
+Dynamis.Util.addAll = function addAll(target,sources) {
+	var args = Array.prototype.slice.call(arguments);
+	for (var i=1; i<args.length; i++) {
+		for (var key in args[i]) {
+			target[key] = args[i][key];
+		}
+	}
+	return target;
+};
+
+Dynamis.Util.removeFromArray = function removeFromArray(arr) {
+    var what, a = arguments, L = a.length, ax;
+    while (L > 1 && arr.length) {
+        what = a[--L];
+        while ((ax= arr.indexOf(what)) !== -1) {
+            arr.splice(ax, 1);
+        }
+    }
+    return arr;
+};
+
+Dynamis.Util.IdentityHashMap.prototype = {
+    constructor: Dynamis.Util.IdentityHashMap,
+
+    get: function(key) {
+        var h = this.hash(key);
+        var entry = this._data[h];
+
+        if(!entry)
+        {
+            return null;
+        }
+
+        if (entry[0]) {
+            while (true) {
+                if (entry[0] === key) {
+                    return entry[1];
+                }
+                h = h + 1;
+                entry = this._data[h];
+                if (!entry) return null;
+            }
+        }
+        return entry[1];
+    },
+
+    put: function(key, value) {
+        var h = this.hash(key);
+        var oldVal = !this._data[h] ? undefined : this._data[h][1];
+
+        while (true) {
+            if (!this._data[h]) {
+                this._data[h] = [key, value];
+                return oldVal;
+            }
+            else {
+                if(this._data[h][0] === key)
+                {
+                    this._data[h] = [key, value];
+                    return oldVal;
+                }
+                h = h + 1;
+
+                oldVal = !this._data[h] ? undefined : this._data[h][1];
+            }
+        }
+    },
+
+    putAll: function(map)
+    {
+        for(var key in map)
+        {
+            this.put(key, map[key]);
+        }
+    },
+
+    entrySet: function()
+    {
+        var retArray = [];
+        var keys = Object.keys(this._data);
+        for(var i = 0; i < keys.length; i++)
+        {
+            var entry = [];
+            var key = keys[i];
+            entry[0] = key;
+            entry[1] = this._data[key];
+            retArray.push(entry);
+        }
+        return retArray;
+    },
+
+    containsKey: function(key) {
+        var h = this.hash(key);
+        var entry = this._data[h];
+
+        if (!entry) return false;
+
+        while (true) {
+            if (entry[0] === key) {
+                return true;
+            }
+            h = h + 1;
+
+            entry = this._data[h];
+            if (!entry) return false;
+        }
+    },
+
+    remove: function(key) {
+        var h = this.hash(key);
+        var entry = this._data[h];
+
+        if(!entry)
+        {
+            return false;
+        }
+
+        if (entry[0]) {
+            while (true) {
+                if (entry[0] === key) {
+                    delete this._data[h];
+                    return true;
+                }
+                h = h + 1;
+
+                entry = this._data[h];
+                if (!entry) return false;
+            }
+        }
+        delete this._data[h];
+        return true;
+    },
+
+    keySet: function() {
+        return Object.keys(this._data);
+    },
+
+    clear: function() {
+        this._data = {};
+    },
+
+    hash: function(key) {
+        key = this.objectToStr(key);
+
+        var h = 0;
+        var len = key.length;
+
+        for (var i = 0; i < len; i++) {
+            h = 31*h + key.charCodeAt(i);
+            if(isNaN(h) || h === Number.POSITIVE_INFINITY || h === Number.NEGATIVE_INFINITY)
+            {
+                h = 0;
+            }
+        }
+        return h % 1000000000000000;
+    },
+
+    objectToStr: function(obj) {
+        if (!obj) return 'undefined';
+        if (typeof obj === 'string') return obj;
+
+        var str = '', objkeys = Object.keys(obj);
+
+        for (var key in objkeys) {
+            str += objkeys[key];
+        }
+
+        return str;
+    },
+
+    size: function()
+    {
+        return Object.keys(this._data).length;
+    },
+
+    isEmpty: function()
+    {
+        return Object.keys(this._data).length === 0;
+    }
+};
+
+Dynamis.Util.VisitTracker = function VisitTracker() {
+	this.visited = [];
+	this.visitKey = '@visited' + Dynamis.Util.UniqueIdGenerator();
+
+	this.containsKey = function(object) {
+		return object.hasOwnProperty(this.visitKey);
+	};
+
+    this.put = function(object,ignored) {
+        if (object.hasOwnProperty(this.visitKey)) {
+            console.log( 'VisitKey=' + this.visitKey + ' already exists on obj=' + object.toString());
+        }
+        object[this.visitKey] = true;
+        if (!object.hasOwnProperty(this.visitKey)) {
+            console.log( 'Unable to add VisitKey=' + this.visitKey + ' to obj=' + object.toString());
+        }
+
+    	this.visited.push(object);
+    };
+
+    this.clear = function(visitor) {
+    	for (var i=0; i<this.visited.length;i++) {
+            if (typeof visitor == 'function') {
+                visitor(this.visited[i]);
+            }
+            var obj = this.visited[i];
+    		if (!delete obj[this.visitKey]) {
+                console.log( 'Failed to remove key=' + this.visitKey + " from obj=" + obj.toString() + " sealed=" + Object.isSealed(obj) + ',frozen=' + Object.isFrozen(obj));
+            }
+    	}
+    	this.visited = [];
+    };
+};
+
+Dynamis.Util.NoTouchVisitTracker = function NoTouchVisitTracker() {
+    this.visited = [];
+
+    this.containsKey = function(obj) {
+        for (var i=0;i<this.visited.length;i++) {
+            if (obj===this.visited[i]) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    this.put = function(obj) {
+        this.visited.push(obj);
+    };
+
+    this.clear = function(visitor) {
+        this.visited = [];
+    };
+};
+
+Dynamis.Util.SimpleMap = function() {
+	this.entries = {};
+
+	this.get = function(key) {
+		return this.entries[key] || null;
+	};
+
+	this.containsKey = function(key) {
+		return this.entries[key] !== undefined;
+	};
+
+    this.put = function(key,object) {
+    	this.entries[key] = object;
+    };
+
+    this.clear = function() {
+    	this.entries = {};
+    };
+};
+
+var id = -1;
+Dynamis.Util.UniqueIdGenerator = function UniqueIdGenerator()
+{
+    return id--;
+};
+
+Dynamis.IO = function IO() {};
+
+Dynamis.IO.typeMap = {
+    'com.gaic.bue.rpm.RpmSession' : 'rpmSe',
+    'com.gaic.bue.rpm.RpmObject' : 'rpmO',
+    'com.gaic.bue.rpm.RpmObjectRel' : 'rpmOR',
+    'com.gaic.bue.rpm.RpmClass' : 'rpmC',
+    'com.gaic.bue.rpm.RpmEnum' : 'rpmE',
+    'com.gaic.bue.rpm.RpmClassField' : 'rpmCF',
+    'com.gaic.bue.rpm.RpmObjectField' : 'rpmOF',
+    'com.gaic.bue.rpm.util.Delta' : 'rpmD',
+    'java.util.ArrayList' : 'arLst',
+    'java.util.HashSet' : 'hSet',
+    'java.util.LinkedHashSet' : 'lhSet',
+    'java.util.HashMap' : 'hMap',
+    'java.util.LinkedHashMap' : 'lhMap',
+    'com.cedarsoftware.util.CaseInsensitiveMap' : 'ciMap'
+};
+
+Dynamis.IO.getMappedType = function getMappedType(typeCode) {
+    if (Dynamis.IO.reverseTypeMap===undefined) {
+        var reverseMap = {};
+        for (var key in Dynamis.IO.typeMap) {
+            reverseMap[Dynamis.IO.typeMap[key]] = key;
+        }
+        Dynamis.IO.reverseTypeMap = reverseMap;
+    }
+
+    return Dynamis.IO.reverseTypeMap.hasOwnProperty(typeCode) ? Dynamis.IO.reverseTypeMap[typeCode] : typeCode;
+}
+
+Dynamis.IO.JsonWriter = function JsonWriter() {};
+
+Dynamis.IO.JsonWriter.objectToJson = function objectToJson(obj) {
+    var visited = new Dynamis.Util.VisitTracker();
+    var buffer = [];
+
+    function isPrimitive(value) {
+        var isScalarObject = (value instanceof Boolean) || (value instanceof Date) || (value instanceof Number) || (value instanceof RegExp) || (value instanceof String);
+        var isScalarValue = typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean';
+        return (isScalarObject || isScalarValue);
+    };
+
+    // walk graph to determine correct id/ref mappings, clearing out any old entries
+    (function visit(value)
+    {
+        if(!value || isPrimitive(value))
+        {
+            return;
+        }
+        else if(Object.prototype.toString.apply(value) === '[object Array]')
+        {
+            for(var i = 0; i < value.length; i++)
+            {
+                if(typeof value[i] === 'object')
+                {
+                    visit(value[i]);
+                }
+            }
+        }
+        else if(visited.containsKey(value))
+        {
+            var id = value['@id'];
+            if (id) {
+                return;
+            }
+            else {
+                id = Dynamis.Util.UniqueIdGenerator();
+                value['@id'] = id;
+                return id;
+            }
+        }
+        else
+        {
+            if (value.hasOwnProperty('@id')) {
+                delete value['@id'];
+            }
+            visited.put(value, null);
+            var i,prop,keys=Object.keys(value);
+            for (i=0; i<keys.length; i++) {
+                prop = keys[i];
+
+                if(typeof value[prop] === 'object')
+                {
+                    visit(value[prop]);
+                }
+            }
+        }
+
+    })(obj);
+
+    // walk the graph to build the buffer of strings
+    var secondVisit = new Dynamis.Util.VisitTracker();
+    (function visit(value)
+    {
+        if(!value || isPrimitive(value))
+        {
+            buffer.push(JSON.stringify(value));
+            return;
+        }
+        else if(Object.prototype.toString.apply(value) === '[object Array]')
+        {
+            buffer.push('[');
+            for(var i = 0; i < value.length; i++)
+            {
+                if (i>0) {
+                    buffer.push(',');
+                }
+                visit(value[i]);
+            }
+            buffer.push(']')
+        }
+        else if(secondVisit.containsKey(value))
+        {
+            if (value.hasOwnProperty('@id')) {
+                buffer.push('{"@ref":' + value['@id'] + '}');
+            }
+            else {
+                console.log('Object referenced but no @id found on object=' + value.toString());
+            }
+
+        }
+        else
+        {
+            secondVisit.put(value);
+            var comma = '';
+            buffer.push('{');
+
+            // write the @id if this object is referenced
+            if (value.hasOwnProperty('@id')) {
+                buffer.push(comma);
+                buffer.push('"@id":' + value['@id']);
+                comma = ',';
+
+            }
+
+            // check for a custom freeze method
+            var freeze = value.freeze;  //value.constructor.freeze;
+            var ret = typeof freeze == 'function' ? value.freeze() : value;
+            value = ret;
+
+            // write the @type entry for object type
+            var type = value['@type'] ? value['@type'] : value.constructor.name;
+            if (type && type!=='Object') {
+                var typeKey = Dynamis.IO.typeMap.hasOwnProperty(type) ? Dynamis.IO.typeMap[type] : type;
+                buffer.push(comma);
+                buffer.push('"@type":"' + typeKey + '"');
+                comma = ',';
+            }
+
+            // write out remaining properties
+            var i,prop,keys=Object.keys(value);
+            for (i=0; i<keys.length; i++) {
+                prop = keys[i];
+                if (prop==='@type' || prop==='@id' || prop.indexOf('@visited-')>=0)
+                    continue;
+
+                if (typeof value[prop] === 'function' || typeof value[prop] === 'undefined') {
+                    continue;
+                }
+
+                buffer.push(comma);
+                comma = ',';
+                buffer.push('"' + prop + '":');
+                var objProp = value[prop];
+                if(typeof objProp === 'object')
+                {
+                    visit(objProp);
+                }
+                else {
+                    buffer.push(JSON.stringify(value[prop]));
+                }
+            }
+            buffer.push('}');
+        }
+    })(obj);
+
+    // build string and then remove id/ref properties
+    var json = buffer.join('');
+    visited.clear(function(o) {
+        if (o.hasOwnProperty('@id')) {
+            delete o['@id'];
+        }
+    });
+    secondVisit.clear();
+    return json;
+};
+
+Dynamis.IO.JsonReader = function () {};
+
+Dynamis.IO.JsonReader.jsonToJs = function jsonToJs(jsonString,objectMap) {
+    var idsToObj = {};
+
+    var mappedTypes = {};
+    for (var key in Dynamis.IO.typeMap) {
+        mappedTypes[Dynamis.IO.typeMap[key]] = key;
+    }
+
+    var revive = function(k,v) {
+        if (v instanceof Object) {
+            var id;
+            if (v.hasOwnProperty('@id')) {
+                id = v['@id'];
+            }
+            if (v.hasOwnProperty('@ref')) {
+                if (idsToObj.hasOwnProperty(v['@ref'])) {
+                    return idsToObj[v['@ref']];
+                }
+                else {
+                    console.log("Referenced object (id=" + v['@ref'] + ") could not be found for Object with key=" + k);
+                }
+            }
+            if (v['@type']) {
+                var type = Dynamis.IO.getMappedType(v['@type']);
+                if (type!==v['@type']) {
+                    v['@type'] = type;
+                }
+                var constructorName = objectMap && objectMap.hasOwnProperty(type) ? objectMap[type] : 'Dynamis.' + type;
+                if (constructorName!==null) {
+                    try {
+                        var objConstructor = eval(constructorName);
+                        if (typeof objConstructor == 'function') {
+                            var obj = new objConstructor(v);
+                            if (typeof obj.thaw == 'function') {
+                                obj.thaw(v);
+                            }
+                            v = obj;
+                        }
+                    }
+                    catch (e) {
+                        if (objectMap.hasOwnProperty(type)) {
+                            console.log( "Failed to construct class=" + type + " for object with id=" + id + " exception=" + e.toString());
+                            console.log(e.stack);
+                        }
+                        else {
+                            objectMap[type] = null;
+                            console.log( 'Unable to determine class for type=' + type);
+                        }
+                    }
+                }
+            }
+            if (id) {
+                idsToObj[id] = v;
+            }
+        }
+
+        // default to returning the value unaltered
+        return v;
+    };
+
+    var value = JSON.parse(jsonString,revive);
+    return value;
+};
+
+Dynamis.Util.deepEquals = function deepEquals(obj1, obj2)
+{
+    var visited = [], stack = [new DualKey(obj1, obj2)], dualKey, dualKeyToAdd,
+        objKey1, objKey2, obj1Type, obj2Type, obj1Keys, obj2Keys;
+
+    while (stack.length)
+    {
+        dualKey = stack.shift();
+        objKey1 = dualKey.key1;
+        objKey2 = dualKey.key2;
+        visited.push(dualKey);
+
+        //equal primitives or pointing to same instance is equal
+        if (objKey1 === objKey2)
+            continue;
+
+        //if either are null, can't be equal (both can't be null, see above)
+        if (!objKey1 || !objKey2)
+            return false;
+
+        obj1Type = typeof objKey1;
+        obj2Type = typeof objKey2;
+
+        //nulls are handled above
+        if (obj1Type === 'object')
+        {
+            //both must be an object
+            if (obj2Type !== 'object')
+                return false;
+        }
+        else if (obj2Type == 'object')
+        {
+            //both must be an object
+            return false;
+        }
+        else
+        {
+            //both are non object, use equals
+            if (objKey1 !== objKey2)
+                return false;
+            else
+                continue;
+        }
+
+        //check for arrays
+        if (Array.isArray(objKey1))
+        {
+            //both must be an array
+            if (!Array.isArray(objKey2))
+                return false;
+
+            //if here, both objects are arrays and must have the same length
+            if (objKey1.length != objKey2.length)
+                return false;
+
+            //compare elements of the arrays
+            for (var i = 0, len = objKey1.length; i < len; i++)
+            {
+                //using strict ordering, if this causes a problem will need to
+                //switch to using un-ordered comparison
+                dualKeyToAdd = new DualKey(objKey1[i], objKey2[i]);
+
+                if (visited.indexOf(dualKeyToAdd) < 0)
+                    stack.push(dualKeyToAdd);
+            }
+        }
+        else if (Array.isArray(objKey2))
+        {
+            //both must be arrays
+            return false;
+        }
+        else
+        {
+            //compare objects
+            obj1Keys = Object.keys(objKey1);
+            obj2Keys = Object.keys(objKey2);
+
+            //must have same number of keys
+            if (obj1Keys.length !== obj2Keys.length)
+                return false;
+
+            //must have matching keys
+            for (var i = 0, len = obj1Keys.length; i < len; i++)
+            {
+                if (!objKey1.hasOwnProperty(obj2Keys[i]) || !objKey2.hasOwnProperty(obj1Keys[i]))
+                    return false;
+            }
+
+            //iterate keys and add new DualKey's to the stack
+            for (i = 0, len = obj1Keys.length; i < len; i++)
+            {
+                dualKeyToAdd = new DualKey(objKey1[obj1Keys[i]], objKey2[obj1Keys[i]]);
+
+                if (!visited.dualKeyVisited(dualKeyToAdd))
+                    stack.push(dualKeyToAdd);
+            }
+        }
+    }
+
+    Array.prototype.dualKeyVisited = function dualKeyVisited(dualKey)
+    {
+        for (var i = 0, len = this.length; i < len; i++)
+        {
+            if (this[i].equals(dualKey))
+                return true;
+        }
+
+        return false;
+    };
+
+    function DualKey(key1, key2)
+    {
+        this.key1 = key1;
+        this.key2 = key2;
+
+        this.equals = function(other)
+        {
+            return this.key1 === other.key1 && this.key2 === other.key2;
+        }
+    }
+
+    return true;
+};
+
+Dynamis.Util.convert = function convert(object, type)
+{
+    if(!type)
+    {
+        throw('Conversion type cannot be null')
+    }
+
+    var dataType = typeof object;
+    switch(type)
+    {
+        case 'long':
+        case 'double':
+        case 'bigdecimal':
+        case 'number':
+            if(isNullOrUndefined(object))
+            {
+                return undefined;
+            }
+            else if(dataType === 'number')
+            {
+                if(isDecimal(object) && type === 'long')
+                {
+                    throw(object + ' cannot be converted to a long');
+                }
+                return object;
+            }
+            else if(dataType === 'string')
+            {
+                if(isDecimal(object) && type === 'long')
+                {
+                    throw(object + ' cannot be converted to a long');
+                }
+                else if(object.indexOf('java.math.BigDecimal') > -1)
+                {
+                    return JSON.parse(object).value;
+                }
+                return isDecimal(object) ? Number(object) : Number(Number(object).toFixed());
+            }
+            else if(object instanceof Date && type !== 'double' && type !== 'bigdecimal')
+            {
+                return object.getTime();
+            }
+            else if(dataType === 'boolean')
+            {
+                return object ? 1 : 0;
+            }
+            else if(dataType === 'object' && type === 'bigdecimal')
+            {
+                if(!object.hasOwnProperty('value'))
+                {
+                    throw(object + ' cannot be converted to big decimal');
+                }
+                return Number(object.value);
+            }
+            throwUp(dataType, type);
+        case 'boolean':
+            if(isNullOrUndefined(object))
+            {
+                return false;
+            }
+            else if(dataType === 'boolean')
+            {
+                return object;
+            }
+            else if(dataType === 'number')
+            {
+                return object !== 0;
+            }
+            else if(dataType === 'string')
+            {
+                return object.toLowerCase() === 'true';
+            }
+            throwUp(dataType, type);
+        case 'date':
+            if(isNullOrUndefined(object))
+            {
+                return undefined;
+            }
+            else if(dataType === 'string' || dataType === 'number' || object instanceof Date)
+            {
+                return moment.utc(object).format('YYYY-MM-DDTHH:mm:ss')
+            }
+            else if(dataType === 'function')
+            {
+                return object.toString();
+            }
+            throwUp(dataType, type);
+        case 'string':
+            if(isNullOrUndefined(object))
+            {
+                return undefined;
+            }
+            else if(dataType === 'string')
+            {
+                return object;
+            }
+            else if(dataType === 'number' || object instanceof Date || dataType === 'function')
+            {
+                return object.toString();
+            }
+            else if(object instanceof Object)
+            {
+                return Dynamis.IO.JsonWriter.objectToJson(object);
+            }
+    }
+    throw('Unsupported type [' + type + '] for conversion');
+
+    function throwUp(valueType, targetType)
+    {
+        throw('Unsupported value type [' + valueType + '] attempting to convert to ' + targetType);
+    }
+
+    function isNullOrUndefined(val)
+    {
+        return val === undefined || val === null;
+    }
+
+    function isDecimal(val)
+    {
+        return val && val.toString().indexOf('.') > -1;
+    }
+};

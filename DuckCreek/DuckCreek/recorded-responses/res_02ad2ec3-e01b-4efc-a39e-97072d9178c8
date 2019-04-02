@@ -1,0 +1,30 @@
+Ext.apply(DCT.Util, {
+	positionPartyTools: function (id) {
+		if (DCT.Util.isPartyToolsVisible) {
+			var tools = Ext.get('partyTools'); // the tools container
+			var src = Ext.get(id); // the field the tools are working with
+			var srcIsDate = (Ext.getCmp(id).dctType == "date");
+			
+			// figure out if we are across or down
+			var layout = 'down'; //assume down
+			var el = src.parent();
+			while (el) {
+				if (el.hasCls('downLayout')) { break; }
+				if (el.hasCls('acrossLayout')) { layout = 'across'; break; }
+				el = el.parent();
+			}
+			
+			// show the tools
+			tools.removeCls('x-hidden-display');
+			var x, y;
+			/* BEGIN rewrite for BIS - make the tool button display inside the field regardless of down/across */
+			tools.dom.style.height = Ext.String.format("{0}px", src.dom.clientHeight - 2); // -2 for borders
+			x = (src.getX()) + (src.getWidth()) - (tools.getWidth()) - 1; // -1 for right border
+			y = (src.getY() + 1); // +1 for top border
+			tools.setX(x);
+			tools.setY(y);
+			// don't use slideIn, it isn't working and makes things blink
+			/* END code for BIS */
+		}
+	}
+});

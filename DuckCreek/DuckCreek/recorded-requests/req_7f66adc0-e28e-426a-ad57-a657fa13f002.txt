@@ -1,0 +1,10 @@
+GET https://cdn.gaic.com:443/cdn/ui-bootstrap/0.78.3/img/page-bg.png HTTP/1.1
+Host: cdn.gaic.com
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: image/webp,image/apng,image/*,*/*;q=0.8
+Referer: https://cdn.gaic.com/cdn/ui-bootstrap/0.78.3/css/gaig-bootstrap.css
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: cookiemonster=!1XzYeP3b5JD49YgS8/4zppzveG5jsxfhrZfrykjE9UPJA5nPRO5maoGgWuakutpvCVml0qt6eNg5JmhJKgpAP2GvwzzcBZq/6T7jSBH2DwRhrLwKBGXag1QaZspis3789BwRDO56+kYAojJCE1P0EqTY2jdU2TY=
+

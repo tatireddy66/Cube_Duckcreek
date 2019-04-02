@@ -1,0 +1,72 @@
+#policyTermTable_wrapper.div.dataTables_filter,
+#activityDetailsTable_wrapper.div.dataTables_filter {
+    display: none;
+}
+
+#policyTermTable_wrapper.div.dataTables_paginate,
+#activityDetailsTable_wrapper.div.dataTables_paginate {
+    display: none;
+}
+
+.dataTables_info {
+    width: 96px;
+    text-align: center;
+    background-color: #006edb;
+    padding: 2px 6px;
+    font-size: 8pt;
+    line-height: 12px;
+    -webkit-border-radius: 16px;
+    -moz-border-radius: 16px;
+    border-radius: 16px;
+    position: relative;
+    margin-top: 5px;
+    margin-right: -41px;
+}
+
+.activityTablePolTrnEffDt,
+.activityTablePolTrnExpDt,
+.activityTablePolicyId,
+.activityTableIsWorked,
+.activityTableIsNonUD {
+    display: none;
+}
+
+.gaig-table-info .btn-bar {
+    float: left;
+}
+
+.gaig-table-info .filter-bar {
+    float: right;
+}
+
+.gaig-table-info .filter-bar-Activities{
+    float: right;
+    margin-top: 15px;
+    margin-right: 5px;
+}
+
+.gaig-table-info .btn {
+    height: 26px;
+    margin-top: 0px !important;
+}
+
+#policyTermTableInfo.gaig-table-info .btn-bar {
+    padding: 3px;
+}
+
+#activityDetailsTableInfo.gaig-table-info .btn-bar {
+    margin-top: 16px;
+}
+
+#activityDetailsTable_info.dataTables_info {
+    margin-top: 0px;
+}
+
+#policyTermTable_info.dataTables_info {
+    margin-top: 0px;
+}
+
+/* This is until gaig-modal can be adjusted to fix this */
+.body-locked {
+    margin-right: 17px !important;
+}

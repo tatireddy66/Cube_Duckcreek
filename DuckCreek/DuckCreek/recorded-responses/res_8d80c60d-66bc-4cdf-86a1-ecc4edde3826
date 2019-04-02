@@ -1,0 +1,2361 @@
+'use strict';
+
+angular.module('dashboardServices',[]).
+factory('Dashboard', function()
+{
+    function dashboardService()
+    {
+        function getFilterQuery(filter) {
+            return filter && filter.filterName ? 'filter=' + encodeURIComponent(filter.filterName) : null;
+        }
+
+        this.deleteFilter = function(filter, callback, queueOpts)
+        {
+            RA.Service.callLocal("DashboardController.deleteFilter", {dto: filter}, {"callback":RA.Service.createCallback(callback),
+                "queryString":getFilterQuery(filter)}, queueOpts);
+        };
+
+        this.doRunFilter = function(filter, callback, queueOpts)
+        {
+            filter['@type'] = 'com.gaic.bue.uwd.ra.common.dto.dashboard.DashboardFilterDto';
+            RA.Service.callLocal("DashboardController.doRunFilter", {dto: filter}, {"callback":RA.Service.createCallback(callback),
+                "timeout":120000,"queryString":getFilterQuery(filter)}, queueOpts);
+        };
+
+        this.doRunFilterForCount = function(filter, callback, queueOpts)
+        {
+            filter['@type'] = 'com.gaic.bue.uwd.ra.common.dto.dashboard.DashboardFilterDto';
+            RA.Service.callLocal("DashboardController.doRunFilterForCount", {dto: filter}, {"callback":RA.Service.createCallback(callback),
+                "timeout":120000,"queryString":getFilterQuery(filter)}, queueOpts);
+        };
+
+        this.findFilters = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("DashboardController.findDashboardFilters", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDashboardRowCountDefault =  function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("DashboardController.findDashboardRowCountDefault", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDashboardRowCountOptions =  function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("DashboardController.findDashboardRowCountOptions", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDashboardDefaultPageSize =  function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("DashboardController.findDashboardDefaultPageSize", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveFilter = function(filter, callback, queueOpts)
+        {
+            filter['@type'] = 'com.gaic.bue.uwd.ra.common.dto.dashboard.DashboardFilterDto';
+            RA.Service.callLocal("DashboardController.saveFilter", {dto: filter}, {"callback":RA.Service.createCallback(callback),
+                "queryString":getFilterQuery(filter)}, queueOpts);
+        };
+
+        this.updateFilter = function(filter, callback, queueOpts)
+        {
+            filter['@type'] = 'com.gaic.bue.uwd.ra.common.dto.dashboard.DashboardFilterDto';
+            RA.Service.callLocal("DashboardController.updateFilter", {dto: filter}, {"callback":RA.Service.createCallback(callback),
+                "queryString":getFilterQuery(filter)}, queueOpts);
+        };
+
+        this.updateMultipleFilters = function(filters, callback, queueOpts)
+        {
+            RA.Service.callLocal("DashboardController.updateMultipleFilters", {filters: filters}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.getHiddenFields = function(objClasses, callback, queueOpts)
+        {
+            RA.Service.callLocal("DashboardController.getHiddenFields", {objectClasses: objClasses}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+
+    return new dashboardService();
+});
+
+angular.module('presentationServices',[]).
+factory('Presentation', function()
+{
+    function presentationService()
+    {
+        this.doGetFooterData =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("SecurityController.findUser", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.determinePolicyExtensionActivity = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("PresentationController.determinePolicyExtensionActivity", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetSoftwareVersions =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findSoftwareVersions", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doSetBusinessUnit =  function(bu, callback, queueOpts)
+        {
+            RA.Service.callLocal("SecurityController.doSetBusinessUnit", {businessDivisionCode: bu}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.isProducerSecurityEnabledForUser = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.isProducerSecurityEnabledForUser", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAccountBanner = function(customerNumber, callback, queueOpts)
+        {
+            RA.Service.callLocal('PresentationController.findAccountBanner', {customerNumber: customerNumber}, {callback:RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAccountSummaryResultColumnList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findAccountSummaryResultColumnList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.hasPermission = function(permissionParams, callback, queueOpts)
+        {
+            RA.Service.callLocal("SecurityController.hasPermission", {permissionParams: permissionParams}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findChangeRoleRpmSearchTypes = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findChangeRoleRpmSearchTypes", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findUsersForRole = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findUsersForRole", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAssignToList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findAssignToList", null, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.findAssignmentReasonList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findAssignmentReasonList", null, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.findAuditTypeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findAuditTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBusinessUnitListForProducerLookUp =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findBusinessUnitListForProducerLookUp", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBillingDetails = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal('PresentationController.findBillingDetails', {params: params}, {callback:RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBuildId = function(callback, queueOpts)
+        {
+            RA.Service.callLocal('PresentationController.findBuildId', null, {callback:RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBusinessDeveloperList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal('PresentationController.findBusinessDeveloperList', null, {'callback':RA.Service.createCallback(callback),'timeout':120000}, queueOpts);
+        };
+
+        this.findBusinessUnits =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findBusinessUnitList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findEnabledPubSubBUs =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findEnabledPubSubBUList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCrmEnabledBUs =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findCrmEnabledBUList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBusinessUnitName =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findBusinessUnitName", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBusinessUnitConfigHeader =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findBusinessUnitConfigHeader", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBusinessUnitDisplayName =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findBusinessUnitDisplayName", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCancellationTypeList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findCancellationTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCancellationReasonList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findCancellationReasonList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCancellationOriginalPolicyList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findCancellationOriginalPolicyList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCityStateByPostalCode =  function(zipCode, callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findCityStateByPostalCode", {zipCode: zipCode}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findClaimCategoryList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findClaimCategoryList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCompanyList = function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findCompanyList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCompanyListCanada =  function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findCompanyListCanada", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findContactTypeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findContactTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBUReferralTypeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findBUReferralTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCountryList =  function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findCountryList", {"searchFor": null, "keepThese": null }, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCountyListByPostalCode =  function(postalCode, callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findCountyListByPostalCode", {postalCode: postalCode}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCreateTransactionList =  function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findCreateTransactionList", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDashboardResultColumnList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findDashboardResultColumnList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDelegateList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal('PresentationController.findDelegateList', null, {'callback':RA.Service.createCallback(callback),'timeout':120000}, queueOpts);
+        };
+
+        this.findDisplayTypeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findDisplayTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDispositionDeclinedList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findDispositionDeclinedList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDispositionLostList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findDispositionLostList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDispositionWithdrawnList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findDispositionWithdrawnList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDispositionDefaults = function(transactionType, callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findDispositionDefaults", {transactionType: transactionType}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findEndorsementTypeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findEndorsementTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findEndorsementSubTypeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findEndorsementSubTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findExternalReportList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findExternalReportList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findGoverningClassCodeRequired =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findGoverningClassCodeRequired", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findHasWorksheet =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findHasWorksheet", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findIncurredAmountList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findIncurredAmountList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findInsuredCopyMethodList = function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findInsuredCopyMethodList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAggregatesSearchType = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findAggregatesSearchType", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findLargeDeductibleType = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findLargeDeductibleType", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findLegalEntityList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findLegalEntityList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findLineOfBusinessListForPriorCarrier = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findLineOfBusinessListForPriorCarrier", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPolicyStatusList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findPolicyStatusList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSubmissionSoaList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findSubmissionSoaList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findLineOfBusinessList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findLineOfBusinessList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findLossTypeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findLossTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findLOBToCoverageMapping = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findLOBToCoverageMapping", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findLossPreventionList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findLossPreventionList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDispositionStatusList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findDispositionStatusList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAccountManagerList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findAccountManagerList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findManagedActivitiesResultColumnList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findManagedActivitiesResultColumnList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findNonRenewalReasonList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findNonRenewalReasonList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findNoteTypeList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findNoteTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPaymentPlansList = function(billingMethod, callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findPaymentPlans", {billingMethod: billingMethod}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPolicyType = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findPolicyType", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPolicyOriginationList = function(callback, queueOpts)
+        {
+            var newCallback = {"callback":RA.Service.createCallback(callback)};
+            RA.Service.callLocal("PresentationController.findPolicyOriginationList", null, newCallback, queueOpts);
+        };
+
+        this.findRegionList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findRegionList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPrintOutputDestinationList = function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findPrintOutputDestinationList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProducerConfiguration = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findProducerConfiguration", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPolicyBanner = function(quoteId, callback, queueOpts)
+        {
+            RA.Service.callLocal('PresentationController.findPolicyBanner', {quoteId: quoteId}, {callback:RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPolicySymbolList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findPolicySymbolList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPolicySymbolsForRenewals =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findPolicySymbolsForRenewals", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPremiumTierList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findPremiumTierList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPriorityList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findPriorityList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProductList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findProductList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProductListForPriorCarrier =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findProductListForPriorCarrier", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProductSortOrder =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findProductSortOrder", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findReferralStatusList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findReferralStatusList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findReinstatementReasonList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findReinstatementReasonList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findRenewalProcessingCodeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findRenewalProcessingCodeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findRenewalProcessingCodeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findRenewalProcessingCodeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDefaultRegionForPolicyState = function (state, callback, queueOpts) {
+            RA.Service.callLocal("PresentationController.findDefaultRegionForPolicyState", {state: state}, {"callback": RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findRenewalProcessingTypeList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findRenewalProcessingTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findRetailWholesaleList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findRetailWholesaleList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBillingTypeList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findBillingTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBillingTypeDefaults = function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findBillingTypeDefaults", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+
+        this.findRewriteReasonList = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findRewriteReasonList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSearchResultColumnList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findSearchResultColumnList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSicNaicsList =  function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findSicNaicsList", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSourceSystemList = function(callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findPolicyProcessingList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDefaultSourceSystem = function(productName, symbolName, callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findDefaultSourceSystem",
+                {productName: productName, symbolName: symbolName},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSourceSystemDefaults = function(productName, callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findSourceSystemDefaults", {productName: productName}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findStateProvinceList =  function(countryCode, callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findStateProvinceList",
+                {referenceDataDto: {'@type': 'com.gaic.bue.uwd.ra.common.dto.referenceData.ReferenceDataDto', "searchFor": countryCode, "keepThese": null}},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findYearEstablishedList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findYearEstablishedList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findTaxStatusCodeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findTaxStatusCodeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findTaxonomyCodes =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findTaxonomyCodes", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSecurityAgreement = function(callback, queueOpts)
+        {
+            RA.Service.callLocal('PresentationController.findSecurityAgreement', null, {callback:RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSubmissionBanner = function(quoteId, callback, queueOpts)
+        {
+            RA.Service.callLocal('PresentationController.findSubmissionBanner', {quoteId: quoteId}, {callback:RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSubmPolReportsResultColumnList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findSubmPolReportsResultColumnList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findTaxLocationCodes =  function(quoteDto, callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findTaxLocationCodes", {quoteDto: quoteDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findValidTaxLocationStates =  function(params,callback, queueOpts)
+        {
+            RA.Service.cacheLocal("PresentationController.findValidTaxLocationStates", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findTransactionStatusList =  function(status, policyProcessingSystem, transactionType, callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findTransactionStatusList", {currentStatus: status, policyProcessingSystem:policyProcessingSystem, transactionType:transactionType}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findTopNavLinks =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findTopNavLinks", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findTopNavReports =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findTopNavReports", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findTransactionTypeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findTransactionTypeList", {"searchFor": null, "keepThese": null }, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findUdProductSymbolList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findUdProductSymbolList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findUnderwriterList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findUnderwriterList", null, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.findWrittenPremiumList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findWrittenPremiumList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findMyFileName =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findMyFileName", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAuditSubTypeList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findAuditSubTypeList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.getPage = function getPage(params, callback, queueOpts)
+        {
+            var queryString='',methodArgs='';
+            if (params) {
+                methodArgs = params.screen || '';
+                queryString = params.productName ? 'productName=' + encodeURIComponent(params.productName) : '';
+            }
+            return RA.Service.callLocal("PresentationController.getPage", params, {"callback":RA.Service.createCallback(callback),
+                "timeout":120000, "methodArgs": methodArgs, "queryString":queryString}, queueOpts);
+        };
+
+        this.getPageSection = function getPageSection(params, callback, queueOpts)
+        {
+            var queryString = '',methodArgs='';
+            if (params) {
+                if (params.screen) {
+                    methodArgs = params.screen + (params.section ? '/' + params.section : '');
+                }
+                queryString = 'productName=' + encodeURIComponent(params.productName || '')
+                    + '&item=' + encodeURIComponent(params.item || '');
+            }
+            return RA.Service.callLocal("PresentationController.getPageSection", params, {"callback":RA.Service.createCallback(callback),
+                "timeout":120000, "methodArgs":methodArgs, "queryString":queryString}, queueOpts);
+        };
+
+        this.findCSRList =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("PresentationController.findCSRList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+    return new presentationService();
+});
+
+angular.module('searchServices',[]).
+factory('Search', function()
+{
+    function searchService()
+    {
+        this.doCarrierLookup = function(lookupString, type, callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.doCarrierLookup",{dto: {"searchString" : lookupString, "type" : type}},{"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.bulkUploadFindClassCodes = function(searchData, callback, queueOpts) {
+            searchData.filter = searchData.StateOrProvince;
+            searchData.code = searchData.WCClassCode;
+            this.findClassCodes(searchData, callback, queueOpts);
+        };
+
+        this.findClassCodes =  function(searchData, callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.findClassCodes", searchData, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findLocationState =  function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.findLocationState", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPersonByHid =  function(hid, callback, queueOpts)
+        {
+            RA.Service.cacheLocal("SearchController.findPersonByHid", {hid: hid}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProducerContactList =  function(producerCode, callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.findProducerContactList",{dto: {"producerCode": producerCode}}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProducersDetails =  function(producerName, producerCode, submissionId, producerType, callback, queueOpts)
+        {
+            RA.Service.cacheLocal("SearchController.findProducerDetail", {dto: {"producerName": producerName, "producerCode": producerCode, "submissionId": submissionId, "producerType": producerType}}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProducerHierarchy = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.findProducerHierarchy", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProducersListWithBu =  function(agencyName, producerCode, country, stateProv, producerSearchType, businessUnit, callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.findProducers",{dto: {"agencyName": agencyName, "producerCode": producerCode, "agentCountry": country, "agencyStateProvince": stateProv, "producerRoleSearch": producerSearchType, "businessUnit":businessUnit}}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProducerTeamAssignments =  function(producerCode, businessUnit, callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.findProducerTeamAssignments",
+                {producerCode: producerCode, businessUnit: businessUnit}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSearchPolicyDetails = function(searchString, callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.findSearchPolicyDetails", {searchString: searchString}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findMasterTaxLocations =  function(searchData, callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.findMasterTaxLocations", searchData, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findTaxLocations =  function(searchData, callback, queueOpts)
+        {
+            RA.Service.callLocal("SearchController.findTaxLocations", searchData, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.searchAdvanced = function(searchString, callback, queueOpts)
+        {
+            searchString['@type'] = 'com.gaic.bue.uwd.ra.common.dto.search.AdvancedSearchDto';
+            RA.Service.callLocal("SearchController.searchAdvanced", {dto: searchString}, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.searchDeep = function(searchString, callback, queueOpts)
+        {
+            var searchQuery = searchString ? 'text=' + encodeURIComponent(searchString) : '';
+            RA.Service.callLocal("SearchController.searchDeep", {searchString: searchString},{"callback":RA.Service.createCallback(callback),
+                "timeout":120000,"queryString":searchQuery}, queueOpts);
+        };
+
+        this.searchShallow = function(searchString, callback, queueOpts)
+        {
+            var searchQuery = searchString ? 'text=' + encodeURIComponent(searchString) : '';
+            RA.Service.callLocal("SearchController.searchShallow", {searchString: searchString} ,{"callback":RA.Service.createCallback(callback),
+                "timeout":120000,"queryString":searchQuery}, queueOpts);
+        };
+    }
+
+    return new searchService();
+});
+
+
+angular.module('submissionServices',[]).
+factory('Submission', function()
+{
+    function submissionService()
+    {
+        this.doAddParty = function(partyName, rpmSession, rpmClass, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doAddParty", RA.Controller.serialize({partyName: partyName, session: rpmSession, rpmClass: rpmClass}), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCopySubmission =  function(submissionId, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doCopySubmission", {submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doDeleteSubmission =  function(submissionId, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doDeleteSubmission", {submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGenerateCustomerNumber =  function(submissionDto, skipRules, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doGenerateCustomerNumber", {dto: submissionDto, skipRules: skipRules}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGeneratePolicyNumber =  function(submissionDto, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doGeneratePolicyNumber", {dto: submissionDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findMasterLocationData = function(dto, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findMasterLocationData", {dto: dto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doHydrateParties = function(rpmSession, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doHydrateParties", RA.Controller.serialize({session: rpmSession}), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doIngestSubmission = function(submissionExternalDto, callback, queueOpts)
+        {
+            submissionExternalDto['@type'] = 'com.gaic.bue.uwd.ra.common.dto.submission.SubmissionExternalDto';
+            RA.Service.callLocal("SubmissionController.doIngestSubmission", {dto: submissionExternalDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunDataMigration = function(data, businessUnit, callback, queueOpts)
+        {
+            return RA.Service.callLocal('SubmissionController.doDataMigration', {data: data, businessUnit: businessUnit}, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doReopenSubmission = function(submissionDto, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doReopenSubmission", {dto: submissionDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doReopenSubmissionById = function(submissionIds, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doReopenSubmissionById", {submissionIds: submissionIds}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunBatchSubmissions = function(businessUnit, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doRunBatchSubmissions", {businessDivisionCode: businessUnit}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunCRMTeamAssignmentUpdates = function(businessUnit, dateToCheckForUpdates, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doRunCRMTeamAssignmentUpdates", {businessDivisionCode: businessUnit, dateToCheckForUpdates: dateToCheckForUpdates}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunCRMProducerUpdates = function(businessUnit, dateToCheckForUpdates, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doRunCRMProducerUpdates", {businessDivisionCode: businessUnit, dateToCheckForUpdates: dateToCheckForUpdates}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doInitiateSweep = function(myActionHandler, numBatchSubms, callback ,queueOpts)
+        {
+            RA.Service.callLocal("AdminController.doRunPubSubSweep", {myActionHandler : myActionHandler, numBatchSubms : numBatchSubms}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDefaultDisposition =  function(submissionDto, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findDefaultSubmissionDisposition", {dto: submissionDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDefaultSubmission =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findDefaultSubmission", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.doGetSystemDate =  function(callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doGetSystemDate", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+
+        this.findSubmission =  function(submissionId, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findFullSubmission", {submissionId: submissionId || 0}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSubmissionAndQuote =  function(submissionId, quoteId, submissionInfo, callback, queueOpts)
+        {
+            this.findSubmissionAndQuoteWithoutSession(submissionId, quoteId, submissionInfo, false, callback, queueOpts)
+        };
+
+        this.findSubmissionAndQuoteWithoutSession =  function(submissionId, quoteId, submissionInfo, nullQuoteSession, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findSubmissionAndQuote", {submissionId: submissionId, quoteId: quoteId, submissionInfo: submissionInfo, nullQuoteSession: nullQuoteSession}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSubmissionAndQuoteWithReducedSession =  function(submissionId, quoteId, submissionInfo, useReducedQuoteSession, screenName, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findSubmissionAndQuote", {submissionId: submissionId, quoteId: quoteId, submissionInfo: submissionInfo, useReducedQuoteSession: useReducedQuoteSession, screenName: screenName}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSubmissionCopy =  function(submissionId, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findFullSubmissionCopy", {submissionId: submissionId || 0}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProductPremiums = function(submission, callback, queueOpts)
+        {
+            RA.Service.callLocal('SubmissionController.findProductPremiums', {dto: submission}, {'callback':RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findRelatedPolicies = function(customerNumber,submissionExpirationDate, submissionId, callback, queueOpts)
+        {
+            RA.Service.callLocal('SubmissionController.findRelatedPolicies',{customerNumber: customerNumber, submissionExpirationDate: submissionExpirationDate, submissionId: submissionId}, {'callback':RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSubmissionDisposition =  function(submissionId, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findSubmissionDisposition", {submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        //TODO: Temporary only. Remove once WPI makes call to CUBE for OOS.
+        this.externalPASPostExternalIssue = function(submissionDto, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.externalPASPostExternalIssue", {submissionId: submissionDto.submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        //TODO: Temporary only. Remove once Duck integration code has moved to DEV.
+        this.externalPASPostDownstreamIssue = function(quoteDto, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.externalPASPostDownstreamIssue", {quoteId: quoteDto.quoteId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveSubmission = function(submissionDto, quoteList, callback, queueOpts)
+        {
+            var serQuoteList = [];
+
+            if (quoteList)
+            {
+                for (var i = 0; i < quoteList.length; i++)
+                    serQuoteList.push(RA.Controller.serialize(quoteList[i]));
+            }
+
+            var serSubmission = RA.Controller.serialize(submissionDto);
+
+            RA.Service.callLocal("SubmissionController.saveSubmission", {dto: serSubmission, quotes: serQuoteList}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.validateIfPolicyIsCancelled = function(policyNumber, policyMod, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.validateIfPolicyIsCancelled",
+                {policyNumber: policyNumber, policyMod: policyMod},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveSubmissionAndQuotes = function(submissionDto, quoteList, screenName, callback, queueOpts)
+        {
+            var serialized = RA.Controller.serialize({dto:submissionDto, quotes:quoteList, screenName: screenName});
+
+            RA.Service.callLocal("SubmissionController.saveSubmissionAndQuote", serialized, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveSubmissionDisposition = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.saveSubmissionDisposition", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveSubmissionDispositionById = function(dispositions, callback, queueOpts)
+        {
+            for(var d in dispositions) dispositions[d]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.submission.DispositionDto';
+            RA.Service.callLocal("SubmissionController.saveSubmissionDispositionById", {dispositions: dispositions}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.verifySubmissionDispositionById = function(dispositions, callback, queueOpts)
+        {
+            for(var d in dispositions) dispositions[d]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.submission.DispositionDto';
+            RA.Service.callLocal("SubmissionController.verifySubmissionDispositionById", {dispositions: dispositions}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.saveProductPremiums = function(submission, quote, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.saveProductPremiums", {dto: submission, quote: quote}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updatePolicyStatus = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.updatePolicyStatus", {params: params}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateSubmission = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.updateSubmission", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateSubmissionAndQuote = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.updateSubmissionAndQuote", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.markAsRated = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.markAsRated", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.markAsProcessed = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.markAsProcessed", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doPopulateAvailableProducts = function doPopulateAvailableProducts(submissionDto, callback, queueOpts)
+        {
+            submissionDto['@type'] = 'com.gaic.bue.uwd.ra.common.dto.submission.SubmissionDto';
+            RA.Service.callLocal("SubmissionController.doPopulateAvailableProducts", {dto: submissionDto}, {'callback':RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSubWithLatestTransDateByPolicyMod = function(policyNumber, mod, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findSubWithLatestTransDateByPolicyMod",{policyNumber: policyNumber, mod: mod}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.hasPrevActiveNotIssuedPolicy = function hasPrevActiveNotIssuedPolicy(symbol, policyNumber, mod, callback, queueOpts){
+            RA.Service.callLocal("SubmissionController.hasPrevActiveNotIssuedPolicy",{symbol: symbol, policyNumber: policyNumber, mod: mod}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        }
+        this.isFirstTimeWorking = function isFirstTimeWorking(submissionId,callback, queueOpts){
+            RA.Service.callLocal("SubmissionController.isFirstTimeWorking",{submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        }
+
+        this.initQuote = function initQuote(symbolName, productNames, quoteRpmSession, scope, callback, queueOpts) {
+            quoteRpmSession = RA.Controller.serialize(quoteRpmSession) || new Dynamis.RpmSession(null);
+
+            scope = scope || {}
+            var args = {
+                'symbolName'   : symbolName,
+                'productNames' : productNames,
+                'scope'        : {'@type':'java.util.Map', scope: scope}
+            };
+            var request = new RA.PipelineRequest('initQuote', args, quoteRpmSession, RA.Service.createCallback(callback));
+            request.execute();
+        }
+
+        this.getHiddenFields = function(objClasses, symbol, submissionId, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.getHiddenFields", {objectClasses: objClasses, symbol: symbol, submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doDeleteMoreNamedInsured = function(productName, submissionDto, quoteDto, party, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doDeleteMoreNamedInsured", {productName: productName, dto:submissionDto, quoteDto: quoteDto, party:party}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.doDeleteMoreNamedInsuredWithReducedSession = function(productName, submissionDto, quoteDto, party, useReducedQuoteSession, screenName, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.doDeleteMoreNamedInsured", {productName: productName, dto:submissionDto, quoteDto: quoteDto, party:party, useReducedQuoteSession: useReducedQuoteSession, screenName: screenName}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.findRolesForPolicyByHidAndRole = function(hid, role, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.findRolesForPolicyByHidAndRole", {hid:hid, role:role},
+                {"callback":RA.Service.createCallback(callback), "timeout": 300000}, queueOpts);
+        };
+        this.updateUserRole = function(policyArray, toUser, role, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.updateUserRole", {policyArray:policyArray, toUser:toUser, role:role},
+                {"callback":RA.Service.createCallback(callback), "timeout": 300000}, queueOpts);
+        }
+        this.editableForms = function(transactionType, transactionSubType,callback, queueOpts){
+            RA.Service.callLocal("FormsController.editableForms", {transactionType:transactionType, transactionSubType:transactionSubType},
+                {"callback":RA.Service.createCallback(callback), "timeout": 300000}, queueOpts);
+        }
+        this.getAnnualizedPremium = function(policyId, callback, queueOpts)
+        {
+            RA.Service.callLocal("SubmissionController.getAnnualizedPremium", {policyId: policyId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+
+    return new submissionService();
+});
+
+angular.module('notesServices',[]).
+factory('Notes', function()
+{
+    function notesService()
+    {
+        this.doDetermineNotesExist =  function(sourceId, policyIds, callback, queueOpts)
+        {
+            RA.Service.callLocal("NotesController.doDetermineNotesExist", {noteDto:{'@type': 'com.gaic.bue.uwd.ra.common.dto.notes.NoteDto', "sourceId":sourceId, "policyIds":policyIds}}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAccountNotes =  function(sourceId, noteLevel,showHiddenNotes, callback, queueOpts) {
+            RA.Service.callLocal("NotesController.findNotes", {noteDto:{'@type': 'com.gaic.bue.uwd.ra.common.dto.notes.NoteDto', "sourceId":sourceId, "noteLevel":noteLevel, "showHiddenIndicator":showHiddenNotes}}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            // do i need to add return statement?? return RA.Service.callLocal("QuoteController.findQuoteBySubmissionId", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+
+        };
+
+        this.findPolicyNotes =  function(sourceId,noteLevel,policyNumber,policyMod,policyVersion,showHiddenNotes,showPolicyMods, callback, queueOpts) {
+            RA.Service.callLocal("NotesController.findNotes", {noteDto:{"sourceId":sourceId, "noteLevel":noteLevel, "policyNumber":policyNumber, "policyMod":policyMod, "policyVersion":policyVersion, "showHiddenIndicator":showHiddenNotes, "policyAllModsIndicator":showPolicyMods}},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveAccountNote =  function(sourceId,noteLevel,workflowApplicationType,noteType,priority, noteText,callback, queueOpts) {
+            RA.Service.callLocal("NotesController.saveNote", {noteDto:{"sourceId":sourceId, "noteLevel":noteLevel, "workflowApplicationType":workflowApplicationType, "noteType":noteType, "priority":priority, "noteText":noteText}},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.savePolicyNote =  function(sourceId,noteLevel,workflowApplicationType, policyNumber,policyMod, policyVersion, noteType,priority,noteText,callback, queueOpts) {
+            RA.Service.callLocal("NotesController.saveNote", {noteDto:{"sourceId":sourceId, "noteLevel":noteLevel, "workflowApplicationType":workflowApplicationType, "policyNumber":policyNumber, "policyMod":policyMod,"policyVersion":policyVersion, "noteType":noteType, "priority":priority,"noteText":noteText}},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateAccountNote =  function(sourceId,noteLevel, noteType,noteText, hiddenIndicator,workflowCommentId, callback, queueOpts) {
+            RA.Service.callLocal("NotesController.updateNote", {noteDto:{"sourceId":sourceId, "noteLevel":noteLevel, "noteType":noteType, "noteText":noteText, "hiddenIndicator":hiddenIndicator, "workflowCommentId":workflowCommentId}},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updatePolicyNote =  function(sourceId,noteLevel, noteType,noteText, hiddenIndicator,workflowCommentId,callback, queueOpts) {
+            RA.Service.callLocal("NotesController.updateNote", {noteDto:{"sourceId":sourceId, "noteLevel":noteLevel, "noteType":noteType, "noteText":noteText, "hiddenIndicator":hiddenIndicator, "workflowCommentId":workflowCommentId}},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+    }
+
+    return new notesService();
+});
+
+angular.module('reportServices',[]).
+factory('Report', function()
+{
+    function reportService()
+    {
+        this.deletePrivateReportFilter =  function(filterCriteria, callback, queueOpts) {
+            RA.Service.callLocal("ReportController.deletePrivateReportFilter", {dto: filterCriteria}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCreateExportSpreadsheet =  function(exportColumns,reportResultList, callback, queueOpts) {
+            RA.Service.callLocal("ReportController.doCreateSubmissionPolicyExportSpreadsheet", {dto: {"exportColumnList":exportColumns, "reportResultMapList":reportResultList}} , {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doSubmissionPolicyReport =  function(filterCriteria, callback, queueOpts) {
+            filterCriteria['@type'] = 'com.gaic.bue.uwd.ra.common.dto.reports.ReportFilterCriteriaDto';
+            RA.Service.callLocal("ReportController.doSubmissionPolicyReport", {dto: filterCriteria}, {"callback":RA.Service.createCallback(callback),"timeout":120000 }, queueOpts);
+        };
+
+        this.findAvailableExportColumns =  function(callback, queueOpts) {
+            RA.Service.callLocal("ReportController.findAvailableExportColumns", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPrivateReportFilters =  function(callback, queueOpts) {
+            RA.Service.callLocal("ReportController.findPrivateReportFilters", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findEmptyFilterDto =  function(callback, queueOpts) {
+            RA.Service.callLocal("ReportController.findEmptyFilterDto", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.savePrivateReportFilter =  function(filterCriteria, callback, queueOpts) {
+            RA.Service.callLocal("ReportController.savePrivateReportFilter", {dto: filterCriteria}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updatePrivateReportFilter =  function(filterCriteria, callback, queueOpts) {
+            RA.Service.callLocal("ReportController.updatePrivateReportFilter", {dto: filterCriteria}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+    }
+
+    return new reportService();
+});
+
+angular.module('accountServices',[]).
+factory('Account', function()
+{
+    function accountService()
+    {
+        this.findAccountSession = function(accountId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findAccountSession", {accountId: accountId}, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.findAccountSummary = function(accountSummaryDto, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findAccountSummary", accountSummaryDto, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.findPolicyDetails = function(policyId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findPolicyDetails", policyId, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAccountPolicies = function(customerNumber, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findAccountPolicies", {customerNumber: customerNumber}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAccountPoliciesForNotes = function(customerNumber, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findAccountPoliciesForNotes", {customerNumber: customerNumber}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCreateAggregate =  function(map, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.doCreateAggregate", {aggregateMap: map}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doUpdateAggregate =  function(map, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.doUpdateAggregate", {aggregateMap: map}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doShowPriorCarrierLosses =  function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.doShowPriorCarrierLosses", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAggregates = function(searchType, searchString, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findAggregates", {searchType: searchType, searchString: searchString}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findGAILosses = function(lossHistoryDto, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findGAILosses", {dto: lossHistoryDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.getPolicyPremiums = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.getPolicyPremiums", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.getAccountPremiums = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.getAccountPremiums", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCustomerExperience = function(customerNumber, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findCustomerExperience", {customerNumber: customerNumber}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findRelatedAggregates = function(aggregateId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findRelatedAggregates", {aggregateId: aggregateId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDistinctPoliciesFromAggregateId = function(aggregateId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findDistinctPoliciesFromAggregateId",
+                {aggregateId: aggregateId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSavedReports = function(reportsDto, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.findSavedReports", reportsDto, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.getHiddenFields = function(objClasses,symbol, callback, queueOpts)
+        {
+            RA.Service.callLocal("AccountController.getHiddenFields", {objectClasses: objClasses, symbol: symbol}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveAccountSummaryReports = function(reportsDto, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.saveAccountSummaryReports", reportsDto, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.validateContact =  function(contactType, accountMap, partyMap, placeMap, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.validateContact", {contactType: contactType, account: accountMap, party: partyMap, place: placeMap}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateAccountSession =  function(accountId, rpmSession, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.updateAccountSession", {accountId: accountId, rpmSession: rpmSession}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateSecurityAgreement =  function(accountId, rpmObject, rpmSession, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.updateSecurityAgreement", {accountId: accountId, updateObject: rpmObject, rpmSession: rpmSession}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateBuReferral =  function(accountId, rpmObject, rpmSession, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AccountController.updateBuReferral",
+                {accountId: accountId, updateObject: rpmObject, rpmSession: rpmSession},
+                {"callback":RA.Service.createCallback(callback)},
+                queueOpts);
+        };
+    }
+    return new accountService();
+});
+
+angular.module('activityServices',[]).
+factory('Activity', function()
+{
+    function activityService()
+    {
+        this.doCheckForOutOfSequence = function(submissionId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.doCheckForOutOfSequence", {submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCheckForEarlierActiveTransactions = function(submissionId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.doCheckForEarlierActiveTransactions",
+                {submissionId: submissionId},
+                {"callback":RA.Service.createCallback(callback)},
+                queueOpts);
+        };
+
+        this.doCheckForPendingRateChange = function(submissionId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.doCheckForPendingRateChange",
+                {submissionId: submissionId},
+                {"callback":RA.Service.createCallback(callback)},
+                queueOpts);
+        };
+
+        this.doCheckValidCreate = function(policies, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.doCheckValidCreate", {policies: policies}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCheckForRelatedCancellationActivity = function(submissionId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.doCheckForRelatedCancellationActivity", {submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCheckForMidTerm = function(activityDto, callback, queueOpts)
+        {
+            activityDto['@type'] = 'com.gaic.bue.uwd.ra.common.dto.activities.ActivityDto';
+            return RA.Service.callLocal("ActivityController.doCheckForMidTerm", {dto: activityDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCheckForReminders = function(submissionId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.doCheckForReminders", {submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCreateActivities = function(activities, callback, queueOpts)
+        {
+            for(var a in activities) activities[a]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.activities.ActivityDto';
+            return RA.Service.callLocal("ActivityController.doCreateActivities", {activities: activities}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCreateReminder = function(activities, callback, queueOpts)
+        {
+            for(var a in activities) activities[a]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.activities.ActivityDto';
+            return RA.Service.callLocal("ActivityController.doCreateReminders", {activities: activities}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doFindReinstatementTRNEffectiveDate = function(activities, callback, queueOpts)
+        {
+            for(var a in activities) activities[a]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.activities.ActivityDto';
+            return RA.Service.callLocal("ActivityController.doFindReinstatementTRNEffectiveDate", {activities: activities}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doUnlockActivities = function(activities, callback, queueOpts)
+        {
+            for(var a in activities) activities[a]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.activities.ActivityDto';
+            return RA.Service.callLocal("ActivityController.doUnlockActivities", {activities: activities}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doViewMultipleMods = function(policyNumbers, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.doViewMultipleMods", {policyNumbers: policyNumbers}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doWorkActivity = function(sourceId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.doWorkActivity", {sourceId: parseInt(sourceId)}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findActivityDetails = function(activityDto, callback, queueOpts)
+        {
+            activityDto['@type'] = 'com.gaic.bue.uwd.ra.common.dto.activities.ActivityDto';
+            return RA.Service.callLocal("ActivityController.findActivityDetails", {dto: activityDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findActivitiesBySourceId = function(sourceId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findActivitiesBySourceId", {sourceId: sourceId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAuditComments = function(sourceId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findAuditComments", {sourceId: parseInt(sourceId)}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findAuditCommentsForReminder = function(sourceId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findAuditCommentsForReminder", {activityId: parseInt(sourceId)}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findUserCommentsBySourceId = function(sourceId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findUserCommentsBySourceId", {sourceId: parseInt(sourceId)}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findOriginalUserCommentsBySourceId = function(sourceId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findOriginalUserCommentsBySourceId", {sourceId: parseInt(sourceId)}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.findUnderwriterHidBySourceId = function(sourceId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findUnderwriterHidBySourceId",
+                {sourceId: parseInt(sourceId)}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findDisabledFields = function(changeDetailsAdditionalFields, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findDisabledFields",
+                {changeDetailsAdditionalFields:changeDetailsAdditionalFields}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findIssuedRenewals = function(policyNumber, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findIssuedRenewals", {policyNumber: policyNumber}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateFromExternalPAS = function(submissionIds, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.updateFromExternalPAS", {submissionIds: submissionIds}, {"callback":RA.Service.createCallback(callback), "timeout":120000}, queueOpts);
+        };
+
+        this.findPolicyTerms = function(submissions, callback, queueOpts)
+        {
+            for(var i = 0; i < submissions.length; i++)
+            {
+                var sub = submissions[i]
+                sub.submissionId = Number(sub.submissionId)
+                sub['@type'] = 'com.gaic.bue.uwd.ra.common.dto.submission.SubmissionDto';
+            }
+            return RA.Service.callLocal("ActivityController.findPolicyTerms", {submissions: submissions}, {"callback":RA.Service.createCallback(callback), "timeout":120000}, queueOpts);
+        };
+
+        this.findActivitiesForPolicy = function(policies, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findActivitiesForPolicy", {policies: policies}, {"callback":RA.Service.createCallback(callback), "timeout":120000}, queueOpts);
+        };
+
+        this.findReverseNonRenewalTRNEffectiveDate = function(policyIds, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findReverseNonRenewalTRNEffectiveDate", {policyIds: policyIds}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSubmissionIdByPolicyId = function(policyId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findSubmissionIdByPolicyId", {policyId: parseInt(policyId)}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findCopyEligibleSubmissionIdByPolicyId = function(policyId, callback, queueOpts)
+        {
+            return RA.Service.callLocal("ActivityController.findCopyEligibleSubmissionIdByPolicyId", {policyId: parseInt(policyId)}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveActivityDetails = function(activities, clearedFieldsList, changeDetailsAdditionalFields, callback, queueOpts)
+        {
+            for(var a in activities) activities[a]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.activities.ActivityDto';
+            return RA.Service.callLocal("ActivityController.saveActivityDetails",
+                {activities: activities, clearedFieldsList:clearedFieldsList, changeDetailsAdditionalFields:changeDetailsAdditionalFields},
+                {"callback":RA.Service.createCallback(callback)},
+                queueOpts);
+        };
+
+        this.saveAndCloseReminders = function(activities, callback, queueOpts)
+        {
+            for(var a in activities) activities[a]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.activities.ActivityDto';
+            return RA.Service.callLocal("ActivityController.saveAndCloseReminders", {activities: activities}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveAndUnlockActivityDetails = function(activities, clearedFieldsList, changeDetailsAdditionalFields, callback, queueOpts)
+        {
+            for(var a in activities) activities[a]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.activities.ActivityDto';
+            return RA.Service.callLocal("ActivityController.saveAndUnlockActivityDetails",
+                {activities: activities, clearedFieldsList: clearedFieldsList, changeDetailsAdditionalFields:changeDetailsAdditionalFields},
+                {"callback":RA.Service.createCallback(callback)},
+                queueOpts);
+        };
+    }
+
+    return new activityService();
+});
+
+angular.module('navigationServices',[]).
+factory('Navigation', function()
+{
+    function navigationService()
+    {
+        this.doGetAddDocumentsParams = function(ids, callback, queueOpts)
+        {
+            return RA.Service.callLocal("NavigationController.doGetAddDocumentsParams", {submissionIds: ids}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetAddDocumentsParamsForPolicy = function(ids, callback, queueOpts)
+        {
+            return RA.Service.callLocal("NavigationController.doGetAddDocumentsParamsForPolicy", {policyIds: ids}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetAddDocumentsParamsForSubAndPolicy = function(myfileDto, callback, queueOpts)
+        {
+            return RA.Service.callLocal("NavigationController.doGetAddDocumentsParamsForSubAndPolicy", {dto: myfileDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetAddDocumentsUrl = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("NavigationController.doGetAddDocumentUrl", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetViewAccountDocumentsUrl = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("NavigationController.doGetViewAccountDocumentsUrl", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetViewPolicyDocumentsUrl = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("NavigationController.doGetViewPolicyDocumentsUrl", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetViewSupportingDocumentsUrl = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("NavigationController.doGetViewSupportingDocumentsUrl", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetMyFileLink = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("NavigationController.doGetMyFileLink", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetLeftNavNodes = function(submissionId, callback, queueOpts)
+        {
+            return RA.Service.callLocal('NavigationController.doBuildNavigation', submissionId, {'callback':RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPageLayout = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal('NavigationController.findPageLayout', null, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+    return new navigationService();
+});
+
+angular.module('renewalServices',[]).
+factory('Renewal', function()
+{
+    function renewalService()
+    {
+        this.doActivateRenewals = function(renewals, callback, queueOpts)
+        {
+            return RA.Service.callLocal("RenewalController.doActivateRenewals", {policyIdList: renewals}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.findFailedRenewals = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("RenewalController.findFailedRenewals", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.findRenewals = function(renewalSearchDto, callback, queueOpts)
+        {
+            renewalSearchDto['@type'] = 'com.gaic.bue.uwd.ra.common.dto.renewal.RenewalSearchDto';
+            return RA.Service.callLocal("RenewalController.findRenewals", {dto: renewalSearchDto}, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.findRenewalStatus = function(batchQueueDto, callback, queueOpts)
+        {
+            return RA.Service.callLocal("RenewalController.findRenewalStatus", {dto: batchQueueDto}, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.doPopulatePolicyDetails = function(renewalDto, callback, queueOpts)
+        {
+            return RA.Service.callLocal("RenewalController.doPopulatePolicyDetails", {dto: renewalDto}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doProcessRenewalExceptionReport = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("RenewalController.doProcessRenewalExceptionReport", null,{"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCreateRenewals = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("RenewalController.doCreateRenewals", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback),"timeout":360000}, queueOpts);
+        };
+
+        this.doCreateExportSpreadsheet = function(renewals, callback, queueOpts)
+        {
+            for(var r in renewals) renewals[r]['@type'] = 'com.gaic.bue.uwd.ra.common.dto.renewal.RenewalExportDto';
+            return RA.Service.callLocal("RenewalController.doCreateExportSpreadsheet", {renewals: renewals}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunRenewals = function(businessUnit, callback, queueOpts)
+        {
+            return RA.Service.callLocal("RenewalController.doRunRenewals", businessUnit, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+    return new renewalService();
+});
+
+angular.module('loggingServices',[]).
+factory('Logging', function()
+{
+    function loggingService()
+    {
+        this.logMyInfo = function(userName, message, stackTrace, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LoggingController.logMyInfo", {dto: {"user": userName, "message": message, "stackTrace": stackTrace}}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+    return new loggingService();
+});
+
+angular.module('adminServices',[]).
+factory('Admin', function()
+{
+    function adminService()
+    {
+        this.doChangeBusinessUnit = function(data, callback, queueOpts)
+        {
+            return RA.Service.callLocal('AdminController.doChangeBusinessUnit', {businessDivisionCode: data}, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doSetUserDetails = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal('AdminController.doSetUserDetails', params, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetUserDetails = function( callback, queueOpts)
+        {
+            return RA.Service.callLocal('AdminController.doGetUserDetails', null, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doChangeLogLevel = function(data, callback, queueOpts)
+        {
+            return RA.Service.callLocal('AdminController.doChangeLogLevel', data, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doReloadCPR = function(callback, queueOpts) {
+            return RA.Service.callLocal('AdminController.doReloadCPR', null, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetServername = function(callback, queueOpts) {
+            return RA.Service.callLocal('AdminController.doGetServername', null, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunPendingRateChangeBatch = function(businessUnit, callback, queueOpts) {
+
+            RA.Service.callLocal('AdminController.doRunPendingRateChangeBatch',
+                {businessUnit: businessUnit, actionName: 'PRCBatchQueue', hostName: 'adminTest', className:'com.gaic.bue.uwd.ra.batch.PendingRateChange.PendingRateChangeBatchUpdate'},
+                {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunPendingRateChangePolicyBatch = function(businessUnit, callback, queueOpts) {
+
+            RA.Service.callLocal('AdminController.doRunPendingRateChangePolicyBatch',
+                {businessUnit: businessUnit, actionName: 'PRCPolicyQueue', hostName: 'adminTest',className:'com.gaic.bue.uwd.ra.batch.PendingRateChange.PendingRateChangePolicyBatchUpdate'},
+                {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunRetroCalcBatch = function(businessUnit, callback, queueOpts) {
+
+            RA.Service.callLocal('AdminController.doRunRetroCalcBatch',
+                {businessUnit: businessUnit, actionName: 'RetroBatchQueue', hostName: 'adminTest',className:'com.gaic.bue.uwd.ra.batch.RetroCalc.RetroCalcBatchUpdate'},
+                {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGenerateRpmView = function(submissionId, callback, queueOpts)
+        {
+            return RA.Service.callLocal('AdminController.doGenerateRpmView', {submissionId: submissionId}, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.executeRpmQuery = function(queryParms, callback, queueOpts)
+        {
+            return RA.Service.callLocal('AdminController.doExecuteRpmQuery', queryParms, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.buildRpmTreeView = function(submissionId, quoteId, visited, callback, queueOpts)
+        {
+            return RA.Service.callLocal('AdminController.buildRpmTreeView', {submissionId: submissionId,quoteId: quoteId,visited: null}, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.buildLetterTreeView = function(customerId, callback, queueOpts)
+        {
+            return RA.Service.callLocal('AdminController.buildLetterTreeView', {customerId: customerId}, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.buildOOSRpmTreeView = function(submissionId, visited, callback, queueOpts)
+        {
+            return RA.Service.callLocal('AdminController.buildOOSRpmTreeView', {submissionId: submissionId, visited: null}, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.pipeline = function(payload, callback, queueOpts)
+        {
+            return RA.Service.callLocal("RpmPipelineController.route", payload, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.reloadCubes = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doReloadNCube", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.reloadSelectCubes = function(cubes, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doReloadSelectedNCubes", {"ncubes":cubes}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findPolicyDates = function(policyNumber, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.findPolicyDates", {policyNumber: policyNumber}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.getSearchFields = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doGetSearchFields", null, {"callback": RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunRpmSearchUpdate = function(field, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doRunRpmSearchUpdate", {field: field}, {"callback": RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateSingleSubmissionSOA = function(submissionId, soaRefCode, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.updateSingleSubmissionSOA", {submissionId:submissionId, newSoaRefCode: soaRefCode},  {"callback": RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doSendBinaryData = function doSendBinaryData(data, callback, queueOpts)
+        {
+            $.ajax(
+                {
+                    url: 'admin/doDataMigration',
+                    type: 'POST',
+                    data: data,
+                    contentType: 'application/octet-stream',
+                    dataType: 'json',
+                    success: callback,
+                    error: callback
+                }
+            );
+        };
+
+        this.doSetSystemDate = function doSetSystemDate(date, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doSetSystemDate", {systemDate: date}, {'callback':RA.Service.createCallback(callback)}, queueOpts);
+        }
+
+        this.findSubmissionBatchUploadStatus = function findSubmissionBatchUploadStatus(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.findSubmissionBatchUploadStatus", null, {'callback':RA.Service.createCallback(callback)}, queueOpts);
+        }
+
+        this.findBatchQueueStatusWithLikeClause = function findBatchQueueStatusLike(batchQueueDto, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.findBatchQueueStatusWithLikeClause", {dto: batchQueueDto}, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.findLatestBatchQueueEntryByAction = function findLatestBatchQueueEntryByAction(action, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.findLatestBatchQueueEntryByAction", {action: action}, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.findAsyncBatchQueue = function findAsyncBatchQueue(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.findAsyncBatchQueue", null, {"callback":RA.Service.createCallback(callback),"timeout":120000}, queueOpts);
+        };
+
+        this.doAdminDeleteSubmission =  function(submissionId, callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.doAdminDeleteSubmission", {submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doAdminUnDeleteSubmission =  function(submissionId, callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.doAdminUnDeleteSubmission", {submissionId: submissionId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doAdminPhysicallyDeleteSubmissions =  function(submissionIds, callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.doAdminPhysicallyDeleteSubmissions", {submissionIds: submissionIds}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doAdminTestDataCleanup =  function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.doAdminTestDataCleanup", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.changeSubmissionStatusDevLocalOnly =  function(submissionId, statusCd, callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.changeSubmissionStatusDevLocalOnly", {submissionId: submissionId, statusCd: statusCd}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.changeTransactionType =  function(submissionId, transactionType, transactionSubType, callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.changeTransactionType",
+                {submissionId: submissionId, transactionType: transactionType, transactionSubType: transactionSubType},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doAdminInsertPubSubEvent =  function(submissionIds, actionCode, actionType, numberOfPubSubWorkers, isRepubIndChecked, callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.doAdminInsertPubSubEvent",
+                {submissionIds: submissionIds, actionCode: actionCode, actionType : actionType, numberOfPubSubWorkers: numberOfPubSubWorkers,
+                    isRepubIndChecked : isRepubIndChecked}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doInsertBulkSubmissionsForPubSubBatch = function(cleanBulkSubmissions, callback, queueOpts) {
+            RA.Service.callLocal("AdminController.doInsertBulkPubSubSubmissions", {bulkSubmissionPubSub : cleanBulkSubmissions}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doAdminGenerateXml = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doAdminGenerateXml", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doAdminFindInEAM = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doAdminFindInEAM", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunDataBatching = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doRunDataBatching", params, {"callback":RA.Service.createCallback(callback),"timeout":0}, queueOpts);
+        };
+
+        this.doDropRpmSearchIndex = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doDropRpmSearchIndex", params, {"callback":RA.Service.createCallback(callback),"timeout":0}, queueOpts);
+        };
+
+        this.doCreateRpmSearchIndex = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doCreateRpmSearchIndex", params, {"callback":RA.Service.createCallback(callback),"timeout":0}, queueOpts);
+        };
+
+        this.doRunDataConversion = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doRunDataConversion", params, {"callback":RA.Service.createCallback(callback),"timeout":0}, queueOpts);
+        };
+
+        this.doConvertSubmRefNoCd = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doConvertSubmRefNoCd", params, {"callback":RA.Service.createCallback(callback),"timeout":0}, queueOpts);
+        };
+
+        this.doObsoleteConversionErrors = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doObsoleteConversionErrors", params, {"callback":RA.Service.createCallback(callback),"timeout":0}, queueOpts);
+        };
+
+        this.doResetLegacyUDConversion = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doResetLegacyUDConversion", params, {"callback":RA.Service.createCallback(callback),"timeout":0}, queueOpts);
+        };
+
+        this.doStopLegacyUDConversion = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doStopLegacyUDConversion", params, {"callback":RA.Service.createCallback(callback),"timeout":0}, queueOpts);
+        };
+
+        this.doResetLegacyUDConversionInProcess = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doResetLegacyUDConversionInProcess", params, {"callback":RA.Service.createCallback(callback),"timeout":0}, queueOpts);
+        };
+
+        this.doRunRpmXmlSweep = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.doRunRpmXmlSweep", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doUpdateRpmXmlConfig = function(numRpmXmlWorker, callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.updateBqConfigWorker", {numWorker: numRpmXmlWorker, actionNm : 'RpmXmlConfigEventHandler'},{"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doUpdatePubSubConfig = function(numPubSubWorker, actionNm, callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.updateBqConfigWorker", {numWorker: numPubSubWorker, actionNm : actionNm},{"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetPubSubWorkerCount = function(callback, queueOpts)
+        {
+            RA.Service.callLocal("AdminController.doGetPubSubWorkerCount", null,{"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetCachedMethods = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doGetCachedMethods", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doClearCachedMethods = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doClearCachedMethods", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGatherProducerCachedCubeStats = function(callback, queueOpts)
+        {
+            RA.Service.callLocal('AdminController.doGatherProducerCachedCubeStats', null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doFindAllReadyToBePublishedCounts = function(callback, queueOpts)
+        {
+            RA.Service.callLocal('AdminController.doFindAllReadyToBePublishedCounts', null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateSinglePolicyStatus = function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal('AdminController.updateSinglePolicyStatus', params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunOrphanedLobs = function(jobToRun, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doRunOrphanedLobs",  {jobToRun: jobToRun}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunMissingLOBNamedRoot = function(jobToRun, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doRunMissingLOBNamedRoot",  {jobToRun: jobToRun}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doFixLobProductRels= function(relsToFix, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doRunLobProductUpdate", {quoteIds: relsToFix}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGenerateInitialSourceNames = function(commitAfterEachGroup, overwriteNonNullValues, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doGenerateInitialSourceNames",  {commitAfterEachGroup: commitAfterEachGroup, overwriteNonNullValues: overwriteNonNullValues}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCheckMissingSourceNames = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doCheckMissingSourceNames",  null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGenerateMissingSourceNames = function(commitAfterEachGroup, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doGenerateMissingSourceNames",  {commitAfterEachGroup: commitAfterEachGroup}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCleanupMissingSourceNames = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doCleanupMissingSourceNames",  null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doCleanupFdeFields = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doCleanupFdeFields",  null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doGetRpmSearchStatus = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doGetRpmSearchStatus",  null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.lookupMdmData = function(mdmKey, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.lookupMdmData", {mdmKey:mdmKey},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.lookupClassCodeData = function(code, suffix, dates, lob, state, callback, queueOpts) // dates are combined because Hudson only allows 7 parameters!
+        {
+            return RA.Service.callLocal("AdminController.lookupClassCodeData", {code:code, suffix:suffix, quoteDate:dates[0], policyEffectiveDate:dates[1], lob:lob, state:state},
+                {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.lookupStatCodeData = function(code, dates, lob, state, coverageCd, callback, queueOpts) // dates are combined because Hudson only allows 7 parameters!
+        {
+            return RA.Service.callLocal("AdminController.lookupStatCodeData", {code:code, quoteDate:dates[0], policyEffectiveDate:dates[1], lob:lob, state:state,
+                coverageCd:coverageCd}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.searchMdmData = function(lob, state, quoteDate, policyEffectiveDate, removeCommas, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.searchMdmData", {lob:lob, state:state, quoteDate:quoteDate,
+                policyEffectiveDate:policyEffectiveDate, removeCommas:removeCommas}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.getPendingRateChanges = function(callback, queueOpts) {
+            return RA.Service.callLocal("AdminController.getPendingRateChanges", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.addPendingRateChange = function(state, minPolEffDt, beginDt, endDt, callback, queueOpts) {
+            return RA.Service.callLocal("AdminController.addPendingRateChange", {state:state, minPolEffDt:minPolEffDt, beginDt:beginDt, endDt:endDt}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updatePendingRateChange = function(rowId, endDt, state, callback, queueOpts) {
+            return RA.Service.callLocal("AdminController.updatePendingRateChange", {rowId:rowId, endDt:endDt, state:state}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doRunPartyRoleRefCodes = function(jobToRun, callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doRunPartyRoleRefCodes",  {jobToRun: jobToRun}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doFindContextIndexList = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doFindContextIndexList",  null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doDropContextIndexes = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doDropContextIndexes",  null, {"callback":RA.Service.createCallback(callback), "timeout": 300000}, queueOpts);
+        };
+
+        this.doCreateContextIndexes = function(callback, queueOpts)
+        {
+            return RA.Service.callLocal("AdminController.doCreateContextIndexes",  null, {"callback":RA.Service.createCallback(callback), "timeout": 300000}, queueOpts);
+        };
+
+        this.saveRetroRecords = function(queueData, callback, queueOpts) {
+            return RA.Service.callLocal("AdminController.addRetroQueueTestData", {queueData:queueData}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.viewRetroRecords = function(callback, queueOpts) {
+            return RA.Service.callLocal("AdminController.viewRetroQueueTestData", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    };
+
+    return new adminService();
+});
+
+
+angular.module('quoteServices',[]).
+factory('Quote', function()
+{
+    function quoteService()
+    {
+        this.findQuoteBySubmissionId = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.findQuoteBySubmissionId", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findProducerCommissions = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.findProducerCommissions", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+
+        this.findMasterProducerDetails = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.findMasterProducerDetails", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+
+        this.saveBillingAccount = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.saveBillingAccount", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.saveQuote = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.saveQuote", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateQuote = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.updateQuote", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateQuoteListRatingStatus = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.updateQuoteListRatingStatus", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.copyQuote = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.copyQuote", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.addQuote = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.addQuote", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.deleteQuote = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.deleteQuote", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doMarkAsQuoted = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.doMarkAsQuoted", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findBilling = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.findBilling", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateBilling = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("QuoteController.updateBilling", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.getHiddenFields = function(objClasses, symbol, callback, queueOpts)
+        {
+            RA.Service.callLocal("QuoteController.getHiddenFields", {objectClasses: objClasses, symbol: symbol}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+    return new quoteService();
+});
+
+angular.module('issuanceServices',[]).
+factory('Issuance', function()
+{
+    function issuanceService()
+    {
+        this.doBindForWorkflow = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("IssuanceController.doBindForWorkflow", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doBindAndUpdate = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("IssuanceController.doBindAndUpdate", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doIssueAndUpdate = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("IssuanceController.doIssueAndUpdate", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doUnBindAndUpdate = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("IssuanceController.doUnBindAndUpdate", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doUnbind = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("IssuanceController.doUnbind", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.doIssueForWorkflow = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("IssuanceController.doIssueForWorkflow", RA.Controller.serialize(params), {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findIssuance = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("IssuanceController.findIssuance", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateIssuance = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("IssuanceController.updateIssuance", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+    return new issuanceService();
+});
+
+angular.module('letterServices',[]).
+factory('Letter', function()
+{
+    function letterService()
+    {
+        this.loadLettersPage  = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.loadLettersPage", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.loadTemplate = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.loadTemplate", params, {"callback":RA.Service.createCallback(callback),"timeout":360000}, queueOpts);
+
+        };
+        this.save  = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.save", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.copy  = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.copy", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.delete  = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.delete", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.saveInstance  = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.saveInstance", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.markInstance  = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.markInstance", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.updateSubjectivities  = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.updateSubjectivities", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.buildHtml = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.buildHtml", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.processManualSave = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.processManualSave", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.addRpmObject = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.addRpmObject", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.removeRpmObject = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.removeRpmObject", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.updateRpmObject = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.updateRpmObject", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.findRatingSystemsList = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.findRatingSystemsList", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.saveForm = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.saveForm", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.removeForm = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.removeForm", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.sendPdfToMyFile = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("LetterController.sendPdfToMyFile", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+    return new letterService();
+});
+
+angular.module('rpmServices',[]).
+factory('RpmGraphView', function()
+{
+    function RpmService()
+    {
+        this.findRelatedActivities = function(submissionId, callback, queueOpts)
+        {
+            return RA.Service.callLocal('RpmGraphViewController.findRelatedActivities', {submissionId: submissionId}, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+        this.visualizeSession = function(sessionId, isQuote, callback, queueOpts)
+        {
+            return RA.Service.callLocal('RpmGraphViewController.visualizeSession', {sessionId: sessionId, isQuote: isQuote}, {callback: RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+    return new RpmService();
+});
+
+angular.module('formsServices',[])
+    .config(function($provide) {
+        var formFields = function() {
+            return function(forms, pattern) {
+                if (!pattern) return forms;
+                var matching = [];
+                for (var i = 0; i < forms.length; i++) {
+                    if (forms[i].formCode.toLowerCase().indexOf(pattern.toLowerCase()) != -1  ||
+                        forms[i].edition.toLowerCase().indexOf(pattern.toLowerCase()) != -1   ||
+                        forms[i].title.toLowerCase().indexOf(pattern.toLowerCase()) != -1)
+                        matching.push(forms[i]);
+                }
+                return matching;
+            }
+        }
+        $provide.provider('formFieldsFilter', function() {
+            this.$get = formFields;
+        });
+        angular.module('formsServices', []).filter('formFieldsFilter', formFields);
+    })
+    .factory('Forms', function() {
+        function formsService() {
+            RA.Session.setTimeout(600000);
+            this.searchForms         = function(params, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.searchForms", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.getCompleteFormList = function(params, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.getCompleteFormList", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.getProForm          = function(formId, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.getProForm", {"formId": formId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.loadQuoteForForms   = function(quoteId, mainDisplayPage, product, productId, refreshFlag, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.loadQuoteForForms", {"quoteId": quoteId, "mainDisplayPage" : mainDisplayPage,
+                    "product":product, "productId":productId, "refreshFlag" : refreshFlag }, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.loadAllForms   = function(quoteId, refreshFlag, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.loadQuoteForForms", {"quoteId": quoteId, "refreshFlag" : refreshFlag },
+                    {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.getRpmTemplates     = function(quoteId, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.getRpmTemplates", {"quoteId": quoteId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.saveForms           = function(quoteId, mainDisplayPage, product, productId, quoteSession, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.saveForms", {"quoteId":quoteId, "mainDisplayPage":mainDisplayPage,
+                    "product":product, "productId":productId, "quoteSession":quoteSession}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.invokePrintPreview  = function(submissionId, quoteId, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.invokePrintPreview", {"submissionId" : submissionId, "quoteId": quoteId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.findMyFileStatus    = function(quoteId, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.findMyFileStatus", {"quoteId": quoteId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.getMyFileDocuments  = function(quoteId, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.getMyFileDocuments", {"quoteId": quoteId}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.addCopyOfOptionalForm           = function(quoteId, optionalForm,  mainDisplayPage, product, productId, quoteSession,submissionDto, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.addCopyOfOptionalForm", {"quoteId": quoteId, "optionalForm": optionalForm , "mainDisplayPage" : mainDisplayPage,
+                        "product":product, "productId":productId, "quoteSession": quoteSession, "submissionDto": submissionDto },
+                    {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.savePrintPreferences           = function(quoteId, quoteSession, callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.savePrintPreferences", {"quoteId": quoteId,"quoteSession": quoteSession}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+            this.getHiddenMandatoryFormsList    = function(callback, queueOpts) {
+                return RA.Service.callLocal("FormsController.getHiddenMandatoryFormsList", null, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+            };
+        }
+        return new formsService();
+    });
+
+angular.module('oosServices', []).
+factory('OOS', function()
+{
+    function oosService()
+    {
+        this.findRpmInstanceBySubmissionId = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("OosController.findRpmInstanceBySubmissionId", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.updateOosSubmissionSession = function(params, callback, queueOpts)
+        {
+            return RA.Service.callLocal("OosController.updateOosSubmissionSession", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.continueOos = function(params, callback, queueOpts)
+        {
+            params.issueWithReview = false;
+            return RA.Service.callLocal("OosController.continueOos", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.continueOosWithReview = function(params, callback, queueOpts)
+        {
+            params.issueWithReview = true;
+            return RA.Service.callLocal("OosController.continueOos", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.cancelOosProcess = function(data, callback, queueOpts)
+        {
+            return RA.Service.callLocal("OosController.cancelOosProcess", data, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+    }
+    return new oosService();
+});
+
+angular.module('productServices',[]).
+factory('Product', function()
+{
+    function productService()
+    {
+        this.setSafePakBuildingOccupancy =  function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("ProductController.setSafePakBuildingOccupancy", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.setSafePakBusinessDescription =  function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("ProductController.setSafePakBusinessDescription", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.findSafePakRatingTerritoryLongDesc =  function(description, callback, queueOpts)
+        {
+            RA.Service.callLocal("ProductController.findSafePakRatingTerritoryLongDesc", {description: description}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.enableSafePakBuildingScheduleCoveragesSections =  function(buildingNumber, callback, queueOpts)
+        {
+            RA.Service.callLocal("ProductController.enableSafePakBuildingScheduleCoveragesSections", {buildingNumber: buildingNumber}, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+
+        this.setHazardGroupDefaultFromPolicyClass =  function(params, callback, queueOpts)
+        {
+            RA.Service.callLocal("ProductController.setHazardGroupDefaultFromPolicyClass", params, {"callback":RA.Service.createCallback(callback)}, queueOpts);
+        };
+    }
+    return new productService();
+});
+

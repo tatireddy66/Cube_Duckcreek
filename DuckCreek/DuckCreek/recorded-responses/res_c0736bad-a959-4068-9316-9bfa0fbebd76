@@ -1,0 +1,70 @@
+Ext.define('DCT.ComparisonSlider2', {
+	override: 'DCT.ComparisonSlider',
+	
+	fieldSubTpl: [
+		'<div id="{cmpId}-compValueEl" data-ref="compValueEl" class="sliderComparison" role="presentation">',
+			'{%this.renderCompValue(out, values)%}',
+		'</div>',
+		'<div id="{id}" role="{role}" {inputAttrTpl} class="' + Ext.baseCSSPrefix + 'slider {fieldCls} {vertical} sliderRange',
+			'{childElCls}"',
+			'<tpl if="tabIdx != null"> tabindex="{tabIdx}"</tpl>',
+			'<tpl foreach="ariaElAttributes"> {$}="{.}"</tpl>',
+			'<tpl foreach="inputElAriaAttributes"> {$}="{.}"</tpl>',
+			'<tpl if="isVertical"> aria-orientation="vertical"<tpl else> aria-orientation="horizontal"</tpl>',
+			'>',
+			'<div id="{cmpId}-endEl" data-ref="endEl" class="' + Ext.baseCSSPrefix + 'slider-end" role="presentation">',
+				'<div id="{cmpId}-innerEl" data-ref="innerEl" class="' + Ext.baseCSSPrefix + 'slider-inner" role="presentation">',
+					'{%this.renderThumbs(out, values)%}',
+				'</div>',
+			'</div>',
+			'<div id="{cmpId}-ticksEl" data-ref="ticksEl" class="sliderRangeTicks" role="presentation">',
+				'{%this.renderTicks(out, values)%}',
+			'</div>',
+		'</div>',
+		{
+			renderThumbs: function(out, values) {
+				var me = values.$comp,
+					i = 0,
+					thumbs = me.thumbs,
+					len = thumbs.length,
+					thumb,
+					thumbConfig;
+
+				for (; i < len; i++) {
+						thumb = thumbs[i];
+						thumbConfig = thumb.getElConfig();
+						thumbConfig.id = me.id + '-thumb-' + i;
+						Ext.DomHelper.generateMarkup(thumbConfig, out);
+				}
+			},
+			renderTicks: function(out, values) {
+				var me = values.$comp,
+					i = 0,
+					ticks = me.store.data.items,
+					len = ticks.length,
+					tick,
+						startPos = me.calculateThumbPosition(me.minValue),
+						nextPos = me.calculateThumbPosition((me.minValue + me.increment)),
+						diff = nextPos - startPos,
+						lastTick = 0,
+					tickConfig;
+
+				for (; i < len; i++) {
+					tick = ticks[i];
+					/* BEGIN BIS bugfix: make slider ticks align correctly regardless of # of options */
+					tickPosition = (i==0) ? (0-(diff/2)) : diff + lastTick;
+					lastTick = tickPosition;
+					tickConfig = {html: tick.data[me.captionField], cls: 'sliderTick', style: 'left: '+ tickPosition +'%; width: '+diff+'%;'};
+					/* END BIS */
+					Ext.DomHelper.generateMarkup(tickConfig, out);
+				}
+			},
+			renderCompValue: function(out, values) {
+				var me = values.$comp;
+				out.push(me.getComparisonValue(me.value));
+			},
+			disableFormats: true
+		}
+	]
+
+});

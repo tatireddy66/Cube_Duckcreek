@@ -1,0 +1,8 @@
+GET http://ctldl.windowsupdate.com/msdownload/update/v3/static/trustedr/en/disallowedcertstl.cab?e7d3c68285204b32 HTTP/1.1
+Accept: */*
+Accept-Encoding: peerdist
+User-Agent: Microsoft-CryptoAPI/10.0
+X-P2P-PeerDist: Version=1.1
+X-P2P-PeerDistEx: MinContentInformation=1.0, MaxContentInformation=2.0
+Host: ctldl.windowsupdate.com
+

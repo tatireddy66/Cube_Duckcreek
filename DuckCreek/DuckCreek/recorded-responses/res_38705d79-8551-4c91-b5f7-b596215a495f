@@ -1,0 +1,514 @@
+/**********************************
+ * RA.Controller
+ **********************************/
+
+RA.Controller.stringify = function stringify(obj) {
+    var json = Dynamis.IO.JsonWriter.objectToJson(obj);
+    return json;
+};
+
+RA.Controller.doExtractConfigFieldsFromRpmSession = function doExtractConfigFieldsFromRpmSession(rpmSession)
+{
+    var rpmObjects = rpmSession.getRpmObjects();
+    var buSpecificFieldsRpmObject;
+    var tempObj;
+
+    for (var key in rpmObjects)
+    {
+        tempObj = rpmObjects[key];
+
+        if (tempObj instanceof Dynamis.RpmObject && tempObj.getRpmClass().name === 'BUSpecificFields')
+        {
+            buSpecificFieldsRpmObject = tempObj;
+            break;
+        }
+    }
+    if(buSpecificFieldsRpmObject)
+        return buSpecificFieldsRpmObject.getFields();
+    else
+        return [];
+};
+
+RA.Controller.doResolveConfigFieldValues =  function doResolveConfigFieldValues(rpmFields, configFields)
+{
+    var rpmField;
+    var configField;
+
+    for (var i in rpmFields)
+    {
+        rpmField = rpmFields[i];
+
+        for (j in configFields)
+        {
+            configField = configFields[j];
+
+            if (rpmField.getName() === configField.name)
+            {
+                rpmField.setValue(configField.value);
+                break;
+            }
+        }
+    }
+};
+
+RA.Controller.doCreateConfigFields = function doCreateConfigFields(rpmFields)
+{
+    var configFields = [];
+    var configField;
+    var rpmField;
+    var uiAttributes;
+
+    for (var i in rpmFields)
+    {
+        rpmField = rpmFields[i];
+        configField = {};
+        configField.name = rpmField.getName();
+        configField.nameId = rpmField.getName();
+        // Convert first character of name to lower case (needed to use Validation Message Widget)
+        if (configField.nameId.length <= 1) {
+            configField.nameId = configField.Id.toLowerCase();
+        } else {
+            configField.nameId = configField.nameId.substring(0, 1).toLowerCase() + configField.nameId.substring(1);
+        }
+        configField.type = rpmField.getTrait('ui:type');
+        configField.label = rpmField.getTrait('ui:label');
+        configField.minlength = rpmField.getTrait('v:min');
+        configField.maxlength = rpmField.getTrait('v:max');
+        configField.value = rpmField.getValue();
+        configFields.push(configField);
+    }
+
+    return configFields;
+};
+
+RA.Controller.doExtractHiddenFields = function doCreateHiddenFields(rpmSession)
+{
+    var hiddenFields = {};
+    var hiddenFieldsRpmObject = rpmSession.getRpmObjectByName('buHideFields');
+    var fieldName;
+    var fieldsObj;
+
+    hiddenFieldsRpmObject = hiddenFieldsRpmObject ? hiddenFieldsRpmObject[0] : null;
+
+    if (hiddenFieldsRpmObject)
+    {
+        fieldsObj = hiddenFieldsRpmObject.getFields();
+
+        for (fieldName in fieldsObj)
+        {
+            if (fieldsObj.hasOwnProperty(fieldName))
+            {
+                hiddenFields[fieldName] = fieldsObj[fieldName];
+            }
+        }
+    }
+
+    return hiddenFields;
+}
+
+RA.Controller.doExtractContinuousTilCancelledOption = function doExtractContinuousTilCancelledOption(rpmSession)
+{
+    if (!rpmSession)
+        return CONTINUOUS_NOT_ELIGIBLE;
+
+    var rpmObjects = rpmSession.getRpmObjects();
+    for(var id in rpmObjects)
+    {
+        var rpmObject = rpmObjects[id];
+        var rpmClass = rpmObject.getRpmClass();
+        if(rpmClass.getName().indexOf('symbol.') > -1)
+        {
+            return rpmClass.getClassTrait('pd:continuousTillCancelledPolicy') || CONTINUOUS_NOT_ELIGIBLE;
+        }
+    }
+    return CONTINUOUS_NOT_ELIGIBLE;
+};
+
+RA.Controller.doAddOneYear = function doAddOneYear(dateString)
+{
+    if (!date)
+        return null;
+
+    var date = new Date(dateString);
+    date.setFullYear((expDate.getFullYear() + 1));
+    return date;
+};
+
+RA.Controller.doExtractContinuousTilCancelledDefaultValue = function doExtractContinuousTilCancelledDefaultValue(submission)
+{
+    var rpmSession = submission.rpmSession;
+
+    if (!rpmSession || !rpmSession.namedObjects || !rpmSession.namedObjects.selectedSymbols ||
+        !rpmSession.namedObjects.selectedSymbols.length || rpmSession.namedObjects.selectedSymbols.length < 1)
+    {
+        return false;
+    }
+
+    var symbolRpmObject = rpmSession.getRpmObjectById(rpmSession.namedObjects.selectedSymbols[0]);
+
+    var value = symbolRpmObject.getRpmClass().getClassTrait('pd:continuousTillCancelledPolicyDefaultValue') || false;
+
+    return value;
+};
+
+//TODO - revisit when Colleen updates code to include quote data elements
+RA.Controller.createSavedSubmission = function(submission)
+{
+    // THERE WERE ONLY TWO FIELDS BEING USED OUT OF HERE....DO WE REALLY NEED THIS METHOD???
+    return {transactionType: submission.transactionTypeRefCode, transactionStatus: submission.transactionStatusRefCode};
+};
+
+RA.Controller.scrubProducerDetailsData = function(producerData) {
+
+    if (producerData) {
+        producerData.preferredName = (producerData.preferredName) ? producerData.preferredName : " -- ";
+        producerData.producerDescription = (producerData.producerDescription) ? producerData.producerDescription : " -- ";
+        producerData.agencyTollFreeNumber = (producerData.agencyTollFreeNumber) ? producerData.agencyTollFreeNumber : " -- ";
+        producerData.agencyPrimaryNumber = (producerData.agencyPrimaryNumber) ? producerData.agencyPrimaryNumber : " -- ";
+        producerData.agencyFaxNumber = (producerData.agencyFaxNumber) ? producerData.agencyFaxNumber : " -- ";
+
+        producerData.agencyWebsite = (producerData.agencyWebsite) ? producerData.agencyWebsite : " -- ";
+        producerData.producerCodeCloseDate = (producerData.producerCodeCloseDate) ? producerData.producerCodeCloseDate : " -- ";
+        producerData.addressLine1 = (producerData.addressLine1) ? producerData.addressLine1 : " -- ";
+        producerData.agentCopy = (producerData.agentCopy) ? producerData.agentCopy : " -- ";
+        producerData.insuredCopy = (producerData.insuredCopy) ? producerData.insuredCopy : " -- ";
+        producerData.emailNotification = (producerData.emailNotification) ? producerData.emailNotification : " -- ";
+        producerData.emailbyAgencyPolicy = (producerData.emailbyAgencyPolicy) ? producerData.emailbyAgencyPolicy : " -- ";
+        producerData.email = (producerData.email) ? producerData.email : " -- ";
+        producerData.producerDescription = (producerData.producerDescription) ? producerData.producerDescription : " -- ";
+    }
+
+    return producerData;
+}
+
+RA.Controller.convertStringToValueLabelPairs = function(stringList) {
+    var convertedArray = [];
+    if (stringList != null) {
+        angular.forEach(stringList, function(stringItem)
+        {
+            var newItem = {"value": stringItem, "label": stringItem};
+            convertedArray.push(newItem);
+        });
+    }
+    return convertedArray;
+}
+
+
+RA.Controller.convertObjectsToLabelAndValue = function (options)
+{
+    var convertedArray = [];
+    if (options)
+    {
+        for (var i in options)
+        {
+            if (i.indexOf('@') === -1)
+            {
+                var item = {"label": i, "value": options[i]};
+                convertedArray.push(item);
+            }
+        }
+    }
+    return convertedArray;
+};
+
+RA.Controller.convertStringToValueUpperCaseLabelPairs = function(stringList) {
+    var convertedArray = [];
+    if (stringList != null) {
+        angular.forEach(stringList, function(stringItem)
+        {
+            var newItem = {"value": stringItem.toUpperCase(), "label": stringItem};
+            convertedArray.push(newItem);
+        });
+    }
+    return convertedArray;
+}
+
+RA.Controller.convertObjectToValueLabelPairs = function(object) {
+    var convertedArray = [];
+    if (object != null) {
+        for (var i in object)
+        {
+            if (i.indexOf('@') === -1)
+            {
+                var newItem = {"value": i, "label": object[i]};
+                convertedArray.push(newItem);
+            }
+        }
+    }
+    return convertedArray;
+}
+
+RA.Controller.isDispositionStatus = function(status)
+{
+    if (status == null)
+        return false;
+
+    return status == TRANSACTION_STATUS_DECLINED ||
+        status == TRANSACTION_STATUS_LOST ||
+        status == TRANSACTION_STATUS_WITHDRAWN;
+};
+
+RA.Controller.isIssuedStatus = function(status)
+{
+    return status == TRANSACTION_STATUS_ISSUED;
+};
+
+RA.Controller.isHoldStatus = function(status)
+{
+    return status == TRANSACTION_STATUS_HOLD;
+};
+
+RA.Controller.isIssuedBoundStatus = function(status)
+{
+    return status == TRANSACTION_STATUS_BOUND || status == TRANSACTION_STATUS_ISSUED;
+};
+
+RA.Controller.isTerminatedStatus = function(status)
+{
+    if (status == null)
+        return false;
+
+    return status == TRANSACTION_STATUS_DECLINED ||
+        status == TRANSACTION_STATUS_LOST ||
+        status == TRANSACTION_STATUS_WITHDRAWN ||
+        status == TRANSACTION_STATUS_ISSUED ||
+        status == TRANSACTION_STATUS_HOLD;
+};
+
+RA.Controller.isUDIssued = function(status, issuingSystem)
+{
+    if (status == null || issuingSystem == null)
+        return false;
+
+    return status == TRANSACTION_STATUS_ISSUED &&  issuingSystem == SOURCE_SYSTEM_CUBE;
+};
+
+RA.Controller.addDocuments = function submitWorkflowAddDocumentsToAccountForm(addDocumentsParams)
+{
+    var addDocumentsForm = $('<form>', {
+        "id": "addDocumentsToAccountForm",
+        "name": "addDocumentsToAccountForm",
+        "html": '<input type="hidden" name="txtImportBusinessUnit" value="'+ addDocumentsParams.txtImportBusinessUnit+ '" >'
+        +' <input type="hidden" name="txtImportUserName" value="'+ addDocumentsParams.txtImportUserName+ '" >'
+        +' <input type="hidden" name="txtImportHID" value="'+ addDocumentsParams.txtImportHID + '" >'
+        +' <input type="hidden" id="txtImportType" name="txtImportType" value="'+ addDocumentsParams.txtImportType + '" >'
+        +' <input type="hidden" name="txtImportDocClass" value="'+ addDocumentsParams.txtImportDocClass + '" >'
+        +' <input type="hidden" name="txtImportSubmissionID" value="'+ addDocumentsParams.txtImportSubmissionID + '" >'
+        +' <input type="hidden" name="txtImportPolicyNumber" value="'+ addDocumentsParams.txtImportPolicyNumber + '" >'
+        +' <input type="hidden" name="txtImportSymbol" value="'+ addDocumentsParams.txtImportSymbol + '" >'
+        +' <input type="hidden" name="txtImportMOD" value="' +addDocumentsParams.txtImportMOD + '" >'
+        +' <input type="hidden" name="txtImportInsuredName" value="'+ addDocumentsParams.txtImportInsuredName + '" >'
+        +' <input type="hidden" name="txtImportUnderwriterName" value="'+ addDocumentsParams.txtImportUnderwriterName + '" >'
+        +' <input type="hidden" name="txtImportCustomerNumber" value="'+ addDocumentsParams.txtImportCustomerNumber + '" >'
+        +' <input type="hidden" name="txtImportProducerCode" value="' +addDocumentsParams.txtImportProducerCode + '" />',
+        "action": addDocumentsParams.url,
+        "target":"popupWindow",
+        "method" : "POST"
+    });
+
+    $('body').append(addDocumentsForm);
+    addDocumentsForm.submit().remove();
+} ;
+
+RA.Controller.viewDocumentsMyfile = function viewDocumentsMyfile(myFileLink, myFileArgs)
+{
+    RA.UI.doNavigation(myFileLink + myFileArgs, true);
+};
+
+function refresh_my_child_window(){
+    return childWindow.location.reload('add_billing_order_frm.php');
+}
+
+RA.Controller.transformBoolean = function(value)
+{
+    return (value == 'YES' || value == 'yes' || value == 'Y' || value == 'y' || value == '1' || value == 1 || value == 'true');
+};
+
+RA.Controller.isAllDigits = function(input)
+{
+    return /^\d+$/.test(input);
+};
+
+RA.Controller.getActivityText = function(itemCode)
+{
+    var activities =
+        {
+            'CANC':'Cancellation',
+            'CNRW':'Cancel Rewrite',
+            'CRC':'Cancel Reason Change',
+            'ENDT':'Endorsement',
+            'NRI':'Non Renewal',
+            'NRRC':'Non Renewal Reason Change',
+            'REIN':'Reinstatement',
+            'REMINDER':'Reminder',
+            'REWRITE':'Rewrite',
+            'RNR':'Reverse Non Renewal',
+            'TEMPREIN':'Temporary Reinstatement'
+        };
+
+    return activities[itemCode];
+};
+
+RA.Controller.doSoftDeleteAction = function(rpmObject)
+{
+    if(!rpmObject) return false;
+
+    var actionField = rpmObject.getField('actionRef');
+    if(!actionField) return false;
+
+    var actionRefCode = actionField.getValue();
+    if(!actionRefCode)
+    {
+        actionField.setValue('A');
+        return false;
+    }
+    else if(actionRefCode === 'E')
+    {
+        actionField.setValue('D');
+        return true;
+    }
+    else if(actionRefCode === 'D')
+    {
+        actionField.setValue('E');
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+};
+
+RA.Controller.isOneOf = function(value, array)
+{
+    for(var i = 0; i < array.length; i++)
+    {
+        if(value == array[i])
+        {
+            return true;
+        }
+    }
+    return false;
+};
+
+RA.Controller.isOnlyTrue = function(value, others)
+{
+    if(!value)
+    {
+        return false;
+    }
+    else
+    {
+        for(var i = 0; i < others.length; i++)
+        {
+            if(others[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+RA.Controller.serialize = function serialize(value, modify)
+{
+    return value;
+};
+
+RA.Controller.deserialize = function deserialize(value) {
+    return value;
+};
+
+RA.Controller.concatUnique = function concatUnique(array1, array2)
+{
+    var master = [];
+    var cache = {};
+    for(var i = 0; i < array1.length; i++)
+    {
+        var value = array1[i];
+        if(!value || cache[value]) continue;
+
+        cache[value] = true;
+        master.push(value);
+    }
+
+    for(var i = 0; i < array2.length; i++)
+    {
+        var value = array2[i];
+        if(cache[value]) continue;
+
+        cache[value] = true;
+        master.push(value);
+    }
+    return master;
+}
+
+/*
+This is still an iterative search, but at least it does maintain uniqueness.
+Even so, you shouldn't see performance issues, unless you overload it badly.
+ */
+RA.Controller.HashSet = function()
+{
+    var array = [];
+
+    this.add = function add(value)
+    {
+        for(var i = 0; i < array.length; i++)
+        {
+            if(array[i] === value)
+            {
+                return;
+            }
+        }
+        array.push(value);
+    }
+
+    this.remove = function remove(value)
+    {
+        for(var i = 0; i < array.length; i++)
+        {
+            if(array[i] === value)
+            {
+                array.splice(i, 1);
+            }
+        }
+    }
+
+    this.contains = function contains(value)
+    {
+        for(var i = 0; i < array.length; i++)
+        {
+            if(array[i] === value)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+
+RA.Controller.getOnlyRoot = function getOnlyRoot(rpmSession, rootName)
+{
+    var rootArray, len;
+    var roots = rpmSession.getNamedRoots() || {};
+    if(roots[rootName])
+    {
+        rootArray = rpmSession.getNamedRoot(rootName);
+        return RA.Controller.getOnlyElement(rootArray);
+    }
+};
+
+RA.Controller.getOnlyElement = function getOnlyElement(array)
+{
+    array = array || [];
+    var len = array.length;
+    if(len == 0)
+    {
+        return undefined;
+    }
+    else if(len > 1)
+    {
+        throw('Only one element was expected in the given array: ' + array);
+    }
+    return array[0];
+};

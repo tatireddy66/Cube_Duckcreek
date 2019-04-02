@@ -1,0 +1,505 @@
+// general
+var ANCHOR_OPEN_TAG							= "<a href='#'>";
+var ANCHOR_CLOSE_TAG						= "</a>";
+var IE_BROWSER_TYPE                         = "Microsoft Internet Explorer";
+var CHROME_BROWSER_TYPE                     = "Netscape";
+var CALLBACK_ERROR							= "error";
+var CLOSED									= "CLOSED";
+var CLOSE_DIV_TAG							= "</div>";
+var CLOSE_SPAN_TAG							= "</span>";
+var COMMA									= ",";
+var CUSTOMER_TOTAL							= "Customer Total";
+var EMPTY_STRING							= "";
+var EMPTY_STRING_AS_VALUE                   = {"value": ""};
+var ERROR_CLASS								= "gaig-error";
+var FALSE									= "false";
+var FORWARD_SLASH							= "/";
+var NaN										= "NaN";
+var NEWLINE_TAG								= "<br/>";
+var NO										= "NO";
+var NONE_OPTION								= "(none)";
+var NONE_DISPLAY							= "(None)";
+var NOT_APPLICABLE							= "N/A";
+var ONE_SPACE								= " ";
+var SEARCH_TYPE_DTO                         = "searchTypeDto";
+var SEARCH_TYPE_SINGLE                      = "searchTypeSingle";
+
+var SESSION_ACCOUNT_SUMMARY                 = "accountSummarySearch";
+var SESSION_ADVANCED_SEARCH					= "advancedSearch";
+var SESSION_ADVANCED_SEARCH_CHARMS  		= "advancedSearchCharms";
+var SESSION_CURRENT_USER_HID 				= "currentUserHid";
+var CURRENCY                                ='currency';
+var SESSION_CUSTOMER_EXPERIENCE             = "customerExperienceSearch";
+var SESSION_CUSTOMER_NO						= "customerNo";
+var SESSION_INSURED_NAME                    = "insuredName";
+var SESSION_CUSTOMER_EXPERIENCE_CLAIMS		= "customerExperienceClaims";
+var SESSION_DEEP_SEARCH_STRING              = "deepSearch";
+var SESSION_IS_SEARCH_FOR_SUBMISSION_ID     = "isSearchForSubmissionId";
+var SESSION_LAST_SCREEN_ACCESSED			= "lastScreenAccessed";
+var SESSION_NOTES_SCREEN_HANDLE				= "notesScreenHandle";
+var SESSION_POLICY_KEY_OBJECT				= "policyKeyObject";
+var SESSION_POLICY_NUMBER					= "policyNumber";
+var SESSION_POLICY_MOD						= "policyMod";
+var SESSION_POLICY_EFFECTIVE_DATE			= "policyEffectiveDate";
+var SESSION_PREVIOUS_PAGE                   = "previousPage";
+var SESSION_PREVIOUS_RENEWAL_DTO            = "previousRenewalDto";
+var SESSION_PREVIOUS_SEARCH_DTO             = "previousSearchDto";
+var SESSION_PREVIOUS_SEARCH_FIELD           = "previousSearchField";
+var SESSION_PREVIOUS_SEARCH_TYPE            = "previousSearchType";
+var SESSION_PRODUCER_DETAILS                = "producerDetails";
+var SESSION_PRODUCT_NAME                    = "product";
+var SESSION_PRODUCT_NAMES                   = "products"
+var SESSION_LOCATION_NAME                   = "location";
+var SESSION_RENEWAL_SEARCH					= "renewalSearch";
+var SESSION_RENEWAL_SEARCH_CHARMS			= "renewalSearchCharms";
+var SESSION_SEARCH_STRING					= "searchString";
+var SESSION_SELECTED_POLICY                 = "selectedPolicy";
+var SESSION_SUBMISSION_ID					= "submissionId";
+var SESSION_SUBMISSION_ID_COPY			    = "submissionIdCopy";
+var SESSION_SUBMISSION_ID_SEARCH			= "submissionIdSearch";
+var SESSION_USER_CHOICE                     = "userYNDialogResponse";
+var SESSION_ADD_NOTE_EVENT		            = "sessionAddNoteEvent";
+var SESSION_VIEW_ONLY_MODE 					= "viewOnlyMode";
+var SESSION_VIEW_ONLY_MODE_CUSTNO 			= "viewOnlyModeCustNo";
+var SESSION_QUOTE_ID                        = "quoteId";
+var SESSION_SELECTED_QUOTE_ID               = "selectedQuoteID";
+var SESSION_SELECTED_LOCATION_NUMBER        = "selectedLocationNubmer";
+var SESSION_SUBMISSION_MESSAGES             = "submissionMessages";
+var SESSION_TIMEOUT                         = "sessionTimeout";
+var SESSION_SOURCE_SYSTEM_CODE              = "sourceSystemRefCode";
+var SESSION_TRANSACTION_TYPE_CODE           = "transactionTypeRefCode";
+var LAST_OBJECT_ADDED                       = "objectAdded"
+
+// variables used to determine if the original search was at the policy level or the submission level
+// used to determine if the LHN value of "Submission Information" should be enabled/disabled
+var SESSION_POLICY_MODE                     = "atThePolicyLevel";
+var SESSION_SUBMISSION_MODE                 = "atTheSubmissionLevel";
+var SESSION_MODE                            = "whichMode";
+
+var SELECT_OPTION							= "-- Select --";
+var NONE_DASH_DASH_OPTION                   = "-- None --";
+var EMPTY_OPTION                            = "-- Empty --";
+var OPEN_DIV_TABLE_OBJECT					= "<div class='top-align-table-object'>";
+var OPEN_ELLIPSIS_TAG_1						= "<div class='singleLineEllipsis' title='";
+var OPEN_ELLIPSIS_TAG_2						= "'>";
+var OPEN_ELLIPSIS_TABLE_TAG_1				= "<div class='singleLineEllipsisTable' title='";
+var OPEN_ELLIPSIS_TABLE_TAG_2				= "'>";
+var OPEN_RIGHT_ALIGN_TAG                    = "<div class='top-align-table-object alignRight'>";
+var OPEN_SPAN_RIGHT_TAG						= "<span class='pull-right'>";
+var TIMEOUT									= "timeout";
+var PARSER_ERROR                            = "parsererror";
+var TOTAL									= "Total";
+var TRUE									= "true";
+var TERM_DIVIDER							= " - ";
+var UNKNOWN									= "UNKNOWN";
+var YES										= "YES";
+var ZERO_STRING								= "0";
+var SESSION_DASHBOARD_VIEW_BY_NAME_KEY      = "dashboardViewByName";
+
+// transaction status
+var TRANSACTION_STATUS_BOUND				= "BND";
+var TRANSACTION_STATUS_DECLINED 			= "DECL";
+var TRANSACTION_STATUS_HOLD 				= "HOLD";
+var TRANSACTION_STATUS_ISSUED 				= "ISSU";
+var TRANSACTION_STATUS_LOST					= "LOST";
+var TRANSACTION_STATUS_NEW		 			= "NEW";
+var TRANSACTION_STATUS_OPEN					= "OPEN";
+var TRANSACTION_STATUS_WITHDRAWN 			= "WITH";
+var TRANSACTION_STATUS_RERATE 			    = "RERATE";
+var TRANSACTION_STATUS_WORK_AND_ISSUE       = "WORKANDISSUE";
+
+
+//quote status
+var QUOTE_STATUS_BOUND			        	= "BOUND";
+//line of business
+var LOB_COMMERCIAL_AUTO_CAI					= "CAI";
+var LOB_COMMERCIAL_AUTO_CAP					= "CAP";
+var LOB_GENERAL_LIABILITY					= "GLP";
+var QUOTE_STATUS_MUST_RERATE                = 'Must Rerate';
+var QUOTE_STATUS_ISSUED                     = 'Issued';
+
+//acount bind
+var ACCT_BIND_ROOT_CHARM_EXTENSION          = ' - Bind Details';
+var ACCT_BIND_ROOT_CHARM_EXTENSION_LENGTH   = ACCT_BIND_ROOT_CHARM_EXTENSION.length;
+
+// party variables
+var C_CORPORATION							= "CCORP";
+var LEGAL_ENTITY_INDIVIDUAL					= "IND";
+var LEGAL_TYPE_REF_CODE						= "legalTypeRefCode";
+var LIMITED_LIAB_LIMITED_PARTNERSHIP		= "LLLP";
+var MORE_NAMED_INSURED_FIRST_NAME			= "firstName";
+var MORE_NAMED_INSURED_FULL_NAME			= "fullName";
+var MORE_NAMED_INSURED_LAST_NAME			= "lastName";
+var MORE_NAMED_INSURED_MIDDLE_I				= "middleInitial";
+var MORE_NAMED_INSURED_ROLE_CD				= "OTHNI";
+var PARTY_ROLE_REF_CODE						= "partyRoleRefCode";
+var PARTY_TYPE_ALT_MAIL						= "altMailParty";
+var PARTY_TYPE_INSURED						= "insuredParty";
+var PARTY_TYPE_PROSPECT_PRODUCER			= "prospectProducerParty";
+var PARTY_TYPE_MORE_NAMED_INSURED			= "moreNamedInsuredParty";
+
+// source system
+var SOURCE_SYSTEM_CUBE						= "UD";
+var SOURCE_SYSTEM_PRO						= "PRO";
+
+// transaction type codes
+var TRANSACTION_TYPE_NEW_BUSINESS			= "NBS";
+var TRANSACTION_TYPE_NEW_BUSINESS_PROCESSED	= "NBSP";
+var TRANSACTION_TYPE_NEW_RENEWAL			= "REN";
+var TRANSACTION_TYPE_NEW_RENEWAL_PROCESSED	= "RENP";
+var TRANSACTION_TYPE_AUDIT              	= "AUD";
+
+var TRANSACTION_TYPE_TEMPORARY_REINSTATEMENT   = "TEMPREIN";
+var TRANSACTION_TYPE_ENDORSEMENT               = "ENDT";
+var TRANSACTION_TYPE_CANCELLATION              = "CANC";
+var TRANSACTION_TYPE_REINSTATEMENT             = "REIN";
+var TRANSACTION_TYPE_NON_RENEWAL               = "NRI";
+var TRANSACTION_TYPE_REVERSE_NON_RENEWAL       = "RNR";
+var TRANSACTION_TYPE_CANCEL_REASON_CHANGE      = "CRC";
+var TRANSACTION_TYPE_NON_RENEWAL_REASON_CHANGE = "NRRC";
+var TRANSACTION_TYPE_FDW_CONVERSION            = "FDWCNV";
+
+// transaction sub types
+
+var TRANSACTION_SUBTYPE_AUDIT_REVERSED = "REVERSED";
+var TRANSACTION_SUBTYPE_AUDIT_FINAL = "FINAL";
+var TRANSACTION_SUBTYPE_AUDIT_REVISED = "REVISED";
+var TRANSACTION_SUBTYPE_AUDIT_ANC = "ANC";
+
+
+//transaction type names
+var ACTIVITY_TYPE_NEW_BUSINESS				= 'New Business';
+var ACTIVITY_TYPE_RENEWAL   				= 'Renewal';
+var ACTIVITY_TYPE_ENDORSEMENT				= 'Endorsement';
+var ACTIVITY_TYPE_CANCELLATION				= 'Cancellation';
+var ACTIVITY_TYPE_REMINDER					= 'Reminder';
+var ACTIVITY_TYPE_REINSTATEMENT				= 'Reinstatement';
+var ACTIVITY_TYPE_NBS_REWRITE				= 'New Business / Rewrite';
+var ACTIVITY_TYPE_REN_REWRITE				= 'Renewal / Rewrite';
+var ACTIVITY_TYPE_NON_RENEWAL				= 'Non-Renewal';
+var ACTIVITY_TYPE_NON_RENEWAL_REASON_CHANGE = 'Non-Renewal Reason Change';
+var ACTIVITY_TYPE_CANCEL_REASON_CHANGE		= 'Cancel Reason Change';
+var ACTIVITY_TYPE_REWRITE				    = 'Rewrite';
+var ACTIVITY_TYPE_TEMPORARY_REINSTATEMENT	= 'Temporary Reinstatement';
+var ACTIVITY_TYPE_REVERSE_NON_RENEWAL		= 'Reverse-Non-Renewal';
+var ACTIVITY_TYPE_PREM_AUDIT                = "Premium Audit";
+
+// message types
+var MESSAGE_INFO							= "info";
+var MESSAGE_ERROR							= "error";
+var MESSAGE_VALIDATION						= "validation";
+var MESSAGE_SUCCESS							= "success";
+
+//validation Messages
+var PROCESS_NON_RERENEWAL_MANUALLY          = "Processing has been interrupted. Please process the Non-Renewal manually.";
+var PROCESS_REV_NON_RENEWAL_MANUALLY        = "Processing has been interrupted. Please process the Reverse Non-Renewal manually.";
+
+// continuous until cancelled
+
+var CONTINUOUS_IS_OPTIONAL                  = "optional";
+var CONTINUOUS_IS_REQUIRED                  = "required";
+var CONTINUOUS_NOT_ELIGIBLE                 = "notEligible";
+var CONTINUOUS_DATA_ON                      = "on";
+var CONTINUOUS_DATA_OFF                     = "off";
+var CONTINUOUS_DATA_TOGGLE_ON               = "toggleOn";
+var CONTINUOUS_DATA_TOGGLE_OFF              = "toggleOff";
+var CONTINUOUS_INFINITE_EXPIRATION_DATE     = "12/31/9999";
+
+// country codes
+var UNITED_STATES							= "US";
+var CANADA									= "CA";
+var STATE_LABEL								= "State";
+var PROVINCE_LABEL							= "Province";
+var ZIP_CODE_LABEL							= "ZIP Code";
+var STATE_PROVINCE_LABEL					= "State/Province";
+var POSTAL_CODE_LABEL						= "Postal Code";
+var POLICY_STATE_LABEL						= "Policy State";
+var POLICY_PROVINCE_LABEL					= "Policy Province";
+
+//note variables
+var	NOTE_LEVEL_ACCOUNT						= "ACCTNOTE";
+var	NOTE_LEVEL_POLICY						= "POLNOTE";
+var	NOTE_LEVEL_SUBMISSION					= "SUBMNOTE";
+var	NOTE_WORKFLOW_APPLICATION				= "PIMWRKFLW";
+var NOTE_TYPE_CLAIMS						= "Claims";
+
+//disposition status
+var DISPOSITION_DECLINED					= "declined";
+var DISPOSITION_LOST						= "lost";
+var DISPOSITION_WITHDRAWN					= "withdrawn";
+
+//address validation messages
+var PRIMARY_ADDRESS_VALIDATION				= "Primary Insured Address Validation";
+var ALTERNATE_ADDRESS_VALIDATION			= "Alternate Insured Address Validation";
+var PRIMARY_ADDRESS_VALIDATION_TAG			= "insuredPartyAddress1";
+var ALTERNATE_ADDRESS_VALIDATION_TAG		= "altMailPartyAddress1";
+
+//Reports variables
+var REPORTS_EXPORT_COL_ALL					= "ALL";
+var REPORTS_EXPORT_COL_DEFAULT				= "DEFAULT";
+var REPORTS_EXPORT_COL_NONDEFAULT			= "NONDEFAULT";
+var REPORTS_SUBPOL_REPORT                   = "subPolReport";
+var REPORTS_POLICY_EXCEPT_REPORT            = "policyExceptionReport";
+var REPORTS_UNDERWRITING_REPORT             = "underwritingReport";
+
+// Session Screen Names
+var SESSION_ACCOUNT_SUMMARY_ACC_SCREEN_UNDERWRITING_NOTES	= "accountSummaryAccountDetailUnd";
+var SESSION_ACCOUNT_SUMMARY_ACC_SCREEN_ISSUANCE_NOTES	    = "accountSummaryAccountDetailIss";
+var SESSION_ACCOUNT_SUMMARY_POL_SCREEN_UNDERWRITING_NOTES	= "accountSummaryPolicyDetailUnd";
+var SESSION_ACCOUNT_SUMMARY_POL_SCREEN_ISSUANCE_NOTES	    = "accountSummaryPolicyDetailIss";
+var SESSION_ACCOUNT_SUMMARY_POL_SCREEN_REFERRAL_NOTES	    = "accountSummaryPolicyDetailRef";
+
+//Screen Names
+
+var BIND_ISSUE                              = "BindIssue";
+var SUBM_INFO                               = "SubmInfo";
+var SESSION_CUSTOMER_EXPERIENCE_SCREEN		= "customerExperience";
+var SESSION_MANAGED_ACTIVITIES_SCREEN		= "manageActivities";
+var SESSION_NOTES_SCREEN					= "notes";
+var SESSION_SUBMISSION_SCREEN				= "submission";
+var SESSION_BILLING_SCREEN		    		= "Billing";
+var QUOTELIST_SCREEN                        ="QuoteList";
+
+// carrier labels
+var ADD_CARRIER_STEP1						= "Add Carrier Step 1 of 2";
+var ADD_CARRIER_STEP2						= "Add Carrier Step 2 of 2";
+var ADD_A_LOSS								= "Add A Loss";
+var CARRIER_LOOKUP_TYPE_ALL					= "ALL";
+var CARRIER_CHANGE_TITLE					= "Change Carrier Details";
+var CARRIER_VIEW_TITLE						= "View Carrier Details";
+var CARRIER_TYPE_INDIVIDUAL					= "IC";
+var CARRIER_TYPE_GROUP						= "ICGRP";
+var CHANGE_CARRIER_STEP1					= "Change Carrier";
+
+// relationshipSourceCode
+var RELATIONSHIP_SOURCE_POLICY				= "policy";
+var RELATIONSHIP_SOURCE_SUBMISSION			= "submission";
+
+// window variables
+var WINDOWS_ATTR_HOST						= "host";
+var WINDOWS_ATTR_PATHNAME					= "pathname";
+
+//HTML locations
+var ACCOUNT_SUMMARY_LOCATION                = "/UwdRefApp/dyn/html/accountSummary";
+var CUSTOMER_EXPERIENCE_LOCATION            = "/UwdRefApp/dyn/html/customerExperience";
+var DASHBOARD_LOCATION                      = "/UwdRefApp/dyn/html/dashboard";
+var NOTES_LOCATION							= "/UwdRefApp/dyn/html/notes";
+var MANAGE_ACTIVITIES_LOCATION				= "/UwdRefApp/dyn/html/manageActivities";
+var RENEWALS_LOCATION						= "/UwdRefApp/dyn/html/renewals";
+var REPORTS_LOCATION                        = "/UwdRefApp/dyn/html/subPolReports";
+var SEARCH_LOCATION							= "/UwdRefApp/dyn/html/search";
+var SUBMISSION_LOCATION						= "/UwdRefApp/dyn/html/submission";
+var LETTERS_LOCATION                        = "/uwdRefApp/dyn/html/letters/lettersMain";
+
+// REPORT TYPES
+var REPORT_TYPE_NEW							= "NEW";
+var REPORT_TYPE_EXISTING					= "EXISTING";
+var REPORT_LEVEL_ACCOUNT					= "ACCTRPT";
+var REPORT_LEVEL_POLICY						= "POLRPT";
+
+// REASON Labels
+var REASON_LABEL							= "Reason";
+var REASON_DECLINED_LABEL					= "Declined Reason";
+var REASON_LOST_LABEL						= "Lost Reason";
+var REASON_WITHDRAWN_LABEL					= "Withdrawn Reason";
+var COMMENTS_LABEL							= "Comments";
+var COMMENTS_DECLINED_LABEL					= "Declined Comments";
+var COMMENTS_LOST_LABEL						= "Lost Comments";
+var COMMENTS_WITHDRAWN_LABEL				= "Withdrawn Comments";
+var DATE_LABEL								= "Date";
+var DATE_DECLINED_LABEL						= "Declined Date";
+var DATE_LOST_LABEL							= "Lost Date";
+var DATE_WITHDRAWN_LABEL					= "Withdrawn Date";
+
+//REVIEW FREQUENCY Labels
+var REVIEW_FREQUENCY_ANNUALLY				= "Annually";
+var REVIEW_FREQUENCY_MONTHLY				= "Monthly";
+var REVIEW_FREQUENCY_NONE					= "None";
+var REVIEW_FREQUENCY_QUARTERLY				= "Quarterly";
+var REVIEW_FREQUENCY_SEMI_ANNUALLY			= "Semi-Annually";
+
+
+// SEARCH variables
+var SEARCH_RESULT_MAX						= 1000;
+
+//Dashboard
+var EIGHT_HOURS                             = 60*60*8;
+
+//JS Confirm Messages
+
+var ACTIVITIES_LOCKED_CONFIRM 				= "One or more Activities selected are Locked to Another User or Final Disposition Status and cannot be updated.  Click \"Ok\" to continue.";
+var UNABLE_TO_DELETE_SUBMISSION_MESSAGE     = "User does not have permission for SubmissionController.doDeleteSubmission";
+var USER_INVALID_DELETE_AUTHORITY           = "The submission has not been deleted. You must have delete authority in order to perform this task.";
+
+//Taxonomy Constants
+var TAXONOMY_CODE                           = 'view_by_taxonomy_code';
+var TAXONOMY_GROUP                          = 'view_by_taxonomy_group';
+var TAXONOMY_KEYWORD                        = 'view_by_taxonomy_keyword';
+
+// ADMIN Screen Constants
+var AUTO_RENEWALS							= "AUTO RENEWALS";
+var POLICY_STATUS							= "POLICY STATUS";
+
+var NO_ERRORS = null;
+
+// RPM Traits
+var TRAIT_UI_LABEL                          = "ui:label";
+var TRAIT_DB_PATH                           = "db:path";
+var TRAIT_DEFAULT_SYMBOL                    = "pd:defaultSymbol";
+var TRAIT_DEFAULT_SYMBOL_MONO               = "pd:monoLineDefaultSymbol";
+var TRAIT_DEFAULT_SYMBOL_MULTI              = "pd:multiLineDefaultSymbol";
+var TRAIT_BUSINESS_TYPE                     = "pd:busType";
+var TRAIT_RISK_TYPE                         = "pd:riskType";
+var TRAIT_OVERRIDE                          = "r:canOverride";
+
+var PRODUCER_APPOINTED						= "APPOINTED";
+var PRODUCER_PROSPECT						= "PROSPECT";
+var PRODUCER_SUBAGENCY						= "SUBAGENCY";
+var PRODUCER_SOURCE_CRM						= "CRM";
+var PRODUCER_SOURCE_PRM						= "PRM";
+
+var DROPDOWN_UNDERWRITER					= "underwriterDropDown";
+var DROPDOWN_BUSINESS_DEVELOPER				= "businessDeveloperDropDown";
+
+//Billing
+var BILLING_TYPE_AGENCY                     = "AGBILL";
+var BILLING_TYPE_DIRECT                     = "DIRBILL";
+
+// Underwriting Worksheet
+var MISSING_PRODUCTS                        = "Products will not display until the submission is worked and saved.";
+
+// LETTERS
+var RPM_NEW_ID                              = 'newId';
+var CAN_COPY_FORWARD                        = 'canCopyForward';
+var COMPANY                                 = 'company';
+var CREATE_MODAL                            = 'createModal';
+var CUSTOMER_NUMBER                         = 'customerNumber';
+var EDIT_MODAL                              = 'editModal';
+var ENDORSEMENT_NUMBER                      = 'endorsementNumber';
+var ITEM_NUMBER                             = 'itemNumber';
+var DISPLAY_SESSION                         = 'display';
+var LETTER_SESSION                          = 'letter';
+var RPM_MAIN_QUOTE                          = 'main';
+var CHECK_ICON                              = 'gaig-icon gaig-icon-ok';
+var RPM_IS_SELECTED                         = 'isSelected';
+var RPM_IS_HIDDEN                           = 'isHidden';
+var RPM_LETTER_INFO                         = 'letters';
+var RPM_AVAILABLE_QUOTES                    = 'availableQuotes';
+var RPM_POLICIES                            = 'policies';
+var RPM_LETTER_DESCRIPTION                  = 'letterDescription';
+var RPM_LETTER_ID                           = 'letterId';
+var RPM_QUOTES                              = 'quotes';
+var RPM_QUOTE_ID                            = 'quoteId';
+var RPM_DESCRIPTION                         = 'description';
+var RPM_SESSION_TO_RETURN                   = 'sessionToReturn';
+var RPM_POL_EFF_DT                          = 'policyTermEffectiveDate';
+var RPM_POL_EXP_DT                          = 'policyTermExpirationDate';
+var CREATE_DATE                             = 'createDate';
+var TEMPLATE_IS_OPEN                        = 'templateIsOpen';
+var LETTER_TEMPLATE_IS_OPEN                 = 'letterTemplateIsOpen';
+var TEMPLATE_NAME                           = 'templateName';
+var RPM_MIN_DATE                            = 'minDate';
+var RPM_MAX_DATE                            = 'maxDate';
+var R_VALUE                                 = 'r:value';
+var RATING_SYSTEM                           = 'ratingSystem';
+var KEY1                                    = 'key1';
+var KEY2                                    = 'key2';
+var CUBE                                    = 'Cube';
+var OnCORE                                  = 'OnCore';
+var DuckCreek                               = 'DuckCreek';
+var HTML                                    = 'html';
+var INSTANCE                                = 'instance';
+var POLICY                                  = 'policy';
+var POLICY_ID                               = 'policyId';
+var POLICY_MOD                              = 'policyMod';
+var POLICY_NUMBER                           = 'policyNumber';
+var POLICY_SYMBOL                           = 'policySymbol';
+var POLICY_VERSION                          = 'policyVersion';
+var QUOTES                                  = 'quotes';
+var PRODUCTS                                = 'products';
+var PRODUCT                                 = 'product';
+var PRODUCT_HIERARCHY                       = 'productHierarchy';
+var FORMS                                   = 'forms';
+var FORM_TABLE_CONFIG                       = 'formTableConfig';
+var LTR_SHOW_FORM                           = 'showFormSelect';
+var LTR_SHOW_FORM_NUMBER                    = 'showFormNumber';
+var LTR_SHOW_FORM_DESC                      = 'showFormDescription';
+var LTR_SHOW_FORM_MANDATORY                 = 'showFormMandatory';
+var LTR_SHOW_FORM_STATE                     = 'showFormState';
+var UI_DATA_MODEL                           = 'uiDataModel';
+var MOD                                     = 'mod';
+var NAME                                    = 'name';
+var LIMIT_TYPE_INCLUDED                     = 'Included';
+var LIMIT_TYPE_EXCLUDED                     = 'Excluded';
+var LIMITS                                  = 'limits';
+var VALUE                                   = 'value';
+var LETTER_LABEL                            = 'label';
+var R_OVERRIDDEN                            = 'r:overridden';
+var R_ORDINAL                               = 'r:ordinal';
+var PREMIUM                                 = 'premium';
+var PREMIUMS                                = 'premiums';
+var HIDE_ON_UI                              = 'hideOnUI';
+var NUMBER                                  = 'number';
+var SYMBOL                                  = 'symbol';
+var INSURED_NAME                            = 'insuredName';
+var RPM_INSURED_NAME                        = 'insuredName';
+var SYMBOLS                                 = 'symbols';
+var STATUS                                  = 'status';
+var TEMPLATE_AUDITS                         = 'templateAudits';
+var TRANSACTION_TYPE                        = 'transactionType';
+var QUOTE_STATUS_NEW                        = 'New';
+var IS_FINAL                                = 'isFinal';
+var UI_LABEL                                = 'ui:label';
+var PD_BUS_TYPE                             = 'pd:busType';
+var PD_BUS_TYPE_UIPRODUCT                   = 'UIPRODUCT';
+var UPDATE_DATE                             = 'updateDate';
+var VERSION                                 = 'version';
+
+// for premiumSummary
+var RISKS = "risks";
+var CLASS_CODES = "classCodes";
+var COVERAGES = "coverages";
+var LABEL = "Label";
+var PERCENT = "Percent";
+var PRO_RATA_FACTOR = "Pro Rata Factor";
+var TERM_FACTOR = "Term Factor";
+var RATE_FACTORS = "RateFactors";
+var BLANK = '--';
+var INLAND_MARINE = 'Inland Marine';
+var WORKERS_COMP = 'Workers Compensation';
+var FULLNAME2 = 'fullName2';
+
+//forms constants
+var PCN = "PCN";
+var FE = "FE";
+
+//controller method constants
+var ISSUANCE_DO_ISSUE_AND_UPDATE                = 'IssuanceController.doIssueAndUpdate';
+
+//RPM Fields
+var RPM_FIELD_TERRORISM_INDICATOR               ='TerrorismAcceptedIndicator';
+var RPM_FIELD_AMOUNT                            ='AMOUNT';
+
+//RPM classes
+var RPM_CLASS_POLICY                            ='policy.Policy';
+
+var FLAT                                        = 'F';
+
+//Buttons
+var CANCEL                                      = 'Cancel';
+var CONTINUE                                    = 'Continue';
+
+//Refcode Constants
+var ACTION_REF_CODE_E                                = 'E';
+var ACTION_REF_CODE_C                                = 'C';
+
+// GAI LOSS DATA PUBLICATION HEADER TEXTS AND FIELDS
+var DEFAULT_GAI_LOSSES_HEADER = "Please hover over the column to see when the data gets updated";
+var DISPLAY_FREQUENCY = 'displayPubFrequency';
+var LOSS_DETAIL_DISPLAY_FREQUENCY = 'gaiLossDetailDisplayFrequency';
+
+//Status Constants
+var STATUS_ISSUED                               = 'Issued';
+var STATUS_WITHDRAWN                            = 'Withdrawn';
+var STATUS_DECLINED                             = 'Declined';
+var STATUS_LOST                                 = 'Lost';

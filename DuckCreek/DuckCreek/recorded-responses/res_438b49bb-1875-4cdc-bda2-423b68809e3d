@@ -1,0 +1,115 @@
+var carrierLookupApp = angular.module('refAppDirectivesCarrierLookup',['submissionServices','presentationServices','searchServices',
+                         'notesServices','accountServices','activityServices','navigationServices','dashboardServices','reportServices','renewalServices']);
+
+/****************************
+ * carrierLookupTable
+ ****************************/
+carrierLookupApp.directive('carrierLookupTable', function() {
+    return  {
+        scope:false,
+    	link: function(scope, element, attrs, controller) {
+    		element.addClass("table-striped");
+
+		  	var options = {};
+		  	var externalId;
+		  	options["bPaginate"] = false;
+		  	options["bDeferRender"] = true;
+		  	options["bSortClasses"] = false;
+	        options["iDisplayLength"] = -1;
+	        options['bAutoWidth'] = false;
+		  	options["sDom"] = '<""i>rtS';
+	     
+		  	
+		  			  	
+			options["oLanguage"] = {"sInfo": "&nbsp;&nbsp;_TOTAL_ Records",
+									"sInfoEmpty" : "&nbsp;&nbsp;0 Records" , "sInfoFiltered" : "&nbsp;" , "sSearch" : "&nbsp;"};
+
+		  	// adding the column headings to the element
+		  	options["aoColumns"] = scope.$eval(attrs.headings);
+
+		  	// add the column definitions, if any
+		  	if (attrs.columnDefs) {
+		  		options["aoColumnDefs"] = scope.$eval(attrs.columnDefs);
+		  	}
+
+	  		options["fnRowCallback"] = function (nRow, aData, iDisplayIndex, iDisplayIndexFull)
+	  		{
+	  			// When we hide the Individual names column for groups, column numbers change. So we need to handle URL selections
+	  			// separately for different table structures
+	  			if(scope.carrierLookup.carrierLookupType == 'ALL')
+	  			{
+		  			$('td:eq(0)',nRow).on ('click', function(e) {
+		  				externalId = aData[3];
+		  				var myTarget = e.target ? e.target : e.srcElement;
+				  		 if (myTarget instanceof HTMLAnchorElement) {
+				  			scope.setSelectedCarrierDetails( aData[5], externalId);
+				  		 }
+		  			});
+
+		  			$('td:eq(1)',nRow).on ('click', function(e) {
+		  				externalId = aData[4];
+		  				var myTarget = e.target ? e.target : e.srcElement;
+				  		 if (myTarget instanceof HTMLAnchorElement) {
+				  			scope.setSelectedGroupDetails(aData[6], externalId);
+				  		 }
+		  			});
+	  			}
+	  			else
+	  			{
+	  				$('td:eq(0)',nRow).on ('click', function(e) {
+	  					externalId = aData[4];
+		  				var myTarget = e.target ? e.target : e.srcElement;
+				  		 if (myTarget instanceof HTMLAnchorElement) {
+				  			scope.setSelectedGroupDetails(aData[6], externalId);
+				  		 }
+		  			});
+	  			}
+	  		}
+	  		options["bSortCellsTop"] = true;
+
+	  		jQuery.fn.dataTableExt.oSort["rating-pre"] = function ( a ) {
+	  			var rating = a.trim();
+  		        switch( rating ) {
+  		            case "A++"	: return 1;
+  		            case "A+"	: return 2;
+  		            case "A"	: return 3;
+  		            case "A-"	: return 4;
+  		            case "B++"	: return 5;
+  		            case "B+"	: return 6;
+  		          	case "B"	: return 7;
+  		        	case "B-"	: return 8;
+  		      		case "C++"	: return 9;
+  		    		case "C+"	: return 10;
+			  		case "C"	: return 11;
+			  		case "C-"	: return 12;
+			  		case "D"	: return 13;
+			  		case "E"	: return 14;
+			  		case "F"	: return 15;
+			  		case "S"	: return 16;
+			  		case "NR"	: return 17;
+			  		default		: return 99;
+  		        }
+  		    };
+	  		jQuery.fn.dataTableExt.oSort['rating-asc']  = function(x,y) {
+		  	    return ((x < y) ? -1 : ((x > y) ?  1 : 0));
+		  	};
+
+		  	jQuery.fn.dataTableExt.oSort['rating-desc'] = function(x,y) {
+		  	    return ((x < y) ?  1 : ((x > y) ? -1 : 0));
+		  	};
+
+	  		// declaring the dataTable element
+		  	var dataTable = element.dataTable(options);
+		  	dataTable.attr('style', 'width:100%;');
+
+		  	// setting the data on the table
+	        scope.$watch(attrs.data, function(value) {
+	            var val = value || null;
+	            if (val) {
+	                dataTable.fnClearTable();
+	                dataTable.fnAddData(scope.$eval(attrs.data));
+	            }
+	        });
+	   	}
+    }
+});

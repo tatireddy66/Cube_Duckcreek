@@ -1,0 +1,491 @@
+/**********************************
+ * RA.Service
+ **********************************/
+RA.Service.createCallback = function (callback)
+{
+    var callbackFunc = function(result){
+        callback.apply(undefined, [result]);
+    };
+    return callbackFunc;
+};
+
+RA.Service.isValidResult = function (result) {
+
+  return  result && result.status===true && result.data && result.data != TIMEOUT && result.data != PARSER_ERROR && result.data != MESSAGE_ERROR
+
+};
+
+RA.Service.isSuccessfulResult = function(result)
+{
+    result = Dynamis.Util.resolveRefs(result);
+    var status = result.status;
+
+    if(result.data)
+    {
+        status = result.status === false ? false : (result.status === true ? true : null);
+
+        for(var key in result.data)
+        {
+            if(key.search(/Controller\.*/) > -1)
+            {
+                var resultData = result.data[key];
+                status = status && resultData.status;
+                break;
+            }
+        }
+    }
+
+    return status
+};
+
+
+RA.Service.handleServiceResult = function(result, $scope)
+{
+    result = Dynamis.Util.resolveRefs(result);
+    var status = result.status;
+    var messages = result.messages;
+    var data = result.data;
+
+    if(result.data)
+    {
+        status = result.status === false ? false : (result.status === true ? true : null);
+        messages = result.messages;
+        data = result.data;
+
+        for(var key in result.data)
+        {
+            if(key.search(/Controller\.*/) > -1)
+            {
+                var resultData = result.data[key];
+                messages = resultData.messages;
+                data = resultData.data;
+                status = resultData.status;
+                break;
+            }
+        }
+    }
+
+    if (status === null)
+    {
+        if (data === TIMEOUT)
+        {
+            $scope.isTimeoutOpen = true;
+        }
+        else
+        {
+            if (data === PARSER_ERROR)
+            {
+                data = null;
+            }
+            RA.UI.doDisplayUIMessages([{"context":"Client Error","type":MESSAGE_ERROR,"text":"An error occured processing your request"}], $scope);
+        }
+    }
+    else if (status !== true)
+    {
+        if (messages)
+            RA.UI.doDisplayUIMessages(messages, $scope);
+        else
+            RA.UI.doDisplayUIMessages([{"context":"Server Error","type":MESSAGE_ERROR,"text":"An error occured processing your request"}], $scope);
+    }
+    else
+        RA.UI.doDisplayUIMessages(messages, $scope);
+
+    return data || null;
+};
+
+RA.Service.cleanMyObject = function (jObj) {
+    delete jObj['$$hashKey'];
+}
+
+RA.Service.Dispatcher = function(label)
+{
+    var running = [];
+    var queue;
+    this.dispatch = function(functions, finalCallback)
+    {
+        if(functions == null)
+        {
+            throw('You didn\'t pass any functions to the dispatcher, not sure what you expected to happen.');
+        }
+
+        if(isRunning(this))
+        {
+            throw('You\'re trying to execute the same dispatcher in multiple calls simultaneously. Think about why this is a bad idea and rewrite your code.');
+        }
+
+        var obj = {};
+        obj[this] = true;
+        running.push(obj);
+
+        queue = new Queue();
+        var numberOfFunctions = Object.keys(functions).length;
+        functions.isReadyForDispatch = function(callback)
+        {
+            while(queue.getQueueLength() < numberOfFunctions)
+            {
+                setTimeout(function(){}, 100);
+            }
+
+            var loc = location.pathname;
+            var pageName = loc.substring(loc.lastIndexOf('/') + 1);
+            pageName = (pageName === 'main' ? sessionStorage['mainDisplayPage'] : pageName) || 'pageUnknown.html';
+            pageName = pageName.indexOf('.') > -1 ? pageName.substring(0, pageName.indexOf('.')) : pageName;
+
+            var queuedItems = queue.getQueue();
+            if (Object.keys(queuedItems).length !== 0) {
+                RA.Service.callLocal('dispatch.doDispatch/' + (label ? label : pageName), queuedItems,
+                    {
+                        'callback':function(result)
+                        {
+                            var cached = queue.getCache();
+                            if(result.status === true)
+                            {
+                                var data = Dynamis.Util.resolveRefs(result.data, false);
+                                for(var v in data)
+                                {
+                                    var stringify = cached[v];
+                                    if(stringify)
+                                    {
+                                        sessionStorage[stringify] = RA.Controller.stringify({isCached: true, value: data[v]});
+                                    }
+
+                                    var call = queue.getCallback(v);
+
+                                    if (call)
+                                        call(data[v]);
+                                }
+                            }
+                            else
+                            {
+                                for(var m in result.messages)
+                                {
+                                    alert(result.messages[m].text);
+                                }
+                            }
+                        }
+                    }
+                );
+            }
+
+            callback(null,null);
+        };
+
+        async.auto(functions, finalCallback);
+    }
+
+    this.addToCache = function(method, params, callback)
+    {
+        queue.cache(method, params, callback);
+    };
+
+    this.addToQueue = function(method, params, callback)
+    {
+        queue.queue(method, params, callback);
+    };
+
+    var isRunning = function(dispatchFunction)
+    {
+        for(var r in running)
+        {
+            var runner = running[r];
+            for(var r2 in runner)
+            {
+                if(r2 == dispatchFunction && runner[r2])
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function Queue()
+    {
+        var myQueue = {};
+        var myCallbacks = [];
+        var myCache = {};
+
+        this.queue = function(method, params, callback)
+        {
+            if (method && myQueue.hasOwnProperty(method)) {
+                console.log('WARN: RA.Service.Dispatcher myQueue entry for method:' + method + ' will be overwritten.', params);
+            }
+            myQueue[method] = params;
+            myCallbacks[method] = callback;
+        }
+
+        this.cache = function(method, params, callback)
+        {
+            var obj = {};
+            obj[method] = params;
+            var stringify = RA.Controller.stringify(obj);
+            var localCache = sessionStorage[stringify];
+            if(localCache)
+            {
+                callback(JSON.parse(localCache).value);
+            }
+            else
+            {
+                this.queue(method, params, callback);
+                myCache[method] = stringify;
+            }
+        }
+
+        this.getQueue = function()
+        {
+            return myQueue;
+        }
+
+        this.getCache = function()
+        {
+            return myCache;
+        }
+
+        this.getQueueLength = function()
+        {
+            return myQueue.length;
+        }
+
+        this.getCallback = function(method)
+        {
+            return myCallbacks[method];
+        }
+
+        this.clearQueue = function()
+        {
+            myQueue = [];
+        }
+    }
+};
+
+RA.Service.cacheLocal = function(method, params, callOpts, queueOpts)
+{
+    var obj = {};
+    var cache;
+    obj[method] = params;
+
+    if(queueOpts && queueOpts.queue)
+    {
+        queueOpts.queue.addToCache(method, params, callOpts.callback);
+    }
+    else
+    {
+        cache = JSON.parse(sessionStorage[RA.Controller.stringify(obj)] || '{}');
+        callOpts.cache = true;
+        return cache.isCached ? callOpts.callback(cache.value) : callMe(method, params, callOpts);
+    }
+};
+
+RA.Service.callLocal = function(method, params, callOpts, queueOpts)
+{
+    if(queueOpts && queueOpts.queue)
+    {
+        queueOpts.queue.addToQueue(method, params, callOpts.callback);
+    }
+    else
+    {
+        return callMe(method, params, callOpts);
+    }
+};
+
+RA.Service.dispatcherFunctionNoArgs = function (dispatchFunction, dispatcher, $scope)
+{
+    return function dispatcherFunction(callback)
+    {
+        dispatchFunction(
+            function resultFunction(result){
+                callback(NO_ERRORS, RA.Service.handleServiceResult(result, $scope));
+            },
+            {'queue':dispatcher}
+        );
+    }
+}
+
+RA.Service.ServiceContext = 'UwdRefApp';
+
+/**
+ * Call - This is not namespaced for a reason
+ */
+function callMe(target, args, params)
+{
+    var dispatchArgs = {};
+
+    if (RA.Session.loginRequired === true) {
+        return {status:null, data:"login required"};
+    }
+
+    var pieces = target.split('.');
+
+    if (pieces == null || pieces.length != 2)
+    {
+        return {status:null, data:"Target must be 'Controller.methodName'"};
+    }
+    var controller = pieces[0];
+    var method = pieces[1];
+    if(controller !== 'dispatch' && args && typeof args === 'object')
+    {
+        args['~loggingArgs~'] =
+        {
+            policyNumber: RA.Session.getPolicyNumber(),
+            submissionId: RA.Session.getSubmissionId(),
+            quoteId: RA.Session.getSelectedQuoteId(),
+            screen: sessionStorage.mainDisplayPage
+        }
+    }
+
+    dispatchArgs[controller + '.' + method] = args;
+
+    var uri = method;
+    if(controller !== 'dispatch')
+    {
+        controller = 'dispatch';
+        method = 'doDispatch/';
+        args = dispatchArgs;
+        uri = target;
+    }
+
+    var json;
+    try
+    {
+        json = RA.Controller.stringify(args);
+    }
+    catch (err)
+    {
+        console.log("Arguments could not be converted to JSON string. Err=" + err);
+        return {status:null,data:"Arguments could not be converted to JSON string."};
+    }
+    var result = null;
+    var url = location.protocol + '//' + location.hostname + ":" + location.port + "/" + RA.Service.ServiceContext + "/dispatch/" + uri;
+    var async = false;
+    var timeout = RA.Session.getTimeout();
+
+    if (params != null)
+    {
+        async = (params.callback != "undefined" && params.callback != null && typeof params.callback === "function");
+        if (params.timeout != "undefined" && params.timeout != null)
+        {
+            if (timeout > 0 && params.timeout > timeout) {
+                timeout = params.timeout;
+            }
+        }
+
+        if (params.methodArgs) {
+            url += '/' + params.methodArgs;
+        }
+
+        if (params.queryString) {
+            url += '?' + params.queryString;
+        }
+    }
+
+    $.ajax({
+        type : "POST",
+        url : url,
+        async : async,
+        cache : false,
+        data : json,
+        dataType : "json",
+        contentType: "application/json",
+        timeout : timeout,
+        success : function(data, textStatus)
+        {
+            if (async)
+            {
+                result = data;
+                if (result == null || typeof result == 'undefined' ||
+                    result.status == null || typeof result.status == 'undefined')
+                {
+                    gaigUi.ready(function(){
+                        params.callback({status:null,data:'Communications error.  Check your network connection.'});
+                    });
+                }
+                else
+                {
+                    gaigUi.ready(function(){
+                        if(params.cache)
+                        {
+                            sessionStorage[RA.Controller.stringify(dispatchArgs)] = RA.Controller.stringify({isCached: true, value: result});
+                        }
+
+                        params.callback(result);
+                    });
+                }
+            }
+            else
+            {
+                result = data;
+            }
+        },
+        error : function(XMLHttpRequest, textStatus, errorThrown)
+        {
+            if (textStatus === PARSER_ERROR && RA.Session.loginRequired === undefined) {
+                $.ajax({
+                    type: "GET",
+                    url: "dyn/js/success",
+                    async: false,
+                    crossDomain: true,
+                    success: function (data, status, xhr) {
+                        if (data !== "true") {
+                            if (handleSMBlockage())
+                            {
+                                return;
+                            }
+                        }
+                    },
+                    error: function (xhr, status ) {
+                        console.log(status);
+                        if (handleSMBlockage())
+                        {
+                            return;
+                        }
+                    }
+                });
+            }
+            if (async)
+            {
+                gaigUi.ready(function(){
+                    params.callback({status:null,data:textStatus}, errorThrown);
+                });
+            }
+            else
+            {
+                result = {status:null, data:textStatus};
+            }
+        }
+    });
+
+    if (async)
+    {
+        return {status:true,data:null};
+    }
+    else
+    {
+        if (result == null || typeof result == 'undefined' ||
+            result.status == null || typeof result.status == 'undefined')
+        {
+            return {status:null,data:'Communications error.  Check your network connection.'};
+        }
+        return result;
+    }
+}
+
+function handleSMBlockage()
+{
+    console.log('parsererror: SM session has probably timed out');
+    if (window.isInitialLoad === true) {
+        RA.Session.loginRequired = true;
+        delete sessionStorage.currentUser;
+        window.location.reload(true);
+        return true;
+    }
+    var reload = confirm("Your login session has expired. Please click OK to login again.")
+    if (reload) {
+        RA.Session.loginRequired = true;
+        delete sessionStorage.currentUser;
+        window.location.reload(true);
+        return true;
+    } else {
+        delete RA.Session.loginRequired;
+    }
+    return false;
+}

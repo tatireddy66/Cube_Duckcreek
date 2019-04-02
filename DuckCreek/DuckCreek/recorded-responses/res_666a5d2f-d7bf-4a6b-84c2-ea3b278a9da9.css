@@ -1,0 +1,27 @@
+#workbenchToolbar {
+	position:fixed; 
+	bottom:0px;
+	top: auto;	
+	width:100%;
+	z-index: 98;
+}
+
+
+.tskbr-g-m-item.dctmvcpolicyattachmentstaskbargroupmenuitem {
+	cursor: default;
+}
+.tskbr-g-m-item.dctmvcpolicyattachmentstaskbargroupmenuitem .tskbr-g-m-i-primary {
+	cursor: pointer;
+}
+.tskbr-g-m-item.dctmvcpolicyattachmentstaskbargroupmenuitem .tskbr-g-m-i-primary span {
+	text-decoration: underline;
+}
+.tskbr-g-m-item.dctmvchylandonbaseattachmentstaskbargroupmenuitem{
+	cursor: default;
+}
+.tskbr-g-m-item.dctmvchylandonbaseattachmentstaskbargroupmenuitem .tskbr-g-m-i-primary {
+	cursor: pointer;
+}
+.tskbr-g-m-item.dctmvchylandonbaseattachmentstaskbargroupmenuitem .tskbr-g-m-i-primary span {
+	text-decoration: underline;
+}

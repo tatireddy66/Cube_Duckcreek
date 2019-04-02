@@ -1,0 +1,583 @@
+//Namespace declaration(s) for Pitney Bowes RIA
+Ext.ns('DCT.Integration.PBBI.RIA');
+/**
+* Contains the PBBI interactive map implementation
+*/
+DCT.Integration.PBBI.RIA = {
+	// Directory path to the Pitney Bowes third-party / open source resources
+	PitneySkinsResourceDir: 'Skins/PitneyBowesRIAControl',
+	//RESTful interface suffix for PBBI's spatial server
+	mapService: '/MappingService',
+	pbbiRIAPopup: null,
+	mapLayers: null,
+	mapRecords: null
+};
+
+/**
+* This datastore is specialized for getting PBBI RIA map data from the session
+
+* Config:
+* dctDataPath: XPath to the element (one or repeated objects)
+* dctRecordId: XPath specifying the unique identifier for an object (relative to the object's dctDataPath)
+* dctRecordFields: Record description, such as: [{name: 'Latitude', type: 'string', mapping: 0},{name: 'Longitude', type: 'string', mapping: 1}]
+*/
+Ext.define('DCT.Integration.PBBI.RIA.MapStore', {
+	extend: 'DCT.BaseXmlStore',
+	inputXType: 'dctriamapstore',
+	xtype: 'dctriamapstore',
+	/**
+	* Override this to control what parameters are posted to Express while obtaining XML data for this store.
+	*/
+	getLocalParams: function () {
+	    var me = this;
+	    return { _targetPage: me.dctTargetPage };
+	}
+});
+
+
+Ext.apply(DCT.Integration.PBBI.RIA, {
+
+	/**
+	* This function loads dependencies of the PBBI RIA map and displays it as a popup (Ext.Window).
+	*/
+	mapInit: function (formName, fileLocationField, contextPath, manuscript, quoteId) {
+	  var me = this;
+		//Only ever show one RIA map window
+		DCT.Integration.PBBI.RIA.pbbiRIAPopup = Ext.getCmp('pbbiRIAPopup');
+		if (DCT.Integration.PBBI.RIA.pbbiRIAPopup) {
+			return;
+		}
+
+		if (!DCT.Util.validateFields()) { return false; }
+
+		me.formName = formName;
+		me.fileLocationField = fileLocationField;
+		me.context = contextPath;
+		me.manuscriptId = manuscript;
+		me.quoteId = quoteId;
+		
+		/* To perform storeInterviewFields */
+		DCT.Util.getSafeElement('_fieldChanged').value = "1";
+		
+		DCT.Integration.PBBI.RIA.mapLoadDependencies(DCT.Integration.PBBI.RIA.mapAddressLoadStore);
+
+	},
+
+	/**
+	* This function dynamically loads the third-party javascript and CSS (if not already loaded) to use PBBI RIA map.
+	* Due to the way OpenLayers and Pitney Bowes' RIA control are implemented in Javascript, ORDER MATTERS
+	* as they are loaded. (if they ever fix this, we can load normally and get better performance)
+	*/
+	mapLoadDependencies: function (loaderCallback) {
+		var openLayerJSExists = Ext.query('script[src*=OpenLayers]'),
+				debugJS = Ext.query('script[src*=debug]'),
+				openLayersJSFile = (Ext.isEmpty(debugJS)) ? '/OpenLayers.js' : '/OpenLayers.debug.js';
+		
+		if (Ext.isEmpty(openLayerJSExists)){
+			Ext.Loader.loadScript({
+				url : [
+			//OpenLayers loads first, and if RIA didn't depend on it in strange non-standard ways, we could just load it "normally" (async and out of order) for non-RIA control usage.
+					DCT.Integration.PBBI.RIA.PitneySkinsResourceDir + openLayersJSFile,
+			//RIA depends on OpenLayers. Perhaps in the future, PBBI will implement this in such a way that we can load it "normally" (async and out of order)
+					DCT.Integration.PBBI.RIA.PitneySkinsResourceDir + '/ria.js'
+				],
+				onLoad: loaderCallback
+			});
+	
+			//And OpenLayers needs a CSS file too
+			var headID = document.getElementsByTagName("head")[0];
+			var cssNode = document.createElement('link');
+			cssNode.id = 'mapTheme';
+			cssNode.type = 'text/css';
+			cssNode.rel = 'stylesheet';
+			cssNode.href = 'Skins/PitneyBowesRIAControl/theme/default/style.css';
+			headID.appendChild(cssNode);
+
+			//Here's one to facilitate printing
+			cssNode = document.createElement('link');
+			cssNode.id = 'mapPrint';
+			cssNode.type = 'text/css';
+			cssNode.rel = 'stylesheet';
+			cssNode.href = 'Skins/PitneyBowesRIAControl/PrintingHelper.css';
+			cssNode.media = 'print';
+			headID.appendChild(cssNode);
+		}else{
+			loaderCallback();
+		}
+	},
+	/**
+	* This function loads the parameters needed to show a map.
+	*/
+	mapAddressLoadStore: function () {
+		//Load the store
+		DCT.LoadingMessage.show();
+		var mapStore = Ext.create('DCT.Integration.PBBI.RIA.MapStore', {
+			autoLoad: false,
+			dctTargetPage: 'PitneyRIAMapExtJsStore', //The target page is typically defined in App_Data/ContentMapPitneyBowes.xml
+			record: 'content/viewmap',
+			fields: [
+				{ name: 'latitude', type: 'string', mapping: 'ViewMap/Latitude' },
+				{ name: 'longitude', type: 'string', mapping: 'ViewMap/Longitude' },
+				{ name: 'zoomLevel', type: 'string', mapping: 'ViewMap/ZoomLevel' },
+				{ name: 'caption', type: 'string', mapping: 'ViewMap/Caption' },
+				{ name: 'riaBaseUrl', type: 'string', mapping: 'ViewMap/RIABaseURL' },
+				{ name: 'apiKey', type: 'string', mapping: 'ViewMap/APIKey' },
+				{ name: 'marker', type: 'string', mapping: 'ViewMap/Marker' }
+				]
+		});
+
+		mapStore.on('load', function (store, records, options) {
+			DCT.Integration.PBBI.RIA.mapRecords = records;
+
+			Ext.Ajax.request({
+				url: "pitneybowes/GetMapLayers", //Get the configured map layers - these are configured in the skin.config
+				method: 'GET',
+				success: function (response, opts) {
+					layerConfig = DCT.Mvc.Util.processAjaxResponse(Ext.decode(response.responseText));
+					DCT.Integration.PBBI.RIA.mapLayers = layerConfig.payload;
+					DCT.Integration.PBBI.RIA.mapAddressShowMap();
+					DCT.LoadingMessage.hide();
+				},
+				failure: function (response, opts) {
+					DCT.LoadingMessage.hide();
+					Ext.create('DCT.AlertMessage', {
+						msg: DCT.T("ErrorOccurredProcessingLastRq"),
+						title: DCT.T("Error"),
+						icon: Ext.MessageBox.ERROR
+					}).show();
+				}
+			});
+		});
+
+		//Not sure when/why this would happen, but just in case
+		mapStore.on('exception', function (misc) {
+			//let the user know what happened
+			alert(DCT.T('RIA_Map_Unavailable'));
+		});
+		mapStore.load();
+	},
+	/**
+	* This function shows the map popup (Ext.Window).
+	*/
+	mapAddressShowMap: function () {
+	    var me = this;
+		if (DCT.Integration.PBBI.RIA.mapRecords.length == 1) {
+
+			//Make a RIA Map Popup
+			DCT.Integration.PBBI.RIA.pbbiRIAPopup = Ext.create('Ext.Window',{
+				title: DCT.T('PBBIRIA_Title'),
+				id: 'pbbiRIAPopup',
+				//default size
+				width: 800,
+				height: 600,
+				constrain: false,
+				modal: true,
+				shadow: true,
+				closable: false,
+				resizable: false,
+				//OpenLayers maps can only grow to a certain size. Limit our window accordingly.
+				boxMaxHeight: 600,
+				boxMaxWidth: 800,
+				layout: 'fit',
+				bodyStyle: 'padding:5px;',
+				items: {
+					xtype: 'panel',
+					bodyCls: 'mapPanelBodyClass',
+					layout: 'fit',
+					id: 'mapPanel',
+					listeners: {
+						afterrender: function(mapPanel){
+							Ext.Function.defer(DCT.Integration.PBBI.RIA.mapAddressRenderOpenLayers, 5, this, [mapPanel]);
+						}
+					}
+				},
+				buttons: [{
+					xtype: 'label',
+					id: 'mapPanelMessage',
+					text: Ext.String.format(DCT.T('AttachmentsUploaded'), 0),
+					count: 0,
+					hidden: true
+				}, {
+					xtype: 'label',
+					id: 'mapPanelTextLabel',
+					text: DCT.T('AttachmentCaption'),
+					hidden: true
+				},{
+					xtype: 'textfield',
+					id: 'mapPanelText',
+					hidden: true,
+					allowBlank: false,
+					maxLength: 50,
+					width: 50 * 6.5 + 10,
+					validator: function (text) {
+						if (Ext.isEmpty(text)) {
+							Ext.getCmp('mapPanelContinue').disable();
+							return false;
+						}
+						Ext.getCmp('mapPanelContinue').enable();
+						return true;
+					},
+					listeners: {
+						show: function () {
+							Ext.getCmp('mapPanelTextLabel').show();
+						},
+						hide: function () {
+							Ext.getCmp('mapPanelTextLabel').hide();
+						}
+					}
+				},{
+					text: DCT.T("Attach"),
+					id: 'mapPanelContinue',
+					hidden: true,
+					handler: function () {
+						var me = this;
+						me.hide();
+						var attachmentCaption = Ext.getCmp('mapPanelText').getRawValue();
+						Ext.getCmp('mapPanelCancel').hide();
+						Ext.getCmp('mapPanelText').hide();
+						Ext.getCmp('mapPanelMessage').show();
+						Ext.getCmp('mapPanelAttach').show();
+						DCT.Integration.PBBI.RIA.attachToPolicy(attachmentCaption);
+					}
+				},{
+					text: DCT.T("Cancel"),
+					id: 'mapPanelCancel',
+					hidden: true,
+					handler: function () {
+						var me = this;
+						me.hide();
+						Ext.getCmp('mapPanelText').hide();
+						Ext.getCmp('mapPanelContinue').hide();
+						Ext.getCmp('mapPanelMessage').show();
+						Ext.getCmp('mapPanelAttach').show();
+					}
+				},{
+					text: DCT.T('AttachToPolicy'),
+					id: 'mapPanelAttach',
+					disabled: DCT.Integration.PBBI.RIA.quoteId <= 0,
+					handler: function () {
+						var me = this;
+						if (Ext.isEmpty(Ext.getCmp('mapPanelText').getRawValue())) {
+							Ext.getCmp('mapPanelContinue').disable();
+						}
+						me.hide();
+						Ext.getCmp('mapPanelMessage').hide();
+						Ext.getCmp('mapPanelText').show();
+						Ext.getCmp('mapPanelContinue').show();
+						Ext.getCmp('mapPanelCancel').show();
+					}
+				}, {
+					text: DCT.T('Print'),
+					id: 'mapPanelPrint',
+					handler: function () { DCT.Integration.PBBI.RIA.printPreview(); }
+				}, {
+					text: DCT.T('Close'),
+					id: 'mapPanelClose',
+					handler: function () { DCT.Integration.PBBI.RIA.closeWindow(); }
+				}]
+			});
+
+			DCT.Integration.PBBI.RIA.pbbiRIAPopup.show();
+		}
+		else {
+			//let the user know what happened
+			alert(DCT.T('RIA_Map_Unavailable'));
+		}
+	},
+	attachToPolicy: function (attachmentCaption) {
+	    var me = this;
+		/* Post A Wait Window */
+		
+		Ext.get('pbbiRIAPopup').mask(DCT.T("Processing"));
+
+		/* We need to attach the generated image to the the policy */
+		var json = DCT.Integration.PBBI.RIA.getImageJson();
+		var height = DCT.Integration.PBBI.RIA.map.size.h;
+		var width = DCT.Integration.PBBI.RIA.map.size.w;
+		var quoteId = me.quoteId;
+
+		Ext.Ajax.request({
+			url: "pitneybowes/AttachToPolicy",
+			method: 'POST',
+			params: {
+				jsonString: json,
+				manuscriptId: me.manuscriptId,
+				quoteId: quoteId,
+				fileLocationField: me.fileLocationField,
+				contextPath: me.context,
+				formName: me.formName,
+				caption: attachmentCaption,
+				width: width,
+				height: height
+			},
+			success: function (response, opts) {
+				var ajaxResponse = DCT.Mvc.Util.processAjaxResponse(Ext.decode(response.responseText));
+				if (ajaxResponse.wasSuccessful()) {
+					var panelMessage = Ext.getCmp('mapPanelMessage');
+					panelMessage.setText(Ext.String.format(DCT.T('AttachmentsUploaded'), ++panelMessage.count));
+					panelMessage.show();
+				}
+				else {
+					DCT.Integration.PBBI.RIA.MessageBox(ajaxResponse.payload, "Attachment", Ext.MessageBox.ERROR);
+				}
+
+				Ext.get('pbbiRIAPopup').unmask();
+			},
+			failure: function (response, opts) {
+				DCT.Integration.PBBI.RIA.MessageBox("ErrorOccurredProcessingLastRq", "Attachment", Ext.MessageBox.ERROR);
+				Ext.get('pbbiRIAPopup').unmask();
+			}
+		});
+	},
+	printPreview: function () {
+	    var me = this;
+		/* Post A Wait Window */
+		Ext.get('pbbiRIAPopup').mask(DCT.T("Processing"));
+		var delayedHideMask = Ext.create('Ext.util.DelayedTask', function () {
+			Ext.get('pbbiRIAPopup').unmask();
+		});
+		var json = DCT.Integration.PBBI.RIA.getImageJson();
+		var formName = me.formName;
+		var manuscriptId = me.manuscriptId;
+		var fileLocationField = me.fileLocationField;
+		var context = me.context;
+		var height = DCT.Integration.PBBI.RIA.map.size.h;
+		var width = DCT.Integration.PBBI.RIA.map.size.w;
+
+		Ext.Ajax.request({
+			url: "pitneybowes/PrintPreview",
+			method: 'POST',
+			params: {
+				jsonString: json,
+				fileLocationField: fileLocationField,
+				manuscriptId: manuscriptId,
+				contextPath: context,
+				width: width,
+				height: height
+			},
+			success: function (response, opts) {
+				var ajaxResponse = DCT.Mvc.Util.processAjaxResponse(Ext.decode(response.responseText));
+				if (ajaxResponse.wasSuccessful()) {
+					Ext.Ajax.request({
+						url: "default.aspx?_submitAction=&_targetPage=preview&_pageSet=&_manuScriptId=" + manuscriptId + "&_previewXSL=" + "printjob:" + formName + "&mode=popup",
+						success: function (response, opts) {
+							Ext.Ajax.request({
+								url: DCT.checkStatusUrl,
+								success: function (formResponse, object) {
+									DCT.LoadingMessage.formsSuccess(formResponse, object);
+									delayedHideMask.delay(4000);
+								},
+								failure: me.formsFailure,
+								scope: me
+							});
+						},
+						failure: DCT.LoadingMessage.formsFailure,
+						scope: DCT.LoadingMessage
+					});
+				}
+				else {
+					Ext.get('pbbiRIAPopup').unmask();
+					DCT.Integration.PBBI.RIA.MessageBox(ajaxResponse.payload, "Preview", Ext.MessageBox.ERROR);
+				}
+			},
+			failure: function (response, opts) {
+				Ext.get('pbbiRIAPopup').unmask();
+				DCT.Integration.PBBI.RIA.MessageBox("ErrorOccurredProcessingLastRq", "Preview", Ext.MessageBox.ERROR);
+			}
+		});
+	},
+	MessageBox: function (message, title, icon) {
+		Ext.create('DCT.AlertMessage', {
+			msg: DCT.T(message),
+			title: DCT.T(title),
+			icon: icon
+		}).show();
+	},
+	getImageJson: function () {
+		/* Generate a string containing all tile url, coordinates and opacity */
+
+		// Assign a local variable of the RIA Map
+		var map = DCT.Integration.PBBI.RIA.map;
+
+		// Get the offset defined by the maps containing div
+		var offsetX = parseInt(map.layerContainerDiv.style.left);
+		var offsetY = parseInt(map.layerContainerDiv.style.top);
+
+		var tiles = [];
+
+		Ext.each(map.layers, function (layer, index) {
+			if (layer.CLASS_NAME === "OpenLayers.Layer.Markers") {
+				var icon = layer.markers[0].icon;
+				tiles[tiles.length] = { url: layer.markers[0].icon.url, x: icon.px.x + (offsetX - 9), y: icon.px.y + (offsetY - 25), opacity: 100 };
+			}
+
+			// if the layer isn't visible at this range, or is turned off, skip it
+			if (!Ext.isDefined(layer.grid) || !layer.getVisibility() || !layer.calculateInRange()) return;
+
+			Ext.each(layer.grid, function (row, rowIndex) {
+				Ext.each(row, function (tile, tileIndex) {
+					if (Ext.isDefined(tile.bounds)) {
+						var url = layer.getURL(tile.bounds);
+						var position = tile.position;
+						var tilexpos = position.x + offsetX;
+						var tileypos = position.y + offsetY;
+						var opacity = layer.opacity ? parseInt(100 * layer.opacity) : 100;
+						tiles[tiles.length] = { url: url, x: tilexpos, y: tileypos, opacity: opacity };
+					}
+				});
+			});
+		});
+
+		// create jsonString of tiles
+		var jsonTiles = JSON.stringify(tiles);
+		return jsonTiles;
+	},
+	closeWindow: function () {
+		if (DCT.Integration.PBBI.RIA.pbbiRIAPopup) {
+			DCT.Integration.PBBI.RIA.pbbiRIAPopup.close();
+		}
+	},
+
+	/**
+	* This function sets the RIA control into action, once the window has been loaded.
+	*/
+	mapAddressRenderOpenLayers: function (mapPanel) {
+		//Init some variables, and configure RIA and OpenLayers
+		var latitude = DCT.Integration.PBBI.RIA.mapRecords[0].data.latitude;
+		var longitude = DCT.Integration.PBBI.RIA.mapRecords[0].data.longitude;
+		var zoomLevel = DCT.Integration.PBBI.RIA.mapRecords[0].data.zoomLevel;
+		var caption = DCT.Integration.PBBI.RIA.mapRecords[0].data.caption;
+		var markerUrl = DCT.Integration.PBBI.RIA.mapRecords[0].data.marker;
+
+		//Projection systems we intend to use
+		var sphMercProj = new OpenLayers.Projection("EPSG:3857"); //Google/Bing maps latitude/longitude (meters)
+		var commonProj = new OpenLayers.Projection("EPSG:4326"); //GPS-like latitude/longitude
+
+		DCT.Integration.PBBI.RIA.map = new OpenLayers.Map({
+			div: mapPanel.body.dom,
+			projection: sphMercProj,
+			controls: [new window.OpenLayers.Control.Navigation(),
+							new OpenLayers.Control.PanZoom(),
+							new OpenLayers.Control.ArgParser(),
+							new OpenLayers.Control.Attribution(),
+							new OpenLayers.Control.LayerSwitcher()
+						  ],
+			layers: DCT.Integration.PBBI.RIA.getMapLayers(),
+			zoom: zoomLevel
+		});
+
+		//Convert GPS Lat/Lon into Spherical Mercator Lat/Lon
+		var point = new OpenLayers.Geometry.Point(parseFloat(longitude), parseFloat(latitude));
+		point = DCT.Integration.PBBI.RIA.transform(point, commonProj);
+		DCT.Integration.PBBI.RIA.map.setCenter(new OpenLayers.LonLat(point.x, point.y));
+
+		//Add the markers layer on the map to mark the location(s)
+		var markers = new OpenLayers.Layer.Markers(caption);
+		DCT.Integration.PBBI.RIA.map.addLayer(markers);
+
+		/* Assuming we only have 1 at this point */
+		var popupClass = OpenLayers.Popup.FramedCloud;
+		var popupContentHTML = '<h1>{0}</h1><p>{1} {2}</p><p>{3} {4}</p>';
+		var popupContentFormat = Ext.String.format(popupContentHTML, caption, DCT.T("Geocode_Latitude"), latitude, DCT.T("Geocode_Longitude"), longitude);
+		DCT.Integration.PBBI.RIA.addMarker(new OpenLayers.LonLat(point.x, point.y), popupClass, popupContentFormat, false, false, markerUrl, markers);
+	},
+	showMarkerHover: function (evt) {
+	    var me = this;
+		if (me.popup == null) {
+			me.popup = me.createPopup(me.closeBox);
+			DCT.Integration.PBBI.RIA.map.addPopup(me.popup);
+			me.popup.show();
+		} else {
+			me.popup.toggle();
+		}
+
+		OpenLayers.Event.stop(evt);
+	},
+	hideMarkerHover: function (evt) {
+	    var me = this;
+		if (me.popup != null) {
+			me.popup.hide();
+		}
+		OpenLayers.Event.stop(evt);
+	},
+	addMarker: function (lonlat, popupClass, popupContentHTML, closeBox, overflow, iconLocation, markers) {
+
+		var feature = new OpenLayers.Feature(markers, lonlat);
+		feature.closeBox = closeBox;
+		feature.popupClass = popupClass;
+		feature.data.popupContentHTML = popupContentHTML;
+		feature.data.overflow = (overflow) ? "auto" : "hidden";
+
+		var marker = feature.createMarker();
+		marker.icon.url = iconLocation;
+
+		marker.events.register("mouseover", feature, DCT.Integration.PBBI.RIA.showMarkerHover);
+		marker.events.register("mouseout", feature, DCT.Integration.PBBI.RIA.hideMarkerHover);
+
+		markers.addMarker(marker);
+	},
+
+	//Transforms a point into the map's native coordinate system.
+	//point: a point that may need transforming
+	//proj: the point's coordinate projection system (may or may not match what the map uses)
+	transform: function (point, proj) {
+
+		//Transform the LonLat to the maps current projection (typically epsg:3857)
+		point.transform(proj, DCT.Integration.PBBI.RIA.map.getProjectionObject());
+
+		return point;
+	},
+
+	//Customers will need to override this, based on what perils they have access to in the Stratus System.
+	//For DCT PBBI / DuckCreekDemo, we're doing tornado and hurricane for now to show the capabilities.
+	getMapLayers: function () {
+		var baseURL =
+			DCT.Integration.PBBI.RIA.mapRecords[0].data.riaBaseUrl +
+			DCT.Integration.PBBI.RIA.mapService;
+
+		var apiKey = DCT.Integration.PBBI.RIA.mapRecords[0].data.apiKey;
+
+		//===========================================================
+		//Bing maps (Every customer will use these)
+		//===========================================================
+		var arrLayers = [];
+		var road = new OpenLayers.Layer.Bing({
+			name: "Shaded",
+			type: "Road",
+			key: apiKey
+		});
+		arrLayers.push(road);
+
+		var hybrid = new OpenLayers.Layer.Bing({
+			name: "Hybrid",
+			type: "AerialWithLabels",
+			key: apiKey
+		});
+		arrLayers.push(hybrid);
+
+		var aerial = new OpenLayers.Layer.Bing({
+			name: "Aerial",
+			type: "Aerial",
+			key: apiKey
+		});
+		arrLayers.push(aerial);
+
+		//===========================================================
+		//Peril related maps - configured in skin.config
+		//===========================================================
+		Ext.each(DCT.Integration.PBBI.RIA.mapLayers, function (layer, index) {
+			if (layer.layerEnabled == "1") {
+				var configuredLayer = new OpenLayers.Layer.MappingServiceLayer(
+					layer.layerDisplayName,
+					layer.layerMapName,
+					baseURL);
+				configuredLayer.opacity = layer.layerOpacity;
+				configuredLayer.visibility = layer.layerVisibility == "1" ? true : false;
+				arrLayers.push(configuredLayer);
+			}
+		});
+
+		return arrLayers;
+	}
+});
+

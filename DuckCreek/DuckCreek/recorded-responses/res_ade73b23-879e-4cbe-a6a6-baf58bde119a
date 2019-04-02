@@ -1,0 +1,1017 @@
+'use strict';
+//# sourceURL=dyn/html/billing
+
+function BillingController($scope, $rootScope, $timeout, Quote, Submission, Presentation, DomManip){
+
+    var alertSnapshot = 'alert';
+    var addressSnapshot = 'address';
+    var snapshots = new RA.UI.Snapshot();
+    var premiumFinanceMap;
+    var primary;
+    var location;
+
+    $scope.billing = {finance:{'@type':'com.gaic.bue.uwd.ra.common.dto.party.PartyDto', extensions:{}}};
+    $scope.search = {};
+    $scope.countryLabel = 'State';
+    $scope.disableFinance = true;
+    $scope.isAgencyBill = true;
+    $scope.isBillingLookupOpen = false;
+    $scope.view = {usePrimary:false, showOverride: false};
+    $scope.isSearchDisabled = false;
+    $scope.disableDefault = false;
+    $scope.viewOnlyMode = true;
+    $scope.masterProducerInformation = {};
+
+    $scope.setViewOnlyMode =  function() {
+        $scope.viewOnlyMode = RA.Session.getViewOnlyMode() === YES
+            || RA.UI.isRetroEndtOrNbsReversal($scope.submission)
+            || ($rootScope.currentUser.createHid !== $scope.submission.lockedByHid)
+            || RA.Controller.isIssuedStatus($scope.submission.transactionStatusRefCode)
+            || RA.Controller.isHoldStatus($scope.submission.transactionStatusRefCode)
+            || !$scope.hasPermission;
+    };
+
+    $scope.billingAccountLookupColumnHeadings =
+        [
+            {"sTitle": ""},
+            {"sTitle": "Account #"},
+            {"sTitle": "Insured or Billing Acct Name"},
+            {"sTitle": "Policy"},
+            {"sTitle": "Policy Effective Date"},
+            {"sTitle": "City"},
+            {"sTitle": "State"},
+            {"sTitle": "ZIP Code"}
+            ];
+
+    $scope.billingAccountList = [];
+
+    $scope.billingTypeList = [
+        {value: "DIRBILL", label: "Direct", id:"billingTypeDirect"},
+        {value: "AGBILL", label: "Agency", id:"billingTypeAgency"}
+    ];
+
+
+    $scope.billingMethodList =[
+        {value: "SPREAD", label: "Spread", id:"billingMethodSpread"},
+        {value: "FULL", label: "Full", id:"billingMethodFull"}
+    ];
+
+    $scope.toggleTimeoutModal = function()
+    {
+        $scope.isTimeoutOpen = !$scope.isTimeoutOpen;
+    };
+
+    $scope.invoiceDates = [{value: 0, label: 'Default Date'}];
+    var day = 1;
+    while(day < 29)
+    {
+        $scope.invoiceDates.push({value: day, label: day});
+        day++;
+    }
+
+    $scope.setBillingAccountModalData = function()
+    {
+        var aData = [];
+        var tableRow = 0;
+
+        angular.forEach($scope.searchResults, function (item)
+        {
+            var billingAccountNumber = item.billingAccountNumber;
+            var billingName = item.billingName;
+            var policy = item.policy;
+            var policyEffectiveDate = item.policyEffectiveDate;
+            var city = item.city;
+            var state = item.state;
+            var zipCode = item.zipCode;
+
+            var twisty = '<i id="'
+                + (tableRow)
+                + '" class="icon icon-chevron-right makeThisWhite"></i>';
+            var billingAccountNumberHtml = '<a id="'
+                + (tableRow)
+                + '" ng-click="doApplySearchResults('
+                + tableRow
+                +')">'
+                + billingAccountNumber
+                + '</a>';
+            tableRow++;
+            var billingAccountRow = [twisty, billingAccountNumberHtml, billingName, policy, policyEffectiveDate, city, state, zipCode];
+            for (var index in billingAccountRow)
+            {
+                if(!billingAccountRow[index])
+                {
+                    billingAccountRow[index] = null;
+                }
+            }
+            aData.push(billingAccountRow);
+        });
+
+        return aData;
+    };
+
+    $scope.findMasterProducerDetails = function(rowClickedOn, params)
+    {
+        var billingParams = {billingAccountNumber: $scope.searchResults[rowClickedOn].billingAccountNumber, producerCode: $scope.submission.producerCode};
+        for (var key in billingParams) {
+            params[key] = billingParams[key];
+        }
+        Quote.findMasterProducerDetails(params, function(result)
+        {
+            var masterProducerInformation, html;
+            if (result.status)
+            {
+                masterProducerInformation = RA.Service.handleServiceResult(result, $scope);
+                html = createMasterProducerHeaderHtml(rowClickedOn, masterProducerInformation);
+                params.table.fnOpen(params.eTarget, params.compiler(html)($scope), "infoRow");
+                $scope.hidePageLoading();
+            }
+            else
+            {
+                $scope.hidePageLoading();
+            }
+
+        });
+
+    };
+
+    function createMasterProducerHeaderHtml(row, masterProducerInformation)
+    {
+        var classValue, html, tooltip;
+        var associatedProducerCodes = createAssociatedProducerCodeHtml(masterProducerInformation.producerCodes);
+        var masterProducerId = 'masterProducerCode' + row;
+        var addressInformationId = 'addressInformation' + row;
+        var producerCodeId = 'producerCodes' + row;
+        if (masterProducerInformation.producerValid) {
+            classValue = 'gaig-icon gaig-icon-ok billing-account-valid';
+            tooltip = 'Valid billing account for producer code ' + $scope.submission.producerCode;
+        } else {
+            classValue = 'gaig-icon gaig-icon-remove billing-account-invalid';
+            tooltip = 'Invalid billing account for producer code ' + $scope.submission.producerCode;
+        }
+        html = '<table width="100%">'
+            + '<tr>'
+            + '<td width="10%"></td>'
+            + '<td colspan="1" width="25%"><b>Master Producer Information</b></td>'
+            + '<td colspan="2">'
+            + '<div id="hover' + row + '_help" class="' + classValue + '" ' + ' gaig-tooltip="' + tooltip + '"></div>'
+            + '</td></tr>'
+            + '<tr>'
+            + '<td width="10%"></td>'
+            + '<td width="20%"><b>Master Producer Code</b><br></td>'
+            + '<td width="35%"><b>Primary Contact Information</b><br></td>'
+            + '<td width="35%"><b>Associated Producer Codes</b><br></td>'
+            + '</tr><tr>'
+            + '<tr><td></td><td id="' + masterProducerId + '">' + masterProducerInformation.masterProducerCode + '</td>'
+            + '<td id="' + addressInformationId + '">' + masterProducerInformation.addressInformation + '</td>'
+            + '<td id="' + producerCodeId + '">' + associatedProducerCodes +  '</td>'
+            + '</tr>'
+            + '</table>';
+        return html;
+    }
+
+    function createAssociatedProducerCodeHtml(producerCodes)
+    {
+        var producerCode;
+        var count = 1;
+        var html = '';
+        for(producerCode in producerCodes)
+        {
+            html += producerCodes[producerCode];
+            if (count % 4 === 0)
+            {
+                html += '<br>';
+            }
+            else
+            {
+                html += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+            }
+            count++;
+        }
+        return html;
+    }
+
+    $scope.createCharms = function() {
+        // Create the charms for the page. This is identical to the function being used on quote page, will be moved to raCommons.
+        var charmsList, charmLabel, billing, policyNumber;
+
+        charmsList = [];
+        billing = $scope.billing;
+
+        if (billing.policySymbol) {
+
+            policyNumber = (billing.policyNumber === null) ? '' : billing.policyNumber;
+            charmLabel = 'Policy #: ' + billing.policySymbol + ' ' + policyNumber + ' ' + billing.policyMod + ' '  + billing.policyVersion;
+            charmsList.push({
+                'label': charmLabel,
+                'static': true
+            });
+        }
+
+        var lockedBy = $scope.submission.lockedByName;
+        if (lockedBy) {
+            charmLabel = 'Locked By: ' + lockedBy;
+            charmsList.push({
+                'label': charmLabel,
+                'static': true
+            });
+        }
+
+        $rootScope.charms = {charmsList: charmsList};
+        RA.UI.charmsSuck();
+    };
+
+    $scope.toggleBillingType = function toggleBillingType()
+    {
+        $scope.isAgencyBill = $scope.billing.billingTypeRefCode === 'AGBILL';
+        $scope.updateZipCode();
+        $scope.billing.billingDetails[0].country = isCanadianPostalCode($scope.billing.billingDetails[0].zipCode) ? CANADA : UNITED_STATES
+
+        RA.UI.doClearMessages($scope);
+        Presentation.findPaymentPlansList($scope.billing.billingTypeRefCode === 'AGBILL' ? 'AGENCY' : 'DIRECT', function(result)
+        {
+            var data = RA.Service.handleServiceResult(result, $scope);
+            var isValid = RA.Service.isValidResult(result);
+            $timeout(function()
+            {
+                if(isValid && data) {
+                    $scope.paymentPlanList = data;
+                }
+                else{
+                    $scope.displayErrorMessages = true;
+                    $scope.errorMessages = $scope.errorMessages || [];
+                }
+            });
+        });
+    };
+
+    $scope.togglePrimaryInsured = function togglePrimaryInsured()
+    {
+        if(!$scope.view.usePrimary) // yes, it's backwards
+        {
+            var details = $scope.billing.billingDetails;
+            details[0].billingName = primary.getValue('fullName');
+            details[0].billingAddressLine1 = location.getValue('AddressLine1');
+            details[0].billingAddressLine2 = location.getValue('AddressLine2');
+            details[0].country = location.getValue('CountryISOCode');
+            details[0].zipCode = location.getValue('PostalCode');
+            details[0].city = location.getValue('City');
+            details[0].state = location.getValue('StateOrProvinceAbbreviation');
+            details[0].billingPhone = primary.getValue('phoneNumber');
+            details[0].billingEmail = primary.getValue('email');
+            $scope.updateZipCode();
+        }
+    };
+
+    $scope.toggleBillingLookupOpen = function toggleBillingLookupOpen()
+    {
+        $scope.isBillingLookupOpen = !$scope.isBillingLookupOpen;
+        if($scope.isBillingLookupOpen)
+        {
+            $scope.search = {};
+            $scope.searchResults = [];
+            $scope.searchCount = null;
+            var num = $scope.billing.billingAccountNumber;
+            if(num)
+            {
+                $scope.search.accountNumber = num;
+            }
+            else
+            {
+                $scope.search.billingName = primary.getValue('fullName');
+            }
+            $scope.doBillingLookup();
+        }
+        else
+        {
+            RA.UI.doClearMessages($scope);
+        }
+    };
+
+    $scope.toggleFinance = function()
+    {
+        $scope.disableFinance = !$scope.billing.premiumFinanceIndicator;
+        if($scope.disableFinance)
+        {
+            $scope.finance = {};
+            $scope.location = {};
+        }
+        else if (($scope.location && !$scope.location.CountryISOCode) && !$scope.disableFinance)
+        {
+            $scope.location.CountryISOCode = UNITED_STATES;  // defaulting country field to United State
+        }
+    };
+
+    $scope.toggleDefault = function toggleDefault()
+    {
+        $scope.disableDefault = false;
+        $scope.isUsingDefault = !$scope.isUsingDefault;
+        if($scope.isUsingDefault)
+        {
+            var rpmSession = $scope.accountSession;
+            var rpmObjects = rpmSession.getRpmObjects();
+            for(var id in rpmObjects)
+            {
+                var rpmObject = rpmObjects[id];
+                if(rpmObject.getRpmClass().getName() === 'account.DefaultBillingInfo')
+                {
+                    var map = {BillingType: 'billingTypeRefCode', DirectBillAccountNumber: 'billingAccountNumber',
+                               EndorsementBillingMethod: 'endorseBillMethodRefCode', PaymentPlan: 'paymentPlanCode'};
+                    for(var i in map)
+                    {
+                        $scope.billing[map[i]] = rpmObject.getFields()[i].getValue();
+                        if(i === 'DirectBillAccountNumber')
+                        {
+                            var num = rpmObject.getFields()[i].getValue();
+                            $scope.billing.billingDetails[0][map[i]] = num;
+                            if(num)
+                            {
+                                $scope.search = {'@type': 'java.util.LinkedHashMap', accountNumber: $scope.billing.billingAccountNumber};
+                                $scope.doBillingLookup(true);
+                            }
+                        }
+                    }
+                    $scope.disableDefault = true;
+                    $scope.toggleBillingType();
+                    break;
+                }
+            }
+        }
+    };
+
+    $scope.doEnableSearch = function doEnableSearch()
+    {
+        var search = $scope.search;
+        var isEnabled = validLength(search.accountNumber, 3) || validLength(search.billingName, 3) || validLength(search.policy, 7) || validLength(search.policyEffectiveDate, 3);
+        $scope.isSearchDisabled = !(isEnabled);
+    };
+
+    $scope.doBillingLookup = function doBillingLookup(isTabSearch)
+    {
+        RA.UI.doClearMessages($scope);
+        $rootScope.showPageLoading();
+        Presentation.findBillingDetails($scope.search, function(result)
+        {
+            RA.UI.doClearMessages($scope);
+            $rootScope.hidePageLoading();
+            var data = RA.Service.handleServiceResult(result, $scope);
+            var isValid = RA.Service.isValidResult(result);
+            if(isValid && data)
+            {
+                $scope.searchResults = data;
+                if(result.data['PresentationController.findBillingDetails'].messages.length === 0 && (!$scope.searchResults.length || $scope.searchResults.length === 0))
+                {
+                    $scope.validationMessages = [{type:'VALIDATION', context:'',
+                        text:'Your search produced no matching records. Please refine your search criteria and try your search again.'}];
+                    $scope.searchCount = '0 Records';
+                }
+                else if(isTabSearch)
+                {
+                    $scope.searchCount = $scope.searchResults.length + ' Records';
+                    $scope.doApplySearchResults(0);
+                }
+                else
+                {
+                    $scope.searchCount = $scope.searchResults.length + ' Records';
+                }
+            }
+            else
+            {
+                $scope.displayErrorMessages = true;
+                $scope.errorMessages = $scope.errorMessages || [];
+                $scope.searchCount = '0 Records';
+                $scope.searchResults = [];
+            }
+            $scope.billingAccountList = $scope.setBillingAccountModalData();
+            $timeout(angular.noop);
+        });
+    };
+
+    $scope.doBillingLookupTab = function doBillingLookupTab()
+    {
+        var number = $scope.billing.billingAccountNumber;
+        $scope.search = {accountNumber: number};
+        if(number && number.length >= 9)
+        {
+            $scope.doBillingLookup(true);
+        }
+    };
+
+    $scope.doChangeFinanceCountry = function doChangeFinanceCountry()
+    {
+        $scope.stateDisplayList = $scope.billing.billingDetails[0].country === UNITED_STATES ? $scope.stateList : $scope.provinceList;
+        $scope.billing.billingDetails[0].zipCode = null;
+        $scope.billing.billingDetails[0].city = null;
+        $scope.billing.billingDetails[0].state = null;
+        $scope.billingCityList= null;
+    };
+
+    $scope.doApplySearchResults = function doApplySearchResults(index)
+    {
+        var res = $scope.searchResults[index];
+        $scope.billing.billingAccountNumber = res.billingAccountNumber;
+        $scope.billing.billingDetails[0] = res;
+        $scope.billing.billingDetails[0].country = UNITED_STATES;
+        $scope.isBillingLookupOpen = false;
+        $scope.updateZipCode();
+    };
+
+    $scope.saveBillingAccount = function saveBillingAccount()
+    {
+        if(!validateSave()) return;
+
+        Quote.saveBillingAccount({submissionDto: $scope.submission, quoteDto: $scope.billing}, function(result)
+        {
+            RA.UI.doClearMessages($scope);
+            var data = RA.Service.handleServiceResult(result, $scope);
+            if(data)
+            {
+                $scope.billing.billingAccountNumber = data;
+                $scope.billing.billingDetails[0].billingAccountNumber = data;
+            }
+            else
+            {
+                DomManip.scrollTop();
+                data = result.data;
+                handleAddressValidation(data['QuoteController.saveBillingAccount']);
+            }
+            $scope.$apply();
+        });
+    };
+
+    $scope.updateZipCode = function updateZipCode(zip)
+    {
+        var countryCode;
+        var postalCode;
+        var myLocation = $scope.location;
+        if(myLocation && $scope.isAgencyBill)
+        {
+            countryCode = myLocation.CountryISOCode;
+            postalCode = myLocation.PostalCode;
+        }
+        else if(!$scope.isAgencyBill)
+        {
+            if (isCanadianPostalCode(zip)) {
+                $scope.billing.billingDetails[0].country = CANADA
+                countryCode = CANADA
+            }
+            else {
+            countryCode = $scope.billing.billingDetails[0].country == null ? UNITED_STATES : $scope.billing.billingDetails[0].country;
+
+            }
+            postalCode = $scope.billing.billingDetails[0].zipCode;
+        }
+
+        if (RA.UI.validateUSZipCode(countryCode, postalCode))
+        {
+            async.auto
+            (
+                {
+                    cityState: function(callback)
+                    {
+                        var zip;
+                        if($scope.isAgencyBill && myLocation)
+                        {
+                            zip = postalCode;
+                        }
+                        else if($scope.billing.billingDetails)
+                        {
+                            zip = $scope.billing.billingDetails[0].zipCode;
+                        }
+
+                        Presentation.findCityStateByPostalCode(zip, function(result)
+                        {
+                            var data = RA.Service.handleServiceResult(result, $scope);
+                            var isValid = RA.Service.isValidResult(result);
+                            if(isValid && data){
+                                callback(NO_ERRORS, data);
+                            }
+                            else
+                            {
+                                callback("ERROR", data);
+                            }
+                        });
+                    }
+                },
+                function(err, results)
+                {
+                    if(err){
+                        $scope.displayErrorMessages = true;
+                        $scope.errorMessages = $scope.errorMessages || [];
+                        $rootScope.hidePageLoading();
+                        $scope.pageLoaded = 'YES';
+                        $timeout(angular.noop);
+                    } else {
+                        var billing = $scope.billing;
+                        var info = results.cityState;
+                        var city;
+                        if($scope.isAgencyBill && myLocation)
+                        {
+                            $scope.cityList = info.cityList ? RA.Controller.convertStringToValueUpperCaseLabelPairs(info.cityList) : [];
+                            city = info.cityList.length === 1 ? info.cityList[0].toUpperCase() : '';
+                            myLocation.City = info.preferredCity ? info.preferredCity.toUpperCase() : city;
+                            myLocation.StateOrProvinceFIPSCode = info.addressInfoList[0].state;
+                        }
+                        else
+                        {
+                            // probably shouldn't do this -- just testing angular
+                            $scope.billingCityList = info.cityList ? RA.Controller.convertStringToValueUpperCaseLabelPairs(info.cityList) : [];
+                            billing.billingDetails[0].city = (info.preferredCity || info.cityList[0]).toUpperCase();
+                            billing.billingDetails[0].state = info.addressInfoList[0].state;
+                        }
+                        $timeout(angular.noop);
+                    }
+                }
+            );
+        }
+        else
+        {
+            if($scope.isAgencyBill && myLocation)
+            {
+                $scope.cityList =  [];
+            }
+            else if (!$scope.isAgencyBill)
+            {
+                // probably shouldn't do this -- just testing angular
+                $scope.billingCityList =  [];
+                $scope.billing.billingDetails[0].city = null;
+                $scope.billing.billingDetails[0].state = null;
+            }
+            $timeout(angular.noop);
+        }
+    };
+
+    $scope.updateBilling = function()
+    {
+        var data;
+        RA.UI.doClearMessages($scope);
+        if(!validateSave(true)) return;
+
+        $rootScope.showPageLoading();
+        handleBillingType();
+
+        var actions = handleSnapshots(true);
+        if(!actions.warning || confirm('Billing Account information will be updated in Billing Center. Click OK to continue.'))
+        {
+            if($scope.billing.billingDetails[0].addressOverride === undefined) {
+                $scope.billing.billingDetails[0].addressOverride = !actions.address;
+            }
+            premiumFinanceMap.locationMap = $scope.location;
+            premiumFinanceMap.partyMap = $scope.finance;
+            var billingParams = {submissionDto: $scope.submission, quoteDto: $scope.billing, accountSession: $scope.accountSession, screenName: SESSION_BILLING_SCREEN, sourceSystem: $scope.submission.sourceSystemRefCode, premiumFinanceMap: premiumFinanceMap};
+            Quote.updateBilling(billingParams, function(result)
+            {
+                data = result.data['QuoteController.updateBilling'];
+                if (data.status)
+                {
+                    var result = RA.Service.handleServiceResult(result, $scope);
+                    $scope.billing = result.quoteDto;
+                    $scope.disableFinance = !$scope.billing.premiumFinanceIndicator;
+                    $scope.location = result.premiumFinanceMap.locationMap;
+                    $scope.finance = result.premiumFinanceMap.partyMap;
+                    var hasBillingDetails = $scope.billing.billingDetails;
+                    if(hasBillingDetails)
+                    {
+                        $scope.billing.billingDetails[0].country = isCanadianPostalCode($scope.billing.billingDetails[0].zipCode) ? CANADA : UNITED_STATES
+                    }
+                    else
+                    {
+                        $scope.billing.billingDetails = [{country: UNITED_STATES}];
+                    }
+
+                    handleAddressValidation(data);
+                    handleSnapshots();
+                    $rootScope.bannerRefresh();
+                    $timeout(angular.noop);
+                } else {
+                    RA.Service.handleServiceResult(data, $scope);
+                    handleAddressValidation(data);
+                }
+                $rootScope.$broadcast('updateLHN');
+                $rootScope.hidePageLoading();
+                DomManip.scrollTop();
+            });
+        }
+        else
+        {
+            $rootScope.hidePageLoading();
+        }
+    };
+
+    function handleBillingType()
+    {
+        var billing = $scope.billing;
+        if($scope.isAgencyBill)
+        {
+            billing.billingAccountNumber = null;
+        }
+        else
+        {
+            billing.waiveServiceIndicator = null;
+            billing.premiumFinanceIndicator = null;
+            $scope.finance = {};
+            $scope.location = {};
+        }
+    }
+
+    function isPrimaryUsed()
+    {
+        var billing = $scope.billing.billingDetails[0];
+        //Addressline2 is usually blank and when we go to another page and come back, location.getValue('AddressLine2') is undefined but billing.billingAddressLine2 is null.
+        // In this case two values can not be the same and we should consider this when we compare these values.
+        var isAddressLine2Same = (location.getValue('AddressLine2') === billing.billingAddressLine2)|| !(location.getValue('AddressLine2') || billing.billingAddressLine2);
+        return primary.getValue('fullName') === billing.billingName &&
+               location.getValue('AddressLine1') === billing.billingAddressLine1 &&
+               isAddressLine2Same &&
+               location.getValue('CountryISOCode') === billing.country &&
+               location.getValue('PostalCode') === billing.zipCode &&
+               location.getValue('City') === billing.city &&
+               location.getValue('StateOrProvinceAbbreviation') === billing.state;
+    }
+
+    function validateSave(isSaveAll)
+    {
+        var errors = [];
+        var isAgency = $scope.isAgencyBill;
+        var details = $scope.billing.billingDetails[0];
+        if(isSaveAll && !$scope.billing.paymentPlanCode)
+            errors.push({type: 'validation', context: 'paymentPlan', message: 'Payment Plan is a required field'});
+
+        if(isSaveAll && !isAgency && !$scope.billing.billingAccountNumber)
+            errors.push({type: 'validation', context: 'billingAccountNumber', message: 'Billing account number is a required field'});
+
+        if(!isAgency && !details.billingName)
+            errors.push({type: 'validation', context: 'accountName', message: 'Billing name is a required field'});
+
+        if(!isAgency && !details.billingAddressLine1)
+            errors.push({type: 'validation', context: 'billingAddressLine1', message: 'Billing address is a required field'});
+
+        if(!isAgency && !details.country)
+            errors.push({type: 'validation', context: 'billingCountry', message: 'Billing country is a required field'});
+
+        if(!isAgency && !details.zipCode)
+            errors.push({type: 'validation', context: 'billingZip', message: 'Billing zip code is a required field'});
+
+        if(!isAgency && !details.city)
+            errors.push({type: 'validation', context: 'billingCity', message: 'Billing city is a required field'});
+
+        if(!isAgency && !details.state)
+            errors.push({type: 'validation', context: 'billingState', message: 'Billing state is a required field'});
+
+        if(!isAgency && details.zipCode){
+            if(!RA.UI.hasNoMoreThanOneMinusSign(details.zipCode))
+                errors.push({type: 'validation', context: 'billingZip', message: US_ZIP_CODE_MUST_BE_5_OR_10});
+            else if(!(details.zipCode.length === 5 || details.zipCode.length === 10) && details.country === UNITED_STATES)
+                errors.push({type: 'validation', context: 'billingZip', message: US_ZIP_CODE_MUST_BE_5_OR_10});
+            else if(details.zipCode.length !== 7 && details.country !== UNITED_STATES)
+                errors.push({type: 'validation', context: 'billingZip', message: NON_US_POSTAL_CODE_MUST_BE_7});
+        }
+
+        if(isAgency){
+            var postalCode = $scope.location.PostalCode;
+            var countryCode = $scope.location.CountryISOCode;
+            if((postalCode) && (postalCode.length > 0)){
+                if(!RA.UI.hasNoMoreThanOneMinusSign(postalCode))
+                    errors.push({type: 'validation', context: 'billingZip', message: US_ZIP_CODE_MUST_BE_5_OR_10});
+                else if(!(postalCode.length === 5 || postalCode.length === 10) && countryCode === UNITED_STATES)
+                    errors.push({type: 'validation', context: 'billingZip', message: US_ZIP_CODE_MUST_BE_5_OR_10});
+                else if(postalCode.length !== 7 && countryCode !== UNITED_STATES)
+                    errors.push({type: 'validation', context: 'billingZip', message: NON_US_POSTAL_CODE_MUST_BE_7});
+            }
+        }
+
+        RA.UI.doDisplayUIMessages(errors, $scope);
+        return errors.length === 0;
+    }
+
+    function handleAddressValidation(data)
+    {
+        var call = data;
+        if(!call.status)
+        {
+            var messages = call.messages;
+            for(var i = 0; i < messages.length; i++)
+            {
+                var m = messages[i];
+                var context = m.context;
+                if(context === 'billingAddress')
+                {
+                    $scope.view.showOverride = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    function handleSnapshots(doCompare)
+    {
+        var details = $scope.billing.billingDetails ? $scope.billing.billingDetails[0] : {};
+        var name = details.billingName;
+        var address = details.billingAddressLine1;
+        var city = details.city ? details.city.toUpperCase() : undefined;
+        var state = details.state;
+        var zip = details.zipCode;
+        var warning = {billingName: name, billingAddressLine1: address, city: city, state: state, zipCode: zip};
+        var dirty = {billingAddressLine1: address, city: city, state: state, zipCode: zip};
+        var ret = {warning: false, address: false};
+
+        if(doCompare)
+        {
+            ret.warning = snapshots.compareSnapshot(alertSnapshot, warning);
+            ret.address = snapshots.compareSnapshot(addressSnapshot, dirty);
+        }
+        else
+        {
+            snapshots.storeSnapshot(alertSnapshot, warning);
+            snapshots.storeSnapshot(addressSnapshot, dirty);
+        }
+        return ret;
+    }
+
+    function validLength(field, len)
+    {
+        return field && field.length >= len;
+    }
+
+    $scope.postalZipType = function postalZipType(countryCode) {
+        if(countryCode == "US" || countryCode == null)
+            return "zip";
+        else
+            return "postal"
+    };
+    $scope.stateLabel = function stateLabel(countryCode) {
+        if(countryCode == "US" || countryCode == null)
+            return STATE_LABEL;
+        else
+            return PROVINCE_LABEL
+    };
+
+    var subId = parseInt(RA.Session.getSubmissionId());
+
+    var quoId = parseInt(RA.Session.getSelectedQuoteId());
+
+    //called on page load
+    async.auto
+    (
+        {
+            init:function(callback)
+            {
+                var disp = new RA.Service.Dispatcher();
+                disp.dispatch
+                (
+                    {
+                        init: function(callback)
+                        {
+                            Quote.findBilling({quoteId:quoId, nullQuoteSession:true}, function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                var isValid = RA.Service.isValidResult(result);
+                                if(isValid && data){
+                                    callback(NO_ERRORS, data);
+                                }
+                                else
+                                {
+                                    callback("ERROR", data);
+                                }
+                            }, {'queue':disp});
+                        },
+                        stateList: function(callback)
+                        {
+                            Presentation.findStateProvinceList('US', function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                var isValid = RA.Service.isValidResult(result);
+                                if(isValid && data){
+                                    $scope.stateList = data;
+                                    callback(NO_ERRORS, data);
+                                }
+                                else
+                                {
+                                    callback("ERROR", data);
+                                }
+                            }, {'queue':disp});
+                        }
+                    },
+                    function(err, results)
+                    {
+                        if(err){
+                            $scope.displayErrorMessages = true;
+                            $scope.errorMessages = $scope.errorMessages || [];
+                            $rootScope.hidePageLoading();
+                            $scope.pageLoaded = 'YES';
+                            $timeout(angular.noop);
+                        }
+                        if(results !=null){
+                            var init = results.init;
+                            $scope.billing = init.quote;
+                            $scope.accountSession = new Dynamis.RpmSession(init.accountSession);
+                            $scope.isAgencyBill = $scope.billing.billingTypeRefCode === 'AGBILL';
+                            if ($scope.billing.billingDetails && !$scope.billing.billingDetails[0]) {
+                                // Create the billingDetails as an array before proceeding
+                                $scope.billing.billingDetails = [];
+                                $scope.billing.billingDetails[0] = {};
+                            }
+
+                            if ($scope.billing.billingDetails) {
+                                $scope.updateZipCode($scope.billing.billingDetails[0].zipCode);
+                                var countryCd
+                                countryCd = isCanadianPostalCode($scope.billing.billingDetails[0].zipCode) ? CANADA : UNITED_STATES
+                                var hasBillingDetails = $scope.billing.billingDetails;
+                                if(hasBillingDetails)
+                                {
+                                    $scope.billing.billingDetails[0].country = countryCd;
+                                }
+                            }
+                            else {
+                                $scope.updateZipCode()
+                                $scope.billing.billingDetails = [{country: UNITED_STATES}];
+                            }
+
+
+                            $scope.disableFinance = !$scope.billing.premiumFinanceIndicator;
+
+                            //checking to see if billing info contains an account number, if it does set billing type to direct
+                            if($scope.billing.billingAccountNumber || $scope.billing.billingDetails[0].billingAccountNumber){
+                                $scope.isAgencyBill = false;
+                                $scope.billing.billingTypeRefCode = "DIRBILL";
+                            }
+
+                            premiumFinanceMap = init.premiumFinanceMap
+
+                            $scope.location = premiumFinanceMap.locationMap;
+                            $scope.finance = premiumFinanceMap.partyMap;
+
+                            $scope.location.PostalCode = $scope.location.PostalCode ? parseInt($scope.location.PostalCode) : undefined;
+
+                            /*
+                                This was causing an issue being run concurrently with the findBilling call, since both have RpmSession objects attached.
+                                I'm thinking the root cause of the issue is a concurrency bug in dynamis, and it should be cleaned up there. That being
+                                said, we really should find a simpler way of managing the locked status. This is something that can and probably should
+                                be driven through the Work/View submission functionality as we have the information readily available at that time, and
+                                would not required each page to make an extra call.
+                             */
+                            Submission.findSubmission(subId, function (result)
+                            {
+                                $scope.submission = RA.Service.handleServiceResult(result, $scope);
+                                var parties = $scope.submission.rpmSession.namedObjects['parties'];
+                                for(var varName in parties)
+                                {
+                                    if(varName !== '@type')
+                                        $scope[varName] = parties[varName];
+                                }
+
+                                primary = $scope.submission.rpmSession.getRpmObjectById($scope.primaryInsuredId);
+                                location = primary.getValue('places')[0];
+
+                                $scope.disabled = $scope.submission.disabledFields;
+                                $scope.setViewOnlyMode();
+                                if(!hasBillingDetails)
+                                {
+                                    $scope.togglePrimaryInsured();
+                                }
+                                $scope.view.usePrimary = isPrimaryUsed();
+                                handleSnapshots();
+                                callback();
+                            });
+                        }
+                    }
+                );
+            },
+            dropdowns:['init', function(callback)
+            {
+                var disp2 = new RA.Service.Dispatcher();
+                disp2.dispatch
+                (
+                    {
+                        cityList: function(callback)
+                        {
+                            if(!$scope.location.PostalCode)
+                            {
+                                callback(NO_ERRORS, undefined);
+                                return;
+                            }
+
+                            Presentation.findCityStateByPostalCode($scope.location.PostalCode ? $scope.location.PostalCode.toString() : '', function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                var isValid = RA.Service.isValidResult(result);
+                                if(isValid && data){
+                                    callback(NO_ERRORS, data);
+                                }
+                                else
+                                {
+                                    callback("ERROR", data);
+                                }
+                            }, {'queue':disp2});
+                        },
+                        countryList: function(callback)
+                        {
+                            Presentation.findCountryList(function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                var isValid = RA.Service.isValidResult(result);
+                                if(isValid && data){
+                                    callback(NO_ERRORS, data);
+                                }
+                                else
+                                {
+                                    callback("ERROR", data);
+                                }
+                            }, {'queue':disp2});
+                        },
+                        provList: function(callback)
+                        {
+                            Presentation.findStateProvinceList(CANADA, function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                var isValid = RA.Service.isValidResult(result);
+                                if(isValid && data){
+                                    $scope.provinceList = data;
+                                    callback(NO_ERRORS, data);
+                                }
+                                else
+                                {
+                                    callback("ERROR", data);
+                                }
+                            }, {'queue':disp2});
+                        },
+                        paymentPlanList: function(callback)
+                        {
+                            Presentation.findPaymentPlansList($scope.billing.billingTypeRefCode === 'AGBILL' ? 'AGENCY' : 'DIRECT', function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                var isValid = RA.Service.isValidResult(result);
+                                if(isValid && data){
+                                    callback(NO_ERRORS, data);
+                                }
+                                else
+                                {
+                                    callback("ERROR", data);
+                                }
+                            }, {'queue':disp2});
+                        }
+                    },
+                    function(err, results)
+                    {
+                        if(err) {
+                            $scope.displayErrorMessages = true;
+                            $scope.errorMessages = $scope.errorMessages || [];
+                        } else if(results) {
+                            $scope.cityList = results.cityList ? RA.Controller.convertStringToValueUpperCaseLabelPairs(results.cityList.cityList) : [];
+                            $scope.countryList = results.countryList;
+                            $scope.provinceList = results.provList;
+                            $scope.paymentPlanList = results.paymentPlanList;
+
+                            $scope.stateDisplayList = isCanadianPostalCode($scope.billing.billingDetails[0].zipCode)? $scope.provinceList : $scope.stateList
+                        }
+                        callback();
+                    }
+                );
+            }],
+            permissions: ['init', function(callback) {
+                var params = {
+                    'resource': 'submission',
+                    'action': 'edit',
+                    'attributes': {
+                        'trnDataList': [{
+                            'sourceSystemRefCode': $scope.submission.sourceSystemRefCode,
+                            'transactionTypeRefCode': 'none'
+                        }]
+                    }
+                };
+                Presentation.hasPermission(params, function(results) {
+                    $scope.hasPermission = RA.Service.handleServiceResult(results, $scope);
+                    $scope.setViewOnlyMode();
+                    callback();
+                });
+            }]
+        },
+        function(err, results)
+        {
+            if(err) {
+                $scope.displayErrorMessages = true;
+                $scope.errorMessages = $scope.errorMessages || [];
+            }
+            $timeout(function()
+            {
+                $rootScope.$broadcast('pageLoaded');
+            });
+            $scope.createCharms();
+            $rootScope.hidePageLoading();
+            $scope.pageLoaded = 'YES';
+            $timeout(angular.noop);
+        }
+    );
+
+    var snapshot = {};
+    $scope.cancelFunction = RA.UI.cancelFunctionFactory(snapshot);
+
+    $scope.postCallback = function postCallback()
+    {
+        $scope.applyLayout(RA.Session.getPreviousPage());
+    };
+
+}
+
+function isCanadianPostalCode(postalCode) {
+    return postalCode && postalCode.length === 7
+}

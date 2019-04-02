@@ -1,0 +1,1 @@
+{"@type":"hMap","data":{"@type":"hMap","PresentationController.findTransactionStatusList":{"@type":"hMap","data":{"@type":"lhMap","OPEN":"Open","PROC":"Processed","ISSU":"Issued","PENDING":"Pending"},"messages":{"@type":"[Lcom.gaic.bue.uwd.ra.common.resource.Message;","@items":[]},"status":true}},"messages":{"@type":"hSet"},"status":true}

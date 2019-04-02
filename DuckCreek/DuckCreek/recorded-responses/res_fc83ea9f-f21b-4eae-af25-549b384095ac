@@ -1,0 +1,442 @@
+var customerExpApp = angular.module('refAppDirectivesCustomerExperience',['submissionServices','presentationServices','searchServices',
+                         'notesServices','accountServices','activityServices','navigationServices','dashboardServices','reportServices','renewalServices']);
+
+/****************************
+ * gaiLossesDetailsTable (no search, no next/prev)
+ ****************************/
+customerExpApp.directive('gaiLossesDetailsTable', function($compile) {
+    return  {
+    	//require:'?ngModel',
+        scope:true,
+    	link: function(scope, element, attrs, controller) {
+
+		  	var FIRST_COL = "firstCol";
+		  	var FIRST_COL_ICON = "firstColIcon";
+		  	var CLOSED_CLASS = "icon icon-twisty-closed";
+		  	var OPENED_CLASS = "icon icon-twisty-open";
+		  	var rowClickedOn = -1;
+		  	var CLOSE_BUTTON_CAPTION = "Cancel";
+		  	var SAVE_BUTTON_CAPTION = "Save";
+		  	var MODAL_CONTAINER = "div.modal-body-refapp";
+			var CLAIM_NUMBER_COLUMN_NDX = 1;
+			var CLAIM_FEATURE_NUMBER_COLUMN_NDX = 2;
+		  	var openedRow = null;
+		  	var openedTarget = null;
+			var selectedClaimNumber = null;
+
+		  	// datatable elements
+		  	var options = {
+		  		"fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+		  			$('td:eq(0)',nRow).on ('click', function() {
+		  				rowClickedOn = iDisplayIndex;
+						selectedClaimNumber = scope.stripTag(aData[CLAIM_NUMBER_COLUMN_NDX]) + scope.stripTag(aData[CLAIM_FEATURE_NUMBER_COLUMN_NDX])
+					});
+		  		},
+				bFilter: false,
+				bPaginate: false,
+				bSortClasses:false,
+				bInfo: false,
+				bAutoWidth: false
+		  	};
+
+		  	// adding the column headings to the element
+		  	options["aoColumns"] = scope.$eval(attrs.headings);
+
+		  	// add the column definitions, if any
+		  	if (attrs.columnDefs) {
+		  		options["aoColumnDefs"] = scope.$eval(attrs.columnDefs);
+		  	}
+
+		  	// declaring the dataTable element
+		  	var dataTable = element.dataTable(options).rowGrouping({bExpandableGrouping: false,iGroupingColumnIndex: 18, sGroupingColumnSortDirection: "desc"}) ;
+
+			// setting the data on the table
+	        scope.$watch(attrs.data, function(value) {
+	            var val = value || null;
+	            if (val) {
+	                dataTable.fnClearTable();
+	                dataTable.fnAddData(scope.$eval(attrs.data));
+	            }
+	        });
+
+		  	dataTable.on('click', function(e) {
+				var myTarget = e.target ? e.target : e.srcElement;
+				// should really use ID
+				var theCellId = myTarget.id;
+				var theClassName = myTarget.className;
+
+				if (FIRST_COL_ICON == theCellId) {
+					var nTr = myTarget.parentElement.parentElement;
+
+					if (CLOSED_CLASS == theClassName) {
+						// if there are any previous rows opened, close them
+						if (openedRow != null) {
+							scope.resetRowClickedOn();
+							openedTarget.className = CLOSED_CLASS;
+							dataTable.fnClose(openedRow);
+						}
+
+						scope.resetRowClickedOn();
+						myTarget.className = OPENED_CLASS;
+						openedRow = nTr;
+						openedTarget = myTarget;
+						var detailsHtml = scope.doDisplayLossDetailsData(rowClickedOn);
+						dataTable.fnOpen(nTr, $compile(detailsHtml)(scope), "infoRow");
+
+						$(MODAL_CONTAINER).animate({
+							scrollTop: openedRow.offsetTop
+						}, 200);
+
+						if (!scope.$$phase) {
+							scope.$apply();
+						}
+					}
+					else {
+						scope.resetRowClickedOn();
+						myTarget.className = CLOSED_CLASS;
+						openedRow = null;
+						openedTarget = null;
+						dataTable.fnClose(nTr);
+					}
+				}
+
+				if (myTarget instanceof HTMLButtonElement) {
+					var buttonCaption = myTarget.innerText;
+					if (CLOSE_BUTTON_CAPTION == buttonCaption) {
+						openedTarget.className = CLOSED_CLASS;
+						scope.resetRowClickedOn();
+						dataTable.fnClose(openedRow);
+					} else if (SAVE_BUTTON_CAPTION == buttonCaption) {
+						scope.doSaveClaimComments(selectedClaimNumber);
+					}
+				}
+			});
+	   	}
+    }
+});
+
+
+/****************************
+ * gaiLossesTable (no search, no next/prev)
+ ****************************/
+customerExpApp.directive('gaiLossesTable', function($compile) {
+    return  {
+        scope:true,
+    	link: function(scope, element, attrs, controller) {
+
+		  	var lossHistory = {};
+
+		  	// datatable elements
+		  	var options = {
+		  		// function which creates the lossHistoryObject when the first column is clicked on
+		  		"fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+		  			$('td:eq(0)',nRow).on ('click', function() {
+		  				lossHistory = {"policyNumber": aData[16], "policySymbol": aData[15], "companyName": aData[2], "policyTerm": aData[3],
+		  						    "policyMod":aData[4]};
+		  			});
+
+		  			// on some of the columns, I don't want the text to wrap, because they are currency
+		  			$('td:eq(3)',nRow).addClass("columnNoWrap");
+		  			$('td:eq(4)',nRow).addClass("columnNoWrap");
+		  			$('td:eq(5)',nRow).addClass("columnNoWrap");
+		  			$('td:eq(6)',nRow).addClass("columnNoWrap");
+		  			$('td:eq(7)',nRow).addClass("columnNoWrap");
+		  			$('td:eq(10)',nRow).addClass("columnNoWrap");
+
+		  			if (aData[3] != null && aData[3] != "" && aData[3].indexOf(TOTAL) > -1) {
+		  				// I have to add this to each column, because we don't want the first column to have the border-top
+		  				$('td:eq(1)',nRow).addClass("totalRow");
+		  				$('td:eq(2)',nRow).addClass("totalRow");
+		  				$('td:eq(3)',nRow).addClass("totalRow");
+		  				$('td:eq(4)',nRow).addClass("totalRow");
+		  				$('td:eq(5)',nRow).addClass("totalRow");
+		  				$('td:eq(6)',nRow).addClass("totalRow");
+		  				$('td:eq(7)',nRow).addClass("totalRow");
+		  				$('td:eq(8)',nRow).addClass("totalRow");
+		  				$('td:eq(9)',nRow).addClass("totalRow");
+		  				$('td:eq(10)',nRow).addClass("totalRow");
+		  				$('td:eq(11)',nRow).addClass("totalRow");
+		  				$('td:eq(12)',nRow).addClass("totalRow");
+		  			}
+		  		},
+				bFilter: false,
+				bPaginate: false,
+				bInfo: false,
+				bAutoWidth: false
+		  	};
+
+		  	// adding the column headings to the element
+		  	options["aoColumns"] = scope.$eval(attrs.headings);
+
+		  	// add the column definitions, if any
+		  	if (attrs.columnDefs) {
+		  		options["aoColumnDefs"] = scope.$eval(attrs.columnDefs);
+		  	}
+
+		  	// declaring the dataTable element
+		  	var dataTable = element.dataTable(options).rowGrouping({bExpandableGrouping: false});
+
+			// setting the data on the table
+	        scope.$watch(attrs.data, function(value) {
+	            var val = value || null;
+	            if (val) {
+	                dataTable.fnClearTable();
+	                var tableData = attrs.data;
+                	dataTable.fnAddData(scope.$eval(attrs.data));
+	            }
+	            var dataTableBody = dataTable.find('tbody');
+                $compile(dataTableBody)(scope);
+	        });
+
+		  	dataTable.on('click', function(e) {
+		  		 var myTarget = e.target ? e.target : e.srcElement;
+		  		 //View Policy Loss Details...
+		  		 if (myTarget instanceof HTMLAnchorElement) {
+		  			scope.doShowGaiLossesDetails(e, lossHistory);
+                     if(scope.lossHistoryDetailsRows.length==1){
+                         $("#firstColIcon").click();
+                     }
+		  		 }
+		  	});
+	   	}
+    }
+});
+
+/****************************
+ * priorCarrierTable (no search, no next/prev)
+ ****************************/
+customerExpApp.directive('priorCarrierTable', function($compile) {
+    return  {
+        scope:true,
+    	link: function(scope, element, attrs, controller) {
+
+		  	var rowClickedOn = -1;
+
+		  	var options = {
+		  		// function which creates the claimsDtoObject when the first column is clicked on
+		  		"fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+		  			$('td:eq(0)',nRow).on ('click', function() {
+		  				rowClickedOn = iDisplayIndex;
+		  			});
+		  			if (aData[4] != null && aData[4] != "" && aData[4].indexOf(TOTAL) > -1) {
+		  				// I have to add this to each column, because we don't want the first column to have the border-top
+		  				$('td:eq(1)',nRow).addClass("totalRow");
+		  				$('td:eq(2)',nRow).addClass("totalRow");
+		  				$('td:eq(3)',nRow).addClass("totalRow");
+		  				$('td:eq(4)',nRow).addClass("totalRow");
+		  				$('td:eq(5)',nRow).addClass("totalRow");
+		  				$('td:eq(6)',nRow).addClass("totalRow");
+		  				$('td:eq(7)',nRow).addClass("totalRow");
+		  				$('td:eq(8)',nRow).addClass("totalRow");
+		  				$('td:eq(9)',nRow).addClass("totalRow");
+		  				$('td:eq(10)',nRow).addClass("totalRow");
+		  				$('td:eq(11)',nRow).addClass("totalRow");
+		  				$('td:eq(12)',nRow).addClass("totalRow");
+		  			}
+		  		},
+				aaSorting:[],
+				bFilter: false,
+				bPaginate: false,
+				bInfo: false,
+				bAutoWidth: false
+		  	};
+
+				// datatable elements
+
+		  	// adding the column headings to the element
+		  	options["aoColumns"] = scope.$eval(attrs.headings);
+
+		  	// add the column definitions, if any
+		  	if (attrs.columnDefs) {
+		  		options["aoColumnDefs"] = scope.$eval(attrs.columnDefs);
+		  	}
+
+		  	// declaring the dataTable element
+		  	var dataTable = element.dataTable(options);//.rowGrouping({bExpandableGrouping: true});
+
+			// setting the data on the table
+	        scope.$watch(attrs.data, function(value) {
+	            var val = value || null;
+	            if (val) {
+	                dataTable.fnClearTable();
+					dataTable.fnAddData(scope.$eval(attrs.data));
+	            }
+	            var dataTableBody = dataTable.find('tbody');
+                $compile(dataTableBody)(scope);
+	        });
+
+		  	dataTable.on('click', function(e) {
+
+		  		var DELETE = "Delete";
+			  	var ADD_LOSS = "Add Loss...";
+			  	var VIEW_CHANGE_LOSS = "View or Change Loss Details...";
+			  	var VIEW_CHANGE_CARRIER = "View or Change Carrier Details...";
+
+		  		 var myTarget = e.target ? e.target : e.srcElement;
+		  		 if (myTarget instanceof HTMLAnchorElement) {
+		  			var buttonCaption = myTarget.innerText;
+		  			//for mozilla
+		  			var buttonCaptionMoz = myTarget.textContent;
+		  			if (buttonCaption == DELETE || buttonCaptionMoz == DELETE) {
+		  				if (!scope.showSnapshot) {
+		  					scope.doDeletePriorCarrier(e, rowClickedOn);
+		  				}
+		  			}
+		  			if (buttonCaption == ADD_LOSS || buttonCaptionMoz == ADD_LOSS) {
+		  				if (!scope.showSnapshot) {
+		  					scope.addLossForPriorCarrier(e, rowClickedOn);
+		  				}
+		  			}
+		  			if (buttonCaption == VIEW_CHANGE_LOSS || buttonCaptionMoz == VIEW_CHANGE_LOSS) {
+		  				scope.updatePriorCarrierLossDetails(e, rowClickedOn);
+                        if(scope.priorCarrierLossRows.length==1){
+                            $("#firstColIcon").click();
+                        }
+		  			}
+		  			if (buttonCaption == VIEW_CHANGE_CARRIER || buttonCaptionMoz == VIEW_CHANGE_CARRIER) {
+		  				scope.updatePriorCarrier(e, rowClickedOn);
+		  			}
+		  		 }
+		  	});
+	   	}
+    }
+});
+
+/****************************
+ * priorCarrierLossesDetailsTable (no search, no next/prev)
+ ****************************/
+customerExpApp.directive('priorCarrierLossesDetailsTable', function($compile) {
+    return  {
+    	//require:'?ngModel',
+        scope:true,
+    	link: function(scope, element, attrs, controller) {
+
+		  	var FIRST_COL = "firstCol";
+		  	var FIRST_COL_ICON = "firstColIcon";
+		  	var CLOSED_CLASS = "icon icon-twisty-closed";
+		  	var OPENED_CLASS = "icon icon-twisty-open";
+		  	var rowClickedOn = -1;
+		  	var CLOSE_BUTTON_CAPTION = "Cancel";
+		  	var SAVE_BUTTON_CAPTION = "Save";
+		  	var MODAL_CONTAINER = "div.modal-body-refapp";
+		  	var openedRow = null;
+		  	var openedTarget = null;
+
+		  	// datatable elements
+		  	var options = {
+		  		"fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+		  			$('td:eq(0)',nRow).on ('click', function() {
+		  				rowClickedOn = iDisplayIndex;
+		  			});
+		  			$('td:eq(1)',nRow).on ('click', function() {
+		  				rowClickedOn = iDisplayIndex;
+		  			});
+		  		},
+				bFilter: false,
+				bSortClasses:false,
+				bPaginate: false,
+				bInfo: false,
+				bAutoWidth: false
+		  	};
+
+		  	// adding the column headings to the element
+		  	options["aoColumns"] = scope.$eval(attrs.headings);
+
+		  	// add the column definitions, if any
+		  	if (attrs.columnDefs) {
+		  		options["aoColumnDefs"] = scope.$eval(attrs.columnDefs);
+		  	}
+
+		  	// declaring the dataTable element
+		  	var dataTable = element.dataTable(options);
+
+			// setting the data on the table
+	        scope.$watch(attrs.data, function(value) {
+	            var val = value || null;
+	            if (val) {
+	                dataTable.fnClearTable();
+	                dataTable.fnAddData(scope.$eval(attrs.data));
+	            }
+	            var dataTableBody = dataTable.find('tbody');
+                $compile(dataTableBody)(scope);
+	        });
+
+		  	dataTable.on('click', function(e) {
+		  		 var myTarget = e.target ? e.target : e.srcElement;
+		  		 // should really use ID
+		  		 var theCellId = myTarget.id;
+		  		 var theClassName = myTarget.className;
+
+		  		 if (FIRST_COL_ICON == theCellId)
+                 {
+		  			 var nTr = myTarget.parentElement.parentElement;
+		  			 if (CLOSED_CLASS == theClassName)
+                     {
+		  				 // if there are any previous rows opened, close them
+		  				 if (openedRow != null)
+                         {
+							 if(scope.rowClickedOn != scope.NO_ROW_CLICKED_ON)
+							 {
+								scope.resetRowClickedOn();
+							 }
+							 openedTarget.className = CLOSED_CLASS;
+							 dataTable.fnClose(openedRow);
+		  				 }
+
+						 scope.resetRowClickedOn();
+						 myTarget.className = OPENED_CLASS;
+						 openedRow = nTr;
+						 openedTarget = myTarget;
+						 var detailsHtml = scope.doDisplayPriorCarrierLossDetailsData(rowClickedOn, scope.priorCarrierLossRows[rowClickedOn]);
+						 dataTable.fnOpen(nTr,$compile(detailsHtml.details)(detailsHtml.scope),"infoRow");
+
+						 $(MODAL_CONTAINER).animate({
+						   scrollTop: openedRow.offsetTop
+						 }, 200);
+		  			 }
+                     else
+                     {
+						 if(scope.rowClickedOn != scope.NO_ROW_CLICKED_ON)
+						 {
+
+					  		 scope.resetRowClickedOn();
+						 }
+						 myTarget.className = CLOSED_CLASS;
+						 openedRow = null;
+						 openedTarget = null;
+						 dataTable.fnClose(nTr);
+		  			 }
+		  		 }
+
+		  		 if (myTarget instanceof HTMLButtonElement) {
+			  		 var buttonCaption = myTarget.innerText;
+					 var claimList = scope.priorCarrierLossRows[rowClickedOn];
+			  		 if (CLOSE_BUTTON_CAPTION == buttonCaption)
+                     {
+						  scope.onUpdateLossCancel(scope.priorCarrier.getValue('claims'));
+						  scope.resetRowClickedOn();
+						  var nTr = myTarget.parentElement.parentElement;
+						  openedTarget.className = CLOSED_CLASS;
+						  dataTable.fnClose(openedRow);
+			  		 }
+                     else if (SAVE_BUTTON_CAPTION == buttonCaption)
+                     {
+			  			scope.doSaveClaimAndComments(rowClickedOn, scope.priorCarrierLossDetails[rowClickedOn]);
+                         scope.resetRowClickedOn();
+                        var nTr = myTarget.parentElement.parentElement;
+		  				openedTarget.className = CLOSED_CLASS;
+		  				dataTable.fnClose(openedRow);
+			  		 }
+			  	 }
+				  if (myTarget instanceof HTMLAnchorElement) {
+					var buttonCaptionAnchor = myTarget.innerText;
+					if (buttonCaptionAnchor == "Delete") {
+		  				scope.doDeleteClaimAndComments(e, rowClickedOn);
+		  			}
+				  }
+		  	});
+
+	   	}
+    }
+
+});

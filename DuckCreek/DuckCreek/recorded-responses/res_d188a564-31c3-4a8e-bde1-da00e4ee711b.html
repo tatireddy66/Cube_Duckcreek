@@ -1,0 +1,925 @@
+<div class="navbar navbar-static-top">
+   <div class="navbar-inner">
+       <div class="container">
+           <div>
+               <ul class="nav">
+                   <li><a ra-href="dashboard">My Dashboard</a></li>
+                   <li class="divider-vertical"></li>
+                   </ul>
+               </div>
+
+           <form class="navbar-search" gaig-navbar-search>
+               <div class="navbar-search-facade">
+                   <input id="globalSearch" type="text" class="search-query" placeholder="Search - Policy # or Insured Name/DBA" maxlength="35"/>
+                   <button type="submit" id="searchButton" class="btn search-btn" ng-click="searchDeep()"><i class="icon-search"></i></button>
+                   <div id="searchReplace"></div>
+                   </div>
+               </form>
+
+           <div class="navbar-search-links">
+               <div class="navbar-search-options">
+                   <a ng-click="toggleAdditionalFieldsModal()">Additional Search Fields</a>
+                   <a id="createSubmission" ng-click="toggleClearSubmissionModal($event)">Create Submission</a>
+                   </div>
+               </div>
+
+           <div>
+               <ul class="nav">
+                   </ul>
+               </div>
+
+           <div>
+               <ul class="nav">
+
+                   <gaig-context-menu>
+                       <a href="#" class="dropdown-toggle">Reports <b class="caret"></b></a>
+                       <ul class="dropdown-menu">
+                           <li ng-repeat="topNavReport in ::topNavReports track by topNavReport.action">
+                                  <a href="#" ra-click="{{::topNavReport.action}}">{{::topNavReport.label}}</a>
+                               </li>
+                           </ul>
+                       </gaig-context-menu>
+
+                   <gaig-context-menu>
+                       <a href="#" class="dropdown-toggle">Links <b class="caret"></b></a>
+                       <ul class="dropdown-menu">
+                           <li ng-repeat="topNavLink in ::topNavLinks track by topNavLink.action">
+                                  <a href="#" ra-click="{{::topNavLink.action}}">{{::topNavLink.label}}</a>
+                               </li>
+                           </ul>
+                       </gaig-context-menu>
+
+                   <gaig-context-menu ng-if="showDevLinks">
+                       <a href="#" class="dropdown-toggle">Developer <b class="caret"></b></a>
+                       <ul class="dropdown-menu">
+                           <li ng-repeat="devLink in devLinks track by devLink.action">
+                                  <a href="#" ng-click="doDeveloperAction(devLink.action)">{{::devLink.label}}</a>
+                               </li>
+                           </ul>
+                       </gaig-context-menu>
+
+                   </ul>
+               </div>
+
+           <div class="pull-right">
+               <a class="brand brand-extended">{{::businessUnitDisplayName}}
+                   <span class="brand-line-two leftMargin5">CUBE</span>
+                   </a>
+               </div>
+           </div>
+       </div>
+   </div>
+<div>
+    <gaig-modal modal-id="devObsoleteSubm"
+                title="Obsolete/Unobsolete Submission"
+                ng-model="isObsoleteSubmissionsModalOpen"
+                on-cancel="obsoleteSubmCancel"
+                modal-css="gaig-modal-large"
+                cancel-button-id="cancelButtonObsoleteSubm"
+                footer-buttons="footerButtons"
+                ng-cloak
+                show-save="false">
+        <obsolete-subm clear-form="obsoleteSubmObjectHolder.clearForm"></obsolete-subm>
+    </gaig-modal>
+    <script type="text/javascript" src="dyn/js/obsoleteSubm"></script>
+</div>
+<gaig-modal modal-id="userDetails"
+            title="User Details"
+            ng-model="isUserDetailsModalOpen"
+            on-cancel="userDetailsFunctions.onCancel()"
+            on-save="userDetailsFunctions.onSave()"
+            on-open="userDetailsFunctions.onOpen()"
+            save-disabled="isTimeoutOpen"
+            show-save="userDetails.hasITAdmin"
+            modal-css="gaig-modal-medium"
+            cancel-button-id="cancelButtonUserDetails"
+            footer-buttons="userDetails.footerButtons"
+            ng-cloak>
+    <messages-modal id="topNavMessages_validation" validation="validationMessages"></messages-modal>
+    <messages id="topNavMessages" success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+    <div style="margin: 0px 4px;">
+        <span class="modal-header-refapp label-color">{{currentUser.userName}} ({{userDetails.userID}})</span>
+        <div class="row-form" ng-if="userDetails.roles">
+            <label for="userRoleList">ESAPI Roles for {{userDetails.businessDivisionCode}}</label>
+            <ul id="userRoleList" class="list3Columns" >
+             <li class="{{userDetails.roles.includes(availableRole) ? '' : 'fadedText'}}" ng-repeat="availableRole in userDetails.availableRoles">{{availableRole}}</li>
+            </ul>
+        </div>
+        <div class="row-form">
+            <div class="span2 margin0">
+                <label for="producerSecurity">Producer Security</label>
+                <gaig-radio-buttons id="producerSecurity"
+                                    options="userDetails.producerSecurityRadioOptions"
+                                    ng-model="userDetails.isProducerSecurityEnabled"
+                                    ng-disabled="true">
+                </gaig-radio-buttons>
+            </div>
+            <div class="span2">
+                <label for="userType">User Type</label>
+                <gaig-radio-buttons id="userType" options="userDetails.userTypeRadioOptions"
+                                    ng-model="userDetails.isExternalUser"
+                                    ng-disabled="isTimeoutOpen || !userDetails.hasITAdmin"
+                                    class="maButtons">
+                </gaig-radio-buttons>
+            </div>
+            <br>
+        </div>
+        <div class="row-form">
+            <label for="extProfitCentersList">Profit Centers</label>
+            <span id="extProfitCentersList">{{userDetails.profitCenters}}</span>
+        </div>
+        <div class="row-form">
+            <label for="extProducerCodesInput" ng-if="userDetails.hasITAdmin">Producer Codes (separate by comma, semicolon, or white space)</label>
+            <label for="extProducerCodesInput" ng-if="!userDetails.hasITAdmin">Producer Codes</label>
+            <textarea class="span5" rows="10" id="extProducerCodesInput" gaig-maxlength="15000" ng-disabled="isTimeoutOpen" ng-model="userDetails.producerCodesInput" maxlength="15000"></textarea>
+        </div>
+        <span class="error-text-large" ng-if="isTimeoutOpen">Request timed out...</span>
+    </div>
+</gaig-modal>
+
+<div ng-if="isChangeSubmissionStatusModalOpen">
+    <ra-modal modal-class="btn" modal-size="medium" display-title="Change Submission Status" ng-cloak custom-footer toggle="isChangeSubmissionStatusModalOpen" cancel-function="toggleChangeSubmissionStatusModal()" close-btn-label="Change Status">
+        <messages-modal validation="validationMessages"></messages-modal>
+        <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+        <change-sub-status ></change-sub-status>
+        <div class="modal-custom-footer-refapp">
+            <button class="btn" id="changeSubmissionStatusModalCloseButton" ng-click="toggleChangeSubmissionStatusModal()">Close</button>
+        </div>
+    </ra-modal>
+
+    <script type="text/javascript" src="dyn/js/changeSubStatus"></script>
+</div>
+
+<div ng-if="isChangeSubmissionTransactionTypeModalOpen">
+    <ra-modal modal-class="btn" modal-size="medium" display-title="Change Transaction Type" ng-cloak custom-footer toggle="toggleChangeSubmissionTransactionTypeModal" cancel-function="toggleChangeSubmissionTransactionTypeModal()" close-btn-label="Change Transaction">
+
+        <messages-modal validation="validationMessages"></messages-modal>
+        <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+
+        <div class="row-form">
+            <div class="row-fluid">
+                <div class="form-cell">
+                    <label class="required" for="transactionType">Submission ID</label>
+                    <input id="transactionType-submissionId" onKeyPress="RA.UI.allowOnlyNumerics(event)" maxlength=16
+                           class="input-small2" ng-model="changeTransactionTypeData.submissionId" type="text"/>
+                </div>
+                <div class="form-cell">
+                    <label class="required" for="transactionType">Transaction Type</label>
+                    <select id="transactionType" class="input-small2" ng-model="changeTransactionTypeData.transactionType">
+                        <option value="CANC">Cancellation</option>
+                        <option value="CRC">Cancel Reason Change</option>
+                        <option value="CNRW">Cancel-Rewrite</option>
+                        <option value="ENDT">Endorsement</option>
+                        <option value="NBS">New Business</option>
+                        <option value="NBP">New Business Processed</option>
+                        <option value="NRI">Non-Renewal</option>
+                        <option value="NRRC">Non-Renewal Reason Change</option>
+                        <option value="AUD">Premium Audit</option>
+                        <option value="REIN">Reinstatement</option>
+                        <option value="REN">Renewal</option>
+                        <option value="RENP">Renewal Processed</option>
+                        <option value="RNR">Reverse-Non-Renewal</option>
+                        <option value="TEMPREIN">Temporary Reinstatement</option>
+                    </select>
+                </div>
+                <div class="form-cell">
+                    <label class="required" for="transactionSubType">Transaction SubType</label>
+                    <select id="transactionSubType" class="input-small2" ng-model="changeTransactionTypeData.transactionSubType">
+                        <option value="CC">Commission Change</option>
+                        <option value="CRC">Cancel Reason Change</option>
+                        <option value="CRW">Cancel-Rewrite</option>
+                        <option value="FINAL">Final</option>
+                        <option value="F">Flat</option>
+                        <option value="FT">Full-Term</option>
+                        <option value="MON">Money</option>
+                        <option value="MT">Mid-Term</option>
+                        <option value="NB">New Business</option>
+                        <option value="NBR">Reinstated</option>
+                        <option value="ANC">Non-Compliance</option>
+                        <option value="NMON">Non-Money</option>
+                        <option value="NRI">Non-Renewal</option>
+                        <option value="NRRC">Non-Renewal Reason Change</option>
+                        <option value="P">Pro Rate</option>
+                        <option value="PPC">Rewrite - Billing Change</option>
+                        <option value="REN">Renewal</option>
+                        <option value="RESUBMIT">Resubmitted</option>
+                        <option value="RETRO">Retro Adjustment</option>
+                        <option value="RLR">Legacy Renewal</option>
+                        <option value="REVERSED">Reversed</option>
+                        <option value="RNR">Reverse Non-Renewal</option>
+                        <option value="REVISED">Revised</option>
+                        <option value="RW">Rewrite</option>
+                        <option value="S">Short-Rate</option>
+                        <option value="TEMPREIN">Temporary Reinstatement</option>
+                    </select>
+                </div>
+                <div class="form-cell">
+                    <br>Note: This change will <strong>ONLY</strong> update the submission transaction type.
+                    <div style="color:red"><br>Warning: This will <strong>NOT</strong> update any underlying data. This is not like a manually made transaction.</div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-custom-footer-refapp">
+            <button class="btn" id="changeTransactionBtn" ng-disabled="changeTransactionTypeData.submissionId == ''" ng-click="changeTransactionType()">Change Transaction Type</button>
+            <button class="btn pull-right" id="changeTransactionCloseButton" ng-click="toggleChangeSubmissionTransactionTypeModal()">Close</button>
+        </div>
+    </ra-modal>
+</div>
+
+
+<div ng-if="isAdditionalFieldsOpen">
+   <ra-modal modal-class="btn" modal-size="advancedSearch" display-title="Additional Search Fields" ng-cloak toggle="isAdditionalFieldsOpen" turn-off-scroll="true" custom-footer func="toggleAdditionalFieldsModal()" cancel-function="toggleAdditionalFieldsModal()" >
+       <ul id="additionalTab" class="nav nav-tabs">
+           <li><a href="#submissionTab" data-toggle="tab"  ng-click="doClearMessages()">Submission</a></li>
+           <li><a href="#launchRenewalTab" data-toggle="tab"  ng-click="doClearMessages()">Launch Renewal</a></li>
+           </ul>
+
+       <div class="container-fixed">
+           <div class="row-form modal-body-advancedSearch">
+
+               <div class="tab-content topPadding1 no-scroll-bars">
+                   <div class="tab-pane active" id="submissionTab">
+
+                       <messages-modal validation="validationMessages"></messages-modal>
+                       <messages success="successMessages" info="infoMessages" error="errorMessages"
+                       validation="validationMessages"></messages>
+
+                       <div class="row-form advancedSearchPad">
+                           <div class="row-fluid">
+                               <div class="form-cell">
+                                   <label for="insuredNameSearch">Insured Name</label>
+                                   <input id="insuredNameSearch" class="input-xlarge2" ng-model="advancedSearchDto.insuredName" type="text"></input><br/>
+                                   </div>
+                               </div>
+                           </div>
+
+                       <div class="row-form advancedSearchPad">
+                           <div class="row-fluid">
+                               <div class="form-cell topMarginMinus4">
+                                   <label for="policyNumberSearch">Policy #</label>
+                                   <input id="policyNumberSearch" class="input-small2" onKeyPress="RA.UI.allowOnlyAlphaNumericsStrict(event)" ng-model="advancedSearchDto.policyNumber" type="text"></input>
+                                   </div>
+
+                               <div class="form-cell topMarginMinus4">
+                                   <label for="customerNumberSearch">Customer #</label>
+                                   <input id="customerNumberSearch" class="input-small2" ng-model="advancedSearchDto.customerNumber" type="text"></input>
+                                   </div>
+
+                               <div class="form-cell topMarginMinus4">
+                                   <label for="underwriterSearch">Underwriter</label>
+                                   <select  id="underwriterSearch" class="input-large"
+                                   gaig-select="{'allowClear':true}"
+                                   ng-model="advancedSearchDto.underwriter"
+                                   on-change="updateAssignedTo()"
+                                   ng-disabled="viewOnlyModeSearchAdvanced">
+                                   <option value=""></option>
+                                   <option ng-repeat="item in ::underWriterListSearch" value="{{::item.hid}}">{{::item.lastName}}, {{::item.firstName}}</option>
+                                   </select>
+                                   </div>
+                               </div>
+                           </div>
+
+                       <div class="row-form advancedSearchPad">
+                           <div class="row-fluid">
+                               <div class="form-cell topMarginMinus4">
+                                   <label for="phoneNumberSearch">Phone #</label>
+                                   <input id="phoneNumberSearch" class="input-small2" ng-model="advancedSearchDto.phone" type="text" gaig-masked-input="(999) 999-9999"></input>
+                                   </div>
+                               <div class="form-cell topMarginMinus4">
+                                   <label for="submissionIdSearch">Submission ID</label>
+                                   <input id="submissionIdSearch" class="input-small2" ng-model="advancedSearchDto.submissionId" onKeyPress="RA.UI.allowOnlyNumerics(event)" type="text"></input>
+                                   </div>
+                               <div class="form-cell topMarginMinus4">
+                                   <label for="feinSearch">FEIN</label>
+                                   <input id="feinSearch" class="input-small2" ng-model="advancedSearchDto.fein" type="text" gaig-masked-input="99-9999999"></input>
+                                   </div>
+
+                               <fieldset class="fieldset-white width56 topMargin4">
+                                   <div class="row-fluid">
+                                       <div class="padding50-bottom">
+                                           <div class="form-cell ">
+                                               <label for="businessUnitSubmissionSearch">Business Unit</label>
+                                               <select id="businessUnitSubmissionSearch" class="input-medium"
+                                                       gaig-select="{'allowClear':false}"
+                                                       ng-model="producerLookUpBuSubmission.value">
+                                                   <option value=""></option>
+                                                   <option ng-repeat="item in ::businessUnitListForProducerLookUp track by item.value" value="{{::item.value}}">{{::item.label}}</option>
+                                               </select>
+                                           </div>
+                                       </div>
+                                   </div>
+                                   <div class="row-fluid">
+                                       <div class="form-cell topMarginMinus4">
+                                           <label for="producerLookupSearch">Producer Code</label>
+                                           <input id="producerLookupSearch" type="text" class="input-small"
+                                           ng-model="advancedSearchDto.producerCode"
+                                           ng-change="findProducerInformationSearch('submission')" maxlength="7"></input>
+                                           </div>
+                                       <div class="form-cell topMarginMinus4">
+                                           <label for="producerLookupSearchName">Agency Name</label>
+                                           <input id="producerLookupSearchName" type="text" class="input-large"
+                                           ng-model="advancedSearchDto.agencyName" maxlength="30"></input>
+                                           </div>
+                                       </div>
+
+                                   <div class="form-cell">
+                                       <ra-modal modal-class="btn" modal-size="xxlarge"
+                                       open-btn-label="  " icon-class="icon-search" open-btn-title="Appointed producers only"
+                                       display-title="Producer Lookup" ng-cloak toggle="isAgencyLookupOpenSearch"
+                                       func="toggleAgencyLookupOpenSearchSubmission()" cancel-function="toggleAgencyLookupOpenSearchSubmission()" >
+
+                                       <div class="container-fixed">
+                                           <messages-modal validation="validationMessages"></messages-modal>
+                                           <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+
+                                           <div class="spanModalLhn modalLHN">
+                                               <div class="row-fluid">
+                                                   <label>Producer Filters</label>
+                                                   <div style="text-align:center">
+                                                       <button type="submit" class="btn" ng-click="updateProducerListSearch($event);" title="Appointed producers only">View Producers</button>
+                                                       </div>
+                                                   </div>
+                                               <div class="row-fluid">
+                                                   <hr>
+                                                   </div>
+                                               <div class="row-fluid">
+                                                   <div class="form-cell ">
+                                                       <label for="businessUnitSubmissionSearchProducerlookupModal">Business Unit</label>
+                                                       <select id="businessUnitSubmissionSearchProducerlookupModal" class="input-medium"
+                                                               gaig-select="{'allowClear':false}"
+                                                               ng-model="producerLookUpBuSubmissionSearchModal.value" >
+                                                           <option value=""></option>
+                                                           <option ng-repeat="item in ::businessUnitListForProducerLookUp track by item.value" value="{{::item.value}}">{{::item.label}}</option>
+                                                       </select>
+                                                   </div>
+                                               </div>
+                                               <div class="row-fluid">
+                                                   <label for="agencyNameLookupInputSearch">Agency Name/DBA</label>
+                                                   <textarea rows="2" id="agencyNameLookupInputSearch" style="width:140px;"
+                                                   ng-model="advancedSearchDto.agencyName" maxlength="30" ></textarea>
+                                                   </div>
+                                               <div class="row-fluid">
+                                                   <label for="producerCodeLookupInputSearch">Producer Code</label>
+                                                   <input id="producerCodeLookupInputSearch" type="text" class="input-mini2"
+                                                   ng-model="advancedSearchDto.producerCode" maxlength="7"/>
+                                                   </div>
+                                               <div class="row-fluid">
+                                                   <label for="countryLookupInputSearch">Country</label>
+                                                   <select id="countryLookupInputSearch" class="input-medium"
+                                                   gaig-select="{'allowClear':true}"
+                                                   ng-model="countryLeftHandNavSearch.value"
+                                                   on-change="updateAgencyLookupStateProvListSearch()">
+                                                   <option value=""></option>
+                                                   <option ng-repeat="item in ::countryListSearch track by item.itemCode" value="{{::item.itemCode}}">{{::item.itemDescriptionShort}}</option>
+                                                   </select>
+                                                   </div>
+
+                                               <div class="row-fluid">
+                                                   <label for="stateLookupInputSearch" id="stateLookupInputLabelSearch">State</label>
+                                                   <select id="stateLookupInputSearch" class="input-medium"
+                                                   gaig-select="{'allowClear':true}"
+                                                   ng-model="stateLeftHandNavSearch.value" >
+                                                   <option value=""></option>
+                                                   <option ng-repeat="item in stateProvinceListSearch" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                                   </select>
+                                                   </div>
+                                               </div>
+                                           <div class="spanModalContentRenewals">
+                                               <div class="gaig-table-topper producerLookupTableTopperSearch">
+                                                   <div class="pull-left">
+                                                       <h3 class="table-title">Search Results</h3>
+                                                       </div>
+                                                   </div>
+                                               <table producer-lookup-table
+                                               class="table gaig-table"
+                                               id="agencyLookupTableSearch"
+                                               data="producerListSearch"
+                                               headings="producerLookupColumnHeadings"
+                                               columnDefs="producerLookupColumnHeadingsDef">
+                                               </table>
+                                               </div>
+                                           </div> <!--  end of container-fixed -->
+                                       </ra-modal>
+                                   </div>
+                               </fieldset>
+</div>
+</div>
+
+<hr class="smallMargin"></hr>
+
+<div class="row-form advancedSearchPad">
+   <div class="row-fluid">
+       <div class="form-cell">
+           <label for="countrySearch">Country</label>
+           <select id="countrySearch" class="input-large3"
+           gaig-select="{'allowClear':true}"
+           data-placeholder="--Select--"
+           ng-model="advancedSearchDto.country"
+           on-change="updateAgencyLookupStateProvListSearch()">
+           <option value=""></option>
+           <option ng-repeat="item in ::countryListSearch track by item.itemCode" value="{{::item.itemCode}}">{{::item.itemDescriptionShort}}</option>
+           </select>
+           </div>
+       </div>
+   </div>
+
+<div class="row-form advancedSearchPad">
+   <div class="row-fluid">
+       <div class="form-cell">
+           <label for="addressSearch">Mailing Address</label>
+           <input id="addressSearch" class="input-xlarge2" ng-model="advancedSearchDto.address" type="text"></input>
+           </div>
+       </div>
+   </div>
+
+<div class="row-form advancedSearchPad">
+   <div class="row-fluid">
+       <div class="form-cell topMarginMinus4">
+           <label for="zipCodeSearch" id="zipPostalCodeSearchLabel">Zip Code</label>
+           <input id="zipCodeSearch" class="input-small2" ng-model="advancedSearchDto.zip" type="text"></input>
+           </div>
+
+       <div class="form-cell topMarginMinus4">
+           <label for="citySearch">City</label>
+           <input id="citySearch" class="input-small2" ng-model="advancedSearchDto.city" type="text"></input>
+           </div>
+
+       <div class="form-cell topMarginMinus4">
+           <label for="stateSearch" id="stateProvinceSearchLabel">State</label>
+           <select id="stateSearch" class="input-large2"
+           gaig-select="{'allowClear':true}"
+           data-placeholder="--Select--"
+           ng-disabled="advancedSearchDto.country != 'US' && advancedSearchDto.country != 'CA'"
+           ng-model="advancedSearchDto.state" >
+           <option value=""></option>
+           <option ng-repeat="item in stateProvinceListSearch" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+           </select>
+           </div>
+       </div>
+   </div>
+
+<hr class="smallMargin"></hr>
+
+<div class="row-form advancedSearchPad">
+   <div class="row-fluid">
+       <div class="form-cell">
+           <label for="effectiveDateFromSearch">Effective Date</label>
+           <gaig-datepicker id="effectiveDateFromSearch"
+           ng-model="advancedSearchDto.policyEffectiveDateFrom" on-select="doValidateEffectiveDateRange()"
+           ng-disabled="viewOnlyModeSearchAdvanced">
+           </gaig-datepicker>
+           </div>
+
+       <div class="form-cell">
+           <br/>
+           To
+           </div>
+
+       <div class="form-cell topMarginMinus4">
+           <br/>
+           <gaig-datepicker id="effectiveDateToSearch"
+           ng-model="advancedSearchDto.policyEffectiveDateTo" on-select="doValidateEffectiveDateRange()"
+           ng-disabled="viewOnlyModeSearchAdvanced">
+           </gaig-datepicker>
+           </div>
+       </div>
+   </div>
+
+<div class="row-form advancedSearchPad topMarginMinus4">
+   <div class="row-fluid">
+       <div class="form-cell">
+           <label for="effectiveDateToSearch">Expiration Date</label>
+           <gaig-datepicker id="expirationDateFrom"
+           ng-model="advancedSearchDto.policyExpirationDateFrom" on-select="doValidateExpirationDateRange()"
+           ng-disabled="viewOnlyModeSearchAdvanced">
+           </gaig-datepicker>
+           </div>
+
+       <div class="form-cell">
+           <br/>
+           To
+           </div>
+
+       <div class="form-cell topMarginMinus4">
+           <br/>
+           <gaig-datepicker id="expirationDateToSearch"
+           ng-model="advancedSearchDto.policyExpirationDateTo" on-select="doValidateExpirationDateRange()"
+           ng-disabled="viewOnlyModeSearchAdvanced">
+           </gaig-datepicker>
+           </div>
+       </div>
+   </div>
+
+</div>
+
+
+<!-- Start Launch Renewal Tab -->
+
+<div class="tab-pane" id="launchRenewalTab">
+
+   <messages-modal validation="validationMessages"></messages-modal>
+   <messages success="successMessages" info="infoMessages" error="errorMessages"
+   validation="validationMessages"></messages>
+
+   <div class="row-form advancedSearchPad">
+       <div class="row-fluid">
+           <div class="form-cell">
+               <label for="startExpDateRenewal">Expiration Date Range</label>
+               <gaig-datepicker id="startExpDateRenewal"
+               ng-model="renewalSearchDto.startExpDateRenewal">
+               </gaig-datepicker>
+               </div>
+
+           <div class="form-cell">
+               <br/>
+               To
+               </div>
+
+           <div class="form-cell topMarginMinus4">
+               <br/>
+               <gaig-datepicker id="endExpDateRenewal"
+               ng-model="renewalSearchDto.endExpDateRenewal">
+               </gaig-datepicker>
+               </div>
+           <div class="form-cell padLeft5 topMarginMinus4">
+               <label for="displayRenewal">Display</label>
+               <select id="displayRenewal" class="input-large"
+               gaig-select="{'allowClear':true}"
+               ng-model="renewalSearchDto.display" >
+               <option value=""></option>
+               <option ng-repeat="item in ::displayTypeList track by item.value" value="{{::item.value}}">{{::item.label}}</option>
+               </select>
+               </div>
+           </div>
+       </div>
+
+   <div class="row-form advancedSearchPad">
+       <div class="row-fluid">
+           <div class="form-cell">
+               <label for="profitCenterRenewal">Profit Center</label>
+               <select id="profitCenterRenewal" class="input-xlarge2"
+               gaig-select="{'allowClear':true}"
+               ng-model="renewalSearchDto.currentProfitCenter"
+               on-change="updateTerritoryList()">
+               <option value=""></option>
+               <option ng-repeat="profitCenter in ::profitCenterList track by profitCenter" value="{{::profitCenter}}">{{::profitCenter}}</option>
+               </select>
+               </div>
+
+           <div class="form-cell">
+               <label for="territoryRenewal">Territory</label>
+               <select id="territoryRenewal" class="input-xlarge2"
+               gaig-select="{'allowClear':true}"
+               ng-model="renewalSearchDto.territoryCode"
+               on-change="updateFieldList()">
+               <option value=""></option>
+               <option ng-repeat="territory in ::territoryList track by territory" value="{{::territory}}">{{::territory}}</option>
+               </select>
+               </div>
+
+           <div class="form-cell">
+               <label for="fieldRenewal">Field</label>
+               <select id="fieldRenewal" class="input-xlarge2"
+               gaig-select="{'allowClear':true}"
+               ng-model="renewalSearchDto.fieldCode">
+               <option value=""></option>
+               <option ng-repeat="field in ::fieldList track by field" value="{{::field}}">{{::field}}</option>
+               </select>
+               </div>
+           </div>
+       </div>
+
+   <div class="row-form advancedSearchPad">
+       <div class="row-fluid">
+           <div class="form-cell">
+               <label for="insuredNameRenewal">Insured Name</label>
+               <input id="insuredNameRenewal" ng-model="renewalSearchDto.insuredName" type="text"
+               class="input-xlarge2"></input>
+               </div>
+           </div>
+       </div>
+
+   <div class="row-form advancedSearchPad">
+       <div class="row-fluid">
+           <div class="form-cell">
+               <label for="policySymbolRenewal">Policy Symbol</label>
+               <select id="policySymbolRenewal" class="input-small2"
+               gaig-select="{'allowClear':true}"
+               ng-model="renewalSearchDto.policySymbol"
+               on-change="updateAgencyLookupStateProvListForRenewal()">
+               <option value=""></option>
+               <option ng-repeat="item in ::policySymbolsList track by item.value" value="{{::item.value}}">{{::item.label}}</option>
+               </select>
+               </div>
+
+           <div class="form-cell">
+               <label for="policyNoRenewal">Policy #</label>
+               <input id="policyNoRenewal" type="text" onKeyPress="RA.UI.allowOnlyAlphaNumericsStrict(event)"  ng-model="renewalSearchDto.policyNumber" class="input-small2"></input>
+               </div>
+           <div class="form-cell">
+               <label for="customerNoRenewal">Customer #</label>
+               <input id="customerNoRenewal" type="text" ng-model="renewalSearchDto.customerNumber" class="input-small2"
+               ></input>
+               </div>
+           </div>
+       </div>
+
+   <div class="row-form advancedSearchPad">
+       <div class="row-fluid">
+           <div class="form-cell">
+               <label for="countryRenewal">Country</label>
+               <select id="countryRenewal" class="input-large3"
+               gaig-select="{'allowClear':true}"
+               data-placeholder="--Select--"
+               ng-model="renewalSearchDto.policyCountry"
+               on-change="updateAgencyLookupStateProvListForRenewal()">
+               <option value=""></option>
+               <option ng-repeat="item in ::countryList track by item.itemCode" value="{{::item.itemCode}}">{{::item.itemDescriptionShort}}</option>
+               </select>
+
+               </div>
+
+           <div class="form-cell">
+               <label for="stateRenewal" id="stateLookupLabelRenewal">State</label>
+               <select id="stateRenewal" class="input-large2"
+               gaig-select="{'allowClear':true}"
+               data-placeholder="--Select--"
+               ng-disabled="renewalSearchDto.policyCountry != 'US' && renewalSearchDto.policyCountry != 'CA'"
+               ng-model="renewalSearchDto.policyState" >
+               <option value=""></option>
+               <option ng-repeat="item in stateProvinceListForRenewal" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+               </select>
+               </div>
+           <div class="form-cell topMargin5">
+               <label class="checkbox">
+                   <input id="claimsExistRenewal" type="checkbox" ng-model="renewalSearchDto.claimsExist"
+                   ng-disabled="renewalSearchDto.currentProfitCenter == null || renewalSearchDto.currentProfitCenter == '' || renewalSearchDto.territoryCode == null || renewalSearchDto.territoryCode == ''">
+                   <b>Claims?</b></input><br/>
+                   </label>
+               <label class="checkbox">
+                   <input id="faceReRenewal" type="checkbox" ng-model="renewalSearchDto.facRe"
+                   ><b>Fac&nbsp;Re?</b></input>
+                   </label>
+               </div>
+           </div>
+       </div>
+
+   <div class="row-form advancedSearchPad">
+       <div class="row-fluid">
+           <div class="form-cell">
+               <label for="writtenPremiumRenewal">Total Written Prem.</label>
+               <select id="writtenPremiumRenewal" class="input-medium2"
+               gaig-select="{'allowClear':true}"
+               ng-model="renewalSearchDto.expiringPremium"
+               ng-disabled="renewalSearchDto.currentProfitCenter == null || renewalSearchDto.territoryCode == null || renewalSearchDto.currentProfitCenter == '' || renewalSearchDto.territoryCode ==''" >
+               <option value=""></option>
+               <option ng-repeat="item in ::writtenPremiumList track by item.itemCode" value="{{::item.itemCode}}">{{::item.itemDescriptionShort}}</option>
+               </select>
+               </div>
+
+           <div class="form-cell">
+               <label for="lossRatioRenewal">Loss Ratio</label>
+               <select id="lossRatioRenewal" class="input-medium2"
+               gaig-select="{'allowClear':true}"
+               ng-disabled="renewalSearchDto.currentProfitCenter == null || renewalSearchDto.territoryCode == null || renewalSearchDto.currentProfitCenter == '' || renewalSearchDto.territoryCode ==''"
+               ng-model="renewalSearchDto.lossRatio" >
+               <option value=""></option>
+               <option ng-repeat="item in ::lossTypeList track by item.label" value="{{::item.value}}">{{::item.label}}</option>
+               </select>
+
+               </div>
+
+           <div class="form-cell">
+               <label for="incurredAmtRenewal">Incurred Amt</label>
+               <select id="incurredAmtRenewal" class="input-medium2"
+               gaig-select="{'allowClear':true}"
+               ng-disabled="renewalSearchDto.currentProfitCenter == null || renewalSearchDto.territoryCode == null || renewalSearchDto.currentProfitCenter == '' || renewalSearchDto.territoryCode ==''"
+               ng-model="renewalSearchDto.incurredAmount" >
+               <option value=""></option>
+               <option ng-repeat="item in ::incurredAmountList track by item.label" value="{{::item.value}}">{{::item.label}}</option>
+               </select>
+               </div>
+           </div>
+       </div>
+
+   <div class="row-form advancedSearchPad">
+       <fieldset class="fieldset-white width56 topMargin4">
+           <div class="row-fluid">
+               <div class="padding50-bottom">
+               <div class="form-cell ">
+                   <label for="businessUnitRenewalSearch">Business Unit</label>
+                   <select id="businessUnitRenewalSearch" class="input-medium"
+                           gaig-select="{'allowClear':false}"
+                           ng-model="producerLookUpBuRenewal.value" >
+                       <option value=""></option>
+                       <option ng-repeat="item in ::businessUnitListForProducerLookUp track by item.value" value="{{::item.value}}">{{::item.label}}</option>
+                   </select>
+               </div>
+           </div>
+           </div>
+           <div class="row-fluid">
+               <div class="form-cell topMarginMinus4">
+                   <label for="producerLookupRenewal">Producer Code</label>
+                   <input id="producerLookupRenewal" type="text" class="input-small"
+                   ng-model="renewalSearchDto.producerNumber"
+                   ng-change="findProducerInformationSearch('launchRenewal')" maxlength="7"></input>
+                   </div>
+               <div class="form-cell marginRight0 topMarginMinus4">
+                   <label for="producerLookupRenewalName">Agency Name</label>
+                   <input id="producerLookupRenewalName" type="text" class="input-large"
+                   ng-model="model.agencyNameRenewal" maxlength="30"></input>
+                   </div>
+
+               <div class="form-cell">
+                   <ra-modal modal-class="btn" modal-size="xxlarge"
+                   open-btn-label="  " icon-class="icon-search" open-btn-title="Appointed producers only"
+                   display-title="Producer Lookup" ng-cloak toggle="isAgencyLookupOpenSearch"
+                   func="toggleAgencyLookupOpenSearchRenewals()"  cancel-function="toggleAgencyLookupOpenSearchSubmission()" >
+                   <div class="container-fixed">
+
+                       <messages-modal validation="validationMessages"></messages-modal>
+                       <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+
+                       <div class="spanModalLhn modalLHN">
+                           <div class="row-fluid">
+                               <label>Producer Filters</label>
+                               <div style="text-align:center">
+                                   <button type="submit" class="btn" ng-click="updateProducerListRenewal($event);" title="Appointed producers only">View Producers</button>
+                                   </div>
+                               </div>
+                           <div class="row-fluid">
+                               <hr>
+                               </div>
+                           <div class="row-fluid">
+                               <div class="form-cell ">
+                                   <label for="businessUnitRenewalSearchProducerlookupModal">Business Unit</label>
+                                   <select id="businessUnitRenewalSearchProducerlookupModal" class="input-medium"
+                                           gaig-select="{'allowClear':false}"
+                                           ng-model="producerLookUpBuRenewalSearchModal.value" >
+                                       <option value=""></option>
+                                       <option ng-repeat="item in ::businessUnitListForProducerLookUp track by item.value" value="{{::item.value}}">{{::item.label}}</option>
+                                   </select>
+                               </div>
+                           </div>
+                           <div class="row-fluid">
+                               <label for="agencyNameLookupInputSearchRenewal">Agency Name/DBA</label>
+                               <textarea rows="2" id="agencyNameLookupInputSearchRenewal" style="width:140px;"
+                               ng-model="model.agencyNameRenewal" maxlength="30" ></textarea>
+                               </div>
+                           <div class="row-fluid">
+                               <label for="producerCodeLookupInputSearchRenewal">Producer Code</label>
+                               <input id="producerCodeLookupInputSearchRenewal" type="text" class="input-mini2"
+                               ng-model="renewalSearchDto.producerNumber" maxlength="7"/>
+                               </div>
+                           <div class="row-fluid">
+                               <label for="countryLookupInputSearchRenewal">Country</label>
+                               <select id="countryLookupInputSearchRenewal" class="input-medium"
+                               gaig-select="{'allowClear':true}"
+                               ng-model="countryLeftHandNavRenewal.value"
+                               on-change="updateAgencyLookupStateProvListForRenewal ()">
+                               <option value=""></option>
+                               <option ng-repeat="item in ::countryListSearch track by item.itemCode" value="{{::item.itemCode}}">{{::item.itemDescriptionShort}}</option>
+                               </select>
+                               </div>
+                           <div class="row-fluid">
+                               <label for="stateLookupInputSearchRenewal" id="stateLookupInputLabelRenewal">State</label>
+                               <select id="stateLookupInputSearchRenewal" class="input-medium"
+                               gaig-select="{'allowClear':true}"
+                               ng-model="stateLeftHandNavRenewal.value" >
+                               <option value=""></option>
+                               <option ng-repeat="item in stateProvinceListForRenewal" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                               </select>
+                               </div>
+                           </div>
+                       <div class="spanModalContentRenewals">
+                           <div class="gaig-table-topper producerLookupTableTopperRen">
+                               <div class="pull-left">
+                                   <h3 class="table-title">Search Results</h3>
+                                   </div>
+                               </div>
+                           <table producer-lookup-table
+                           class="table gaig-table"
+                           id="agencyLookupTableSearchRen"
+                           data="producerListSearch"
+                           headings="producerLookupColumnHeadings"
+                           columnDefs="producerLookupColumnHeadingsDef">
+                           </table>
+                           </div>
+                       </div> <!--  end of container-fixed -->
+                   </ra-modal>
+                   </div>
+               </div>
+       </fieldset>
+   </div>
+   <div class="row-form advancedSearchPad">
+       <div class="row-fluid">
+
+           <div class="form-cell">
+               <label for="renewalTypeRenewal">Renewal Proc. Type</label>
+               <select id="renewalTypeRenewal" class="input-small2"
+               gaig-select="{'allowClear':true}"
+               ng-model="renewalSearchDto.autoFastInd" >
+               <option value=""></option>
+               <option ng-repeat="item in ::renewalProcessingCodeList track by item.itemCode" value="{{::item.itemCode}}">{{::item.itemDescriptionShort}}</option>
+               </select>
+               </div>
+
+           <div class="form-cell">
+               <label for="auditTypeRenewal">Audit Type</label>
+               <select id="auditTypeRenewal" class="input-medium"
+               gaig-select="{'allowClear':true}"
+               ng-model="renewalSearchDto.auditFreq" >
+               <option value=""></option>
+               <option ng-repeat="item in ::auditTypeList track by item.itemCode" value="{{::item.itemCode}}">{{::item.itemDescriptionShort}}</option>
+               </select>
+
+               </div>
+
+           <div class="form-cell">
+               <label for="sicCodeRenewal">SIC Code</label>
+               <input id="sicCodeRenewal" type="text" ng-model="renewalSearchDto.sicCode" class="input-small2"></input>
+               </div>
+           </div>
+       <div class="row-form">
+           </div>
+       </div>
+   </div>
+</div>
+</div>
+</div>
+<div class="modal-custom-footer-refapp">
+   <button class="btn" id="additionalSearchButton" ng-click="searchAdvanced()" ng-disabled="doSetSearchDisabled()"><i class="icon-search"></i></button>
+   <button class="btn" id="clearAllButton" ng-click="doClearFields()">Clear All</button>
+   <button class="btn pull-right" id="closeButton" ng-click="toggleAdditionalFieldsModal()">Close</button>
+   </div>
+</ra-modal>
+</div>
+<div ng-if="isClearSubmissionOpen">
+   <!--  Clear Submission MODAL -->
+   <ra-modal modal-class="btn" modal-size="confirm"
+   title="Create Submission" ng-cloak
+   toggle="isClearSubmissionOpen"
+   func="toggleClearSubmissionModal()" cancel-function="toggleClearSubmissionModal()"
+   close-btn-label="OK"
+   >
+   <br />
+   <label class="checkbox">
+       <input id="includeSearchFields" type="checkbox" ng-model="clearSubmission.includeSearchFields"><b>Include Search Fields?</b></input><br/>
+       </label>
+   </ra-modal>
+   </div>
+<div ng-if="isChangeBusinessUnitOpen">
+   <ra-modal modal-class="btn" modal-size="medium" display-title="Change Business Unit" ng-cloak custom-footer toggle="toggleChangeBusinessModal" cancel-function="toggleChangeBusinessModal()">
+       <messages-modal validation="validationMessages"></messages-modal>
+       <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+
+       <div class="row-form">
+           <div class="row-fluid">
+               <div class="form-cell">
+                   <label for="changeBusinessSelect">Pick Business Unit</label>
+                   <select id="changeBusinessSelect" class="input-large" gaig-select="{allowClear: true}" ng-model="changeBusiness.code" data-placeholder="--Select--">
+                       <option ng-repeat="bu in ::businessUnitList track by bu.value" value="{{::bu.value}}">{{::bu.label}}</option>
+                   </select>
+                   <br/>
+                   <button class="btn btn-primary" ng-click="doChangeBusinessUnit()">Save</button>
+                   <button class="btn" ng-click="toggleChangeBusinessModal()">Cancel</button>
+                </div>
+           </div>
+       </div>
+   </ra-modal>
+</div>
+<div>
+    <gaig-modal modal-id="devChangeLogLevel"
+                title="Change Log Level"
+                ng-model="isChangeLogLevelOpen"
+                on-cancel="logLevelCancel"
+                modal-css="gaig-modal-large"
+                cancel-button-id="cancelChangeLogLevel"
+                footer-buttons="logButtons"
+                ng-cloak
+                show-save="false">
+        <div class="row-form">
+            <div class="row-fluid">
+                <i>Note: The appender below is the same as what is in in the log4j configuration (log4j2.xml), not the name of the class. If an appender
+                   is not found for the string you pass in, the root appender will be changed.</i><br/><br/>
+            </div>
+            <div class="row-fluid" ng-if="logInfo.showComplete">
+                <b>{{'Log level successfully changed via appender: [' + logInfo.appender + ']'}}</b>
+                <br/><br/>
+            </div>
+            <div class="row-fluid">
+                <div class="form-cell">
+                    <label for="logAppender">Appender Name</label>
+                    <input id="logAppender" class="input-xlarge" ng-model="logInfo.appender">
+                </div>
+                <div class="form-cell">
+                    <label for="logLevel">Log Level</label>
+                    <select id="logLevel" class="input-large" gaig-select="{'allowClear':false}" ng-model="logInfo.logLevel">
+                        <option ng-repeat="level in logLevels" value="{{level.value}}">{{level.label}}</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </gaig-modal>
+</div>
+<script type="text/javascript" src="dyn/js/topNavController"></script>

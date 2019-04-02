@@ -1,0 +1,106 @@
+<style type="text/css">
+    .dataTables_filter
+    {
+        display:none;
+    }
+
+    .dataTables_paginate
+    {
+        display:none;
+    }
+
+    .details_container
+    {
+        background-color:#D8D8D8;
+    }
+
+    .dataTables_info
+    {
+      width: 96px;
+      text-align: center;
+      background-color: #006edb;
+      padding: 2px 6px;
+      font-size: 8pt;
+      line-height: 12px;
+      -webkit-border-radius: 16px;
+      -moz-border-radius: 16px;
+      border-radius: 16px;
+      position: relative;
+      margin-top: 5px;
+      margin-right: -41px;
+    }
+
+    .highlight_row
+    {
+        background-color:#ECFFB3;
+    }
+</style>
+
+<div id="controller" ng-controller="SearchController" class="with-bg">
+
+        <div class="gaig-loading" ng-show="pageLoadedSearch == null || pageLoadedSearch == false">      		
+      	</div>
+    		
+       <gaig-validation-panel ng-model="validationMessages"></gaig-validation-panel>
+       <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+	   <div error-catcher></div>
+
+       <div ng-show="showTimeout">
+			<!--  TIMEOUT MODAL -->
+			<ra-modal modal-class="btn" modal-size="confirm"
+                      display-title="Timeout Message" ng-cloak
+				toggle="isTimeoutOpen"
+				func="toggleTimeoutModal()"
+				close-btn-label="OK"
+                cancel-function="toggleTimeoutModal()"
+	 		>
+			<br />
+				Your request has exceeded the time allowed.
+			</ra-modal>
+		</div>	
+
+        <div class="container-fixed" ng-show="pageLoadedSearch">
+			<div class="row-form">
+				<div class="row-fluid">
+					<div class="span12">
+						<div class="gaig-table-topper">
+							<div class="pull-left"><h3 class="table-title">Search Results</h3></div>
+							<div id="searchResultsTop" class="pull-right-tableToppers">
+	                    	     <input id="searchTopFilter" type="text" onKeyPress="filterTable('listViewTable', this.value)"
+	                                    onblur="filterTable('listViewTable', this.value)" placeholder="search table..." />
+		                        </div>
+						</div>
+						
+						<table id="listViewTable" class=" table gaig-table table-striped display table">
+							<thead class="greyBackground">
+								<tr >
+									<th class="twistyColumn"></th>
+									<th></th>
+									<th>{{searchResultColumns.insuredName}}</th>
+									<th>{{searchResultColumns.policy}}</th>
+									<th>{{searchResultColumns.bu1}}</th>
+									<th>{{searchResultColumns.customerNumber}}</th>
+									<th>{{searchResultColumns.policyLocation}}</th>
+									<th>{{searchResultColumns.status}}</th>
+									<th>{{searchResultColumns.agencyProducerCode}}</th>
+									<th>{{searchResultColumns.policyTerm}}</th>
+									<th>{{searchResultColumns.underwriter}}</th>
+									<th>{{searchResultColumns.profitCenterTerritoryField}}</th>
+									<th>{{searchResultColumns.bu2}}</th>
+									<!-- Hidden Column Containing submissionId -->
+									<th></th>
+							   </tr>
+												
+							</thead>
+							<tbody></tbody>
+	
+						</table>
+						</div><br><br><br><br>
+					</div>							
+				</div>			
+			</div>						
+		</div>
+    <script type="text/javascript" src="dyn/js/search"></script>
+</div>
+
+</html>

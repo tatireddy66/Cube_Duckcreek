@@ -1,0 +1,1246 @@
+//Namespace declaration(s)
+Ext.ns('DCT.Integration.Spotlight');
+Ext.ns('DCT.LocalStorageManager');
+
+window.onbeforeunload = function () {
+	//Close any tabbed/windows
+	if (DCT.Integration.Spotlight.spotlightView) {
+		DCT.Integration.Spotlight.spotlightView.close();
+	}
+};
+
+window.onresize = function () {
+	if (Ext.get('spotlight')) {
+		DCT.Integration.Spotlight.checkEnableExpand();
+	}
+};
+
+Ext.apply(DCT.LocalStorageManager, {
+	feature : "",
+	maxLength : 2621440,
+	keyExpiration : 300, //Seconds (5 minutes);
+	queue : [],
+	packageManager : [],
+
+	initialize : function (feature) {
+		var me = this;
+		//Initialize this class with a feature key ('Spotlight') as an example.  This will be used throughout the lifecycle.
+		me.feature = feature;
+		//Add an event listener for localStorage changes.
+		window.addEventListener("storage", me.storageHandler, false);
+	},
+	storageHandler : function (event) {
+		if (event.key == 'spotlightQueue') {
+			//Get the value which should be the method name.
+
+			var method = DCT.LocalStorageManager.get(event.key, true);
+
+			//If we have a local queue item for the given method...
+			if (DCT.LocalStorageManager.queue[method]) {
+				//Pull the next item off the queue.
+				var qItem = DCT.LocalStorageManager.queue[method].shift();
+
+				if (!qItem) {
+					//Cleanup Queue (remove it)..
+					DCT.LocalStorageManager.removeItemFromQueue(event.key);
+				} else if (DCT.LocalStorageManager.queue[method].length >= 1) {
+					//If the queue is not empty
+					DCT.LocalStorageManager.execute(Ext.String.format("{0}|{1}", qItem.key, "queue"), qItem.value);
+				} else {
+					//Cleanup Queue (remove it)..
+					DCT.LocalStorageManager.removeItemFromQueue(event.key);
+
+					DCT.LocalStorageManager.execute(Ext.String.format("{0}", qItem.key), qItem.value);
+				}
+			}
+		} else if (event.key == 'spotlightClose') {
+			var guid = DCT.LocalStorageManager.get(event.key, true);
+			if (guid) {
+				var spotlightAssistant = Ext.getCmp('spotlight');
+				if (guid.indexOf(spotlightAssistant.guid) != -1) {
+					spotlightAssistant.close();
+					DCT.Integration.Spotlight.spotlightView = null;
+					DCT.Integration.Spotlight.updateAndShow();
+				}
+			}
+
+			DCT.LocalStorageManager.remove(event.key);
+		}
+		else if(event.key == 'retrievePage'){
+			
+			var pageNumber = DCT.LocalStorageManager.get(event.key, true);
+			
+			if(pageNumber){
+				var imgData = Ext.DomQuery.selectValue(DCT.Integration.Spotlight.imageTag, DCT.Integration.Spotlight.pagingToolbar.store.data.items[pageNumber - 1].data);
+			DCT.LocalStorageManager.add("draw", "source", Ext.String.format("data:image/png;base64,{0}", imgData));
+			DCT.LocalStorageManager.send("draw");
+			}
+		}
+	},
+	removeItemFromQueue : function (key) {
+		delete DCT.LocalStorageManager[key];
+	},
+	execute : function (key, value) {
+		var me = this;
+
+			//Set
+			localStorage.setItem(key, value);
+			//Execute
+			//Quick Clear (sanity)
+			localStorage.removeItem("spotlight|execute");
+			localStorage.setItem("spotlight|execute", key);
+	},
+	send : function (method, overrideMaxLength) {
+		var me = this;
+
+		var pkg = me.uniqueObject(method);
+		if (pkg) {
+			try {
+				var pkgString = JSON.stringify(pkg);
+				var maxLength = overrideMaxLength ? overrideMaxLength : me.maxLength;
+				var re = new RegExp(Ext.String.format(".{1,{0}}", maxLength), 'g');
+				var valueArray = pkgString.match(re);
+
+				me.queue[method] = [];
+				me.queue[method].length = 0;
+
+				for (var index = 0; index < valueArray.length; index++) {
+					var val = valueArray[index];
+					var q = {
+						'key' : Ext.String.format("{0}|{1}", pkg.feature, pkg.method),
+						'value' : val
+					};
+
+					me.queue[method].push(q);
+				}
+
+				var qItem = me.queue[method].shift();
+				var executeKeyValue = "";
+
+				if (me.queue[method].length >= 1) {
+					me.execute(Ext.String.format("{0}|{1}", qItem.key, "queue"), qItem.value);
+				} else {
+					me.execute(Ext.String.format("{0}", qItem.key), qItem.value);
+				}
+				
+				//Cleanup Unique Obj.
+				me.removeUniqueObject(method);
+
+			} catch (err) {
+				if (err.name == "QuotaExceededError") {
+					//Remove from Queue
+					DCT.LocalStorageManager.removeItemFromQueue(method);
+
+					me.queue[method] = null;
+
+					var cleanedUp = false;
+
+					// Most likely an quota limit on the local storage...
+					for (var key in localStorage) {
+						var keyArray = key.split('|');
+
+						//validate spotlight feature
+						if (keyArray && keyArray[0] == 'spotlight') {
+							try {
+								//Check expiration...
+								var objPkg = JSON.parse(localStorage[key]);
+								var now = new Date().getTime();
+
+								if ((now - objPkg.timestamp) / 1000 > me.keyExpiration) {
+									cleanedUp = true;
+									me.remove(key);
+								}
+							} catch (parseError) {
+								//Remove
+								cleanedUp = true;
+								me.remove(key);
+							}
+						}
+					}
+
+					if (cleanedUp) {
+						//Try The Add Again!!!
+						me.send(method);
+					} else {
+						//Adjust the max length of the key value.
+						var currentMaxLength = overrideMaxLength ? overrideMaxLength : me.maxLength;
+						var adjustedMaxLength = currentMaxLength * 0.90;
+						me.send(method, adjustedMaxLength);
+					}
+				}
+			}
+		}
+	},
+	removeUniqueObject: function (key){
+		var me = this;
+
+		for (var index = 0; index < me.packageManager.length; index++) {
+			var pkg = me.packageManager[index];
+
+			if (pkg.method == key) {
+				me.packageManager.splice(index, 1);
+			}
+		}
+	},
+	uniqueObject : function (key) {
+		var me = this;
+
+		for (var index = 0; index < me.packageManager.length; index++) {
+			var pkg = me.packageManager[index];
+
+			if (pkg.method == key) {
+				return pkg;
+			}
+		}
+
+		return null;
+	},
+	add : function (method, param, value) {
+		var me = this;
+
+		if (typeof(value) == "function") {
+			value = "" + value;
+		}
+
+		//Do we have a package already started for this 'method'?
+		if (me.uniqueObject(method) == null) {
+			//NEW
+			var pkg = {
+				feature : me.feature,
+				method : method,
+				timestamp : new Date().getTime(),
+				params : {}
+			};
+
+			pkg.params[param] = value;
+			me.packageManager.push(pkg);
+		} else {
+			//EXISTING
+			var existingPkg = me.uniqueObject(method);
+			existingPkg.params[param] = value;
+		}
+	},
+	get : function (key, remove) {
+		var me = this;
+
+		var value = localStorage[key];
+
+		if (value && remove) {
+			me.remove(key);
+		}
+
+		return value;
+	},
+	remove : function (key) {
+		localStorage.removeItem(key);
+	}
+});
+
+Ext.apply(DCT.Integration.Spotlight, {
+
+	canvas : null,
+	ctx : null,
+	image : null,
+	zoomPower : 1.0,
+	pdfData : null,
+	spotlightView : null,
+	highlightedArea : null,
+	pagingToolbar : null,
+	offsetX : 0,
+	offsetY : 0,
+	currentFieldRef : null,
+	imageTag : 'imageData',
+	callbackQueue : [],
+	currentState : null,
+	minimized : false,
+
+	//TEMP
+	version : 2, //version: 1 == "scroll", version: 2 == "drag"...
+	updateAndShow : function () {
+		var me = this;
+
+		if (me.currentFieldRef) {
+			me.processField(me.currentFieldRef);
+		}
+	},
+	processField : function (fieldRef) {
+		var me = this;
+		me.currentFieldRef = fieldRef;
+
+		var pageNumber = Ext.DomQuery.selectValue("actualPageNum", fieldRef.parentNode);
+		var imageBytes = Ext.DomQuery.selectValue(me.imageTag, fieldRef.parentNode);
+		var imageDataUrl = Ext.String.format("data:image/png;base64,{0}", imageBytes);
+
+		if (!pageNumber || !imageBytes) {
+			return;
+		}
+
+		if (DCT.Integration.Spotlight.windowListening()) {
+			var coordinates = Ext.DomQuery.selectValue("coordinates", fieldRef);
+			if (coordinates != null) {
+				var coords = coordinates.replace("y:", "");
+				coords = coords.replace("x:", "");
+				coords = coords.replace("width:", "");
+				coords = coords.replace("height:", "");
+				var coordArray = coords.split(",", 4)
+					DCT.Integration.Spotlight.offsetX = coordArray[0];
+				DCT.Integration.Spotlight.offsetY = coordArray[1];
+				DCT.LocalStorageManager.add("draw", "coords", coordArray);
+			}
+
+			DCT.LocalStorageManager.add("draw", "currentPage", parseInt(pageNumber, 10) + 1);
+			DCT.LocalStorageManager.add("draw", "pageCount", DCT.Integration.Spotlight.pagingToolbar.store.data.items.length);
+			DCT.LocalStorageManager.add("draw", "source", imageDataUrl);
+			DCT.LocalStorageManager.send("draw");
+
+			return;
+		}
+
+		if (!DCT.Integration.Spotlight.minimized) {
+			me.showSpotlightAssistant();
+		}
+
+		me.loadPage(pageNumber, function () {
+			//COORDINATES
+			var coordinates = Ext.DomQuery.selectValue("coordinates", fieldRef);
+			if (coordinates != null) {
+				var coords = coordinates.replace("y:", "");
+				coords = coords.replace("x:", "");
+				coords = coords.replace("width:", "");
+				coords = coords.replace("height:", "");
+				var coordArray = coords.split(",", 4)
+					me.hightlightImage(coordArray);
+			}
+
+			if (DCT.Integration.Spotlight.version == 1) {
+				//HEIGHT
+				var scrollHeight = document.getElementById('spotlight-body').scrollHeight;
+				var clientHeight = document.getElementById('spotlight-body').clientHeight;
+				var maxScrollY = scrollHeight - clientHeight;
+
+				document.getElementById('spotlight-body').scrollTop = (coordArray[1] * DCT.Integration.Spotlight.zoomPower) - (clientHeight / 2);
+
+				//WIDTH
+				var scrollWidth = document.getElementById('spotlight-body').scrollWidth;
+				var clientWidth = document.getElementById('spotlight-body').clientWidth;
+				var maxScrollX = scrollWidth - clientWidth;
+
+				document.getElementById('spotlight-body').scrollLeft = (coordArray[0] * DCT.Integration.Spotlight.zoomPower) - (clientWidth / 2);
+			} else {
+				DCT.Integration.Spotlight.canvas.style.left = 0;
+				DCT.Integration.Spotlight.canvas.style.top = 0;
+
+				//HEIGHT
+				var scrollHeight = document.getElementById('spotlight-body').scrollHeight;
+				var clientHeight = document.getElementById('spotlight-body').clientHeight;
+				var maxScrollY = scrollHeight - clientHeight;
+
+				document.getElementById('spotlight-body').scrollTop = (coordArray[1] * DCT.Integration.Spotlight.zoomPower) - (clientHeight / 2);
+
+				//WIDTH
+				var scrollWidth = document.getElementById('spotlight-body').scrollWidth;
+				var clientWidth = document.getElementById('spotlight-body').clientWidth;
+				var maxScrollX = scrollWidth - clientWidth;
+
+				document.getElementById('spotlight-body').scrollLeft = (coordArray[0] * DCT.Integration.Spotlight.zoomPower) - (clientWidth / 2);
+
+			}
+
+		});
+	},
+	processInputField : function (inputField) {
+		var me = this;
+
+		//We have our pdfData initialized and we now want to check if a matching xmlID is found.
+		var fieldReference = Ext.DomQuery.select("pdfData/page/field[@xmlID='" + inputField.dctSpotlight + "']", me.pdfData);
+
+		if (fieldReference != null && fieldReference[0]) {
+			me.processField(fieldReference[0]);
+		}
+	},
+
+	loadPage : function (pageNumber, callback) {
+		var me = this;
+
+		me.pagingToolbar.store.currentPage = parseInt(pageNumber, 10) + 1;
+		me.pagingToolbar.store.load({
+			params : {
+				hightlightCallback : callback
+			}
+		});
+	},
+
+	redrawHighlights : function () {
+		if (highlightedArea != null) {
+			var scale = DCT.Integration.Spotlight.zoomPower;
+
+			var mode = "darken";
+
+			DCT.Integration.Spotlight.ctx.globalCompositeOperation = mode;
+
+			DCT.Integration.Spotlight.ctx.beginPath();
+
+			DCT.Integration.Spotlight.ctx.rect(highlightedArea.coords[0] * scale, highlightedArea.coords[1] * scale, highlightedArea.coords[2] * scale, highlightedArea.coords[3] * scale);
+
+			DCT.Integration.Spotlight.ctx.strokeStyle = "red";
+
+			if (DCT.Integration.Spotlight.ctx.globalCompositeOperation != mode) {
+				DCT.Integration.Spotlight.ctx.fillStyle = "rgba(255, 251, 181, .3)";
+			} else {
+				DCT.Integration.Spotlight.ctx.fillStyle = "rgba(255, 251, 181, 1)";
+			}
+
+			DCT.Integration.Spotlight.ctx.stroke();
+
+			DCT.Integration.Spotlight.ctx.fill();
+
+			//DCT.Integration.Spotlight.ctx.globalCompositeOperation = "";
+			DCT.Integration.Spotlight.ctx.closePath();
+		}
+	},
+
+	startDrag : function (e) {
+		var me = this;
+
+		// determine event object
+		if (!e) {
+			var e = window.event;
+		}
+
+		// IE uses srcElement, others use target
+		targ = e.target ? e.target : e.srcElement;
+
+		if (targ.className != 'dragme') {
+			return
+		};
+		// calculate event X, Y coordinates
+		offsetX = e.clientX;
+		offsetY = e.clientY;
+
+		// assign default values for top and left properties
+		if (!targ.style.left) {
+			targ.style.left = '0px'
+		};
+		if (!targ.style.top) {
+			targ.style.top = '0px'
+		};
+
+		// calculate integer values for top and left
+		// properties
+		coordX = parseInt(targ.style.left);
+		coordY = parseInt(targ.style.top);
+		drag = true;
+
+		// move div element
+		targ.style.position = "absolute";
+
+		DCT.Integration.Spotlight.canvas.onmousemove = DCT.Integration.Spotlight.dragDiv;
+		return false;
+	},
+
+	checkEnableExpand : function () {
+		var me = Ext.getCmp('spotlight');
+
+		var clientSize = Ext.getBody().getViewSize();
+		var wrapperWidth = Ext.get('wrapper').dom.clientWidth;
+
+		var tool = Ext.getCmp('spotlightExpand');
+
+		if (clientSize.width - wrapperWidth - 35 > 240) {
+			if (me.hasCls('spotlight-expand')) {
+				me.alignTo(Ext.get('wrapper'), 'r', [10]);
+
+				me.setWidth(clientSize.width - wrapperWidth - 35);
+				me.setHeight(clientSize.height - 45);
+
+			} else {
+				tool.show();
+			}
+		} else {
+			tool.hide();
+			if (me.hasCls('spotlight-expand')) {
+				Ext.get('wrapper').setStyle('margin-left', 'auto');
+				tool = Ext.getCmp('spotlightCompress');
+				tool.hide();
+
+				Ext.getCmp('spotlightExpand').show();
+
+				me.removeCls('spotlight-expand');
+				me.setWidth(320);
+				me.setHeight(420);
+
+				var actions = Ext.get('relatedActions');
+				var newYPos;
+				if (actions != null) {
+					if (actions.dom.offsetTop) {
+						newYPos = actions.dom.offsetTop + actions.dom.offsetHeight;
+					}
+					else {
+						newYPos = '15%';
+					}
+				}
+				else {
+					newYPos = '15%';
+				}
+
+				me.setStyle({
+					left: 'auto',
+					right: '10px',
+					top: newYPos
+				});
+
+				DCT.Integration.Spotlight.checkEnableExpand();
+			}
+		}
+	},
+
+	dragDiv : function (e) {
+		if (!drag) {
+			return
+		}
+
+		if (!e) {
+			var e = window.event
+		}
+
+		var body = Ext.getCmp('spotlight').body;
+		var trueMaxLeft = document.getElementById('spotlight-body').scrollLeft;
+		var trueMaxTop = document.getElementById('spotlight-body').scrollTop;
+		var trueMaxRight = targ.width - body.getViewSize().width;
+		var trueMaxBottom = targ.height - body.getViewSize().height;
+		var pagingHeight = Ext.getCmp('spotlight').height - Ext.getCmp('spotlightPaging').y;
+
+		var suggestedLeft = coordX + e.clientX - offsetX;
+		var suggestedTop = coordY + e.clientY - offsetY;
+
+		//Ext.getCmp('leftVal').setText(suggestedLeft);
+		//Ext.getCmp('topVal').setText(suggestedTop);
+
+
+		if (suggestedLeft > trueMaxLeft) {
+			suggestedLeft = trueMaxLeft;
+		} else if (Math.abs(suggestedLeft) > trueMaxRight) {
+			if (suggestedLeft < 0) {
+				suggestedLeft = trueMaxRight * -1;
+			} else {
+				suggestedLeft = trueMaxRight;
+			}
+		}
+
+		if (suggestedTop > trueMaxTop) {
+			suggestedTop = trueMaxTop;
+		} else if (Math.abs(suggestedTop) > trueMaxBottom) {
+			if (suggestedTop < 0) {
+				suggestedTop = trueMaxBottom * -1;
+			} else {
+				suggestedTop = trueMaxBottom;
+			}
+		}
+
+		targ.style.left = suggestedLeft;
+		targ.style.top = suggestedTop;
+
+		return false;
+	},
+
+	stopDrag : function () {
+		drag = false;
+	},
+
+	hightlightImage : function (coordArray) {
+
+		highlightedArea = {
+			coords : coordArray,
+			baseImageWidth : DCT.Integration.Spotlight.image.width,
+			baseImageHeight : DCT.Integration.Spotlight.image.height
+		};
+		var mode = "darken";
+
+		var scale = DCT.Integration.Spotlight.zoomPower;
+
+		DCT.Integration.Spotlight.ctx.globalCompositeOperation = mode;
+
+		DCT.Integration.Spotlight.ctx.beginPath();
+		DCT.Integration.Spotlight.ctx.rect(coordArray[0] * scale, coordArray[1] * scale, coordArray[2] * scale, coordArray[3] * scale);
+		DCT.Integration.Spotlight.ctx.strokeStyle = "red";
+
+		if (DCT.Integration.Spotlight.ctx.globalCompositeOperation != mode) {
+			DCT.Integration.Spotlight.ctx.fillStyle = "rgba(255, 251, 181, .3)";
+		} else {
+			DCT.Integration.Spotlight.ctx.fillStyle = "rgba(255, 251, 181, 1)";
+		}
+
+		DCT.Integration.Spotlight.ctx.stroke();
+		DCT.Integration.Spotlight.ctx.fill();
+		DCT.Integration.Spotlight.ctx.closePath();
+	},
+
+	windowListening : function () {
+		return (DCT.Integration.Spotlight.spotlightView != null && !DCT.Integration.Spotlight.spotlightView.closed);
+	},
+
+	preparePagingToolbar : function () {
+		var me = this;
+
+		if (me.pdfData == null)
+			return;
+
+		var store = Ext.create('Ext.data.Store', {
+				id : 'pageStore',
+				autoLoad : false,
+				pageSize : 1,
+				data : me.pdfData.childNodes[0].childNodes,
+				listeners : {
+					load : {
+						fn : function (store, records, successful, operation) {
+							var me = this;
+
+							var imageDataElement = records[store.currentPage - 1].data;
+							if (imageDataElement != null) {
+
+								var imageData = Ext.DomQuery.selectValue(me.imageTag, imageDataElement);
+								var callback = operation._params ? operation._params.hightlightCallback : null;
+								me.draw(Ext.String.format("data:image/png;base64,{0}", imageData), callback);
+							}
+						},
+						scope : me
+					}
+
+				}
+			});
+
+		me.pagingToolbar = {
+			xtype : 'pagingtoolbar',
+			store : store,
+			dock : 'bottom',
+			displayInfo : true,
+			id : 'spotlightPaging',
+
+			listeners : {
+				beforechange : {
+					fn : function (toolbar, page, eOpts) {
+
+						highlightedArea = null;
+						toolbar.store.loadPage(page);
+					},
+					scope : me
+				}
+
+			},
+
+			moveFirst : function () {
+				highlightedArea = null;
+				var me = this;
+				me.store.loadPage(1);
+			},
+			moveNext : function () {
+				highlightedArea = null;
+				var me = this;
+				me.store.nextPage();
+			},
+			movePrevious : function () {
+				highlightedArea = null;
+				var me = this;
+				me.store.previousPage();
+			},
+			moveLast : function () {
+				highlightedArea = null;
+				var me = this;
+				var last = me.getPageData().pageCount;
+				me.store.loadPage(last);
+			}
+		};
+	},
+	close: function() {
+		var spotlightWindow = Ext.getCmp('spotlight');
+		if (spotlightWindow) {
+			spotlightWindow.close();
+		}
+	},
+	showSpotlightAssistant : function () {
+		var me = this;
+		//Show Some Popup..window..etc.
+		var spotlightWindow = Ext.get('spotlight');
+
+		if (spotlightWindow == null) {
+
+			me.preparePagingToolbar();
+
+			spotlightWindow = Ext.create('Ext.Window', {
+					id : 'spotlight',
+					width: 320,
+					minWidth: 240,
+					height: 420,
+					zoomIncrement : .05,
+					hideCollapseTool : true,
+					maximizable : false,
+					closable : false,
+					frame : false,
+					header : {
+						xtype : 'panel',
+						frame : false,
+						border : false,
+						height : 30,
+						id : 'spotlightHeader',
+						style : {
+							background : 'transparent',
+							'box-shadow' : 'none !important',
+							border : 'none',
+							'float' : 'right'
+						},
+						items : [{
+								xtype : 'button',
+								id : 'spotlightCollapse',
+								iconCls : 'spotlightMinusIcon',
+								style : {
+									border : 'none',
+									background : '#006699',
+									height : '25px',
+									width : '25px',
+									'border-radius' : '5px',
+									'margin-right': '5px',
+									'float': 'right'
+								},
+								listeners : {
+									afterrender : function (me) {
+										// Register the new tip with an element's ID
+										Ext.tip.QuickTipManager.register({
+											target : me.getId(), // Target button's ID
+											cls : 'x-tip-spotlight',
+											text : 'Minimize' // Tip content
+
+										});
+									}
+								},
+								scope : this,
+								handler : function () {
+									Ext.getCmp('spotlight').collapseSpotlight();
+								}
+							}, {
+								xtype : 'button',
+								id : 'spotlightExpand',
+								iconCls : 'spotlightExpandIcon',
+								style : {
+									border : 'none',
+									background : '#006699',
+									height : '25px',
+									width : '25px',
+									'border-radius' : '5px',
+									'margin-right': '5px',
+									'float': 'right'
+								},
+								listeners : {
+									afterrender : function (me) {
+										// Register the new tip with an element's ID
+										Ext.tip.QuickTipManager.register({
+											target : me.getId(), // Target button's ID
+											cls : 'x-tip-spotlight',
+											text : 'Expand' // Tip content
+
+										});
+									}
+								},
+								handler : Ext.bind(function () {
+									Ext.getCmp('spotlight').enlarge();
+								}, this)
+							}, {
+								xtype : 'button',
+								id : 'spotlightCompress',
+								iconCls : 'spotlightCompressIcon',
+								style : {
+									border : 'none',
+									background : '#006699',
+									height : '25px',
+									width : '25px',
+									'border-radius' : '5px',
+									'margin-right': '5px',
+									'float': 'right'
+								},
+								listeners : {
+									afterrender : function (me) {
+										// Register the new tip with an element's ID
+										Ext.tip.QuickTipManager.register({
+											target : me.getId(), // Target button's ID
+											cls : 'x-tip-spotlight',
+											text : 'Compress' // Tip content
+
+										});
+									}
+								},								
+								handler : Ext.bind(function () {
+									Ext.getCmp('spotlight').compress();
+								}, this)
+							}, {
+								xtype : 'button',
+								id : 'spotlightExternalLink',
+								iconCls : 'spotlightExternalLinkIcon',
+								style : {
+									border : 'none',
+									background : '#006699',
+									height : '25px',
+									width : '25px',
+									'border-radius' : '5px',
+									'margin-right': '5px',
+									'float': 'right'
+								},
+								listeners : {
+									 afterrender : function (me) {
+										 // Register the new tip with an element's ID
+										Ext.tip.QuickTipManager.register({
+											target : me.getId(), // Target button's ID
+											cls : 'x-tip-spotlight',
+											text : 'New Window', // Tip content
+											listeners : {
+												beforerender : function (x, y, z) {
+													alert('hiiihh');
+												}
+											}
+										});
+									 }
+								},
+								handler : Ext.bind(function () {
+									if (!DCT.Integration.Spotlight.windowListening()) {
+										if (Ext.getCmp('spotlightExpand').hidden) {
+											Ext.getCmp('spotlight').restore();
+										}
+
+										DCT.Integration.Spotlight.spotlightView = window.open(Ext.String.format("spotlight.html?_windowGuid={0}", DCT.Util.getWindowGuid()), Ext.String.format("DCT_Spotlight_{0}", DCT.Util.getWindowGuid()));
+										var imgData = Ext.DomQuery.selectValue(DCT.Integration.Spotlight.imageTag, DCT.Integration.Spotlight.pagingToolbar.store.data.items[DCT.Integration.Spotlight.pagingToolbar.store.currentPage - 1].data);
+
+										var coordinates = Ext.DomQuery.selectValue("coordinates", DCT.Integration.Spotlight.currentFieldRef);
+										if (coordinates != null) {
+											var coords = coordinates.replace("y:", "");
+											coords = coords.replace("x:", "");
+											coords = coords.replace("width:", "");
+											coords = coords.replace("height:", "");
+											var coordArray = coords.split(",", 4)
+												DCT.Integration.Spotlight.offsetX = coordArray[0];
+											DCT.Integration.Spotlight.offsetY = coordArray[1];
+											
+											DCT.LocalStorageManager.add("draw", "coords", coordArray);
+										}
+
+										
+											
+										DCT.LocalStorageManager.add("draw", "source", Ext.String.format("data:image/png;base64,{0}", imgData));
+										DCT.LocalStorageManager.add("draw", "currentPage", DCT.Integration.Spotlight.pagingToolbar.store.currentPage);
+										DCT.LocalStorageManager.add("draw", "pageCount", DCT.Integration.Spotlight.pagingToolbar.store.data.items.length);
+
+										Ext.getCmp('spotlight').show();
+										Ext.getCmp('spotlight').hide();
+
+										if (!DCT.Integration.Spotlight.spotlightView.closed) {
+											function spotlightViewLoaded() {
+												body = DCT.Integration.Spotlight.spotlightView.document.getElementsByTagName("documentReady");
+												if (body[0] == null) {
+													// Page isn't ready yet!
+													setTimeout(spotlightViewLoaded, 10);
+												} else {
+													DCT.LocalStorageManager.send("draw");
+												}
+											}
+										}
+
+										spotlightViewLoaded();
+									}
+								}, this)
+							},
+							{
+								id: 'spotlightTitleText',
+								html: '<div class="validationTitleText">Spotlight View</div>'
+							}
+						]
+					},
+					border : false,
+					closeToolText : '',
+					resizable : true,
+					liveDrag : true,
+					guid : DCT.Util.getWindowGuid(),
+					plain : true,
+					scrollable : DCT.Integration.Spotlight.version == 1,
+					shadow : false,
+					modal : false,
+					focusOnToFront : false,
+					toFrontOnShow : true,
+					alwaysOnTop : true,
+					tbar : [
+						'->'
+					],
+					dockedItems : [me.pagingToolbar],
+					html : '<div class="container"><canvas id="panel" class="dragme" width="" height="" /></div>',
+					listeners : {
+						show : {
+							fn : function (win, eOpts) {
+								var me = this;
+
+								Ext.getCmp('spotlightCompress').hide();
+
+								var actions = Ext.get('relatedActions');
+								var newYPos;
+								if (actions != null) {
+									if (actions.dom.offsetTop) {
+										newYPos = actions.dom.offsetTop + actions.dom.offsetHeight;
+									}
+									else {
+										newYPos = '15%';
+									}
+								}
+								else {
+									newYPos = '15%';
+								}
+
+								win.setStyle({
+									left: 'auto',
+									right: '10px',
+									top: newYPos
+								});
+
+							},
+							scope : me
+						},
+						close : {
+							fn : function (win, eOpts) {
+								var me = this;
+
+								Ext.get('wrapper').setStyle('margin-left', 'auto');
+
+							},
+							scope : me
+						}
+					},
+					enlarge : function () {
+						var me = this;
+
+						var tool = Ext.getCmp('spotlightExpand');
+						tool.hide();
+
+						Ext.getCmp('spotlightCompress').show();
+
+						Ext.get('wrapper').setStyle('margin-left', 'inherit');
+
+						me.addCls('spotlight-expand');
+
+						var clientSize = Ext.getBody().getViewSize();
+
+						me.alignTo(Ext.get('wrapper'), 'r', [10]);
+
+						var wrapperWidth = Ext.get('wrapper').dom.clientWidth;
+
+						me.setWidth(clientSize.width - wrapperWidth - 35);
+						me.setHeight(clientSize.height - 45);
+					},
+					compress : function () {
+						var me = this;
+
+						var tool = Ext.getCmp('spotlightCompress');
+						tool.hide();
+
+						Ext.getCmp('spotlightExpand').show();
+
+						Ext.get('wrapper').setStyle('margin-left', 'auto');
+
+						me.removeCls('spotlight-expand');
+						me.setWidth(320);
+						me.setHeight(420);
+
+						var actions = Ext.get('relatedActions');
+						var newYPos;
+						if (actions != null) {
+							if (actions.dom.offsetTop) {
+								newYPos = actions.dom.offsetTop + actions.dom.offsetHeight;
+							}
+							else {
+								newYPos = '15%';
+							}
+						}
+						else {
+							newYPos = '15%';
+						}
+
+						me.setStyle({
+							left : 'auto',
+							right : '10px',
+							top : newYPos
+						});
+						DCT.Integration.Spotlight.checkEnableExpand()
+					},
+					collapseSpotlight : function () {
+						var me = this;
+
+						Ext.DomHelper.append('relatedActions', {
+							tag : 'a',
+							onclick : "Ext.getCmp('spotlight').restoreSpotlight(this);",
+							cls : 'spotlightPlusIcon',
+							id : 'spotlightRestoreHelper',
+							style : 'float:right; cursor:pointer; margin: 2 3 0 0; background:#006699; border-radius:3px; padding:2 4 1 3;'
+						});
+
+						DCT.Integration.Spotlight.minimized = true;
+
+						me.compress();
+						me.hide();
+					},
+					restoreSpotlight : function (btn) {
+						var me = this;
+						DCT.Integration.Spotlight.minimized = false;
+						me.compress();
+						me.show();
+						if (btn.remove) {
+							btn.remove();
+						} else {
+							btn.removeNode();
+						}
+					}
+				});
+
+			//Add Toolbar Items
+			var tbar = spotlightWindow.getDockedItems()[0];
+
+			
+
+			tbar.add({
+				xtype : 'component',
+				autoEl: {
+					tag: 'a',
+					href: '#',
+					style: 'margin:2px;'
+				},
+				//icon : DCT.imageDir + '\icons/magnifier_zoom_in.png',
+				id : 'spotlightZoomIn',
+				cls: 'spotlightZoomInIcon spotlightToolbarBtn',
+				listeners : {
+					el : {
+					click : {
+						fn : function (btn, event, eOpts) {
+							var me = this;
+							DCT.Integration.Spotlight.zoomPower += me.zoomIncrement;
+							DCT.Integration.Spotlight.redraw(function () {
+								DCT.Integration.Spotlight.redrawHighlights();
+							});
+
+						},
+						scope : spotlightWindow
+					}
+					}
+				}
+			});
+			
+			tbar.add({
+				xtype : 'component',
+				autoEl: {
+					tag: 'a',
+					href: '#',
+					style: 'margin:2px;'
+				},
+				//icon : DCT.imageDir + '\icons/magifier_zoom_out.png',
+				id : 'spotlightZoomOut',
+				cls: 'spotlightZoomOutIcon spotlightToolbarBtn',
+				listeners : {
+					el : {
+					click : {
+						fn : function (btn, event, eOpts) {
+							var me = this;
+							DCT.Integration.Spotlight.zoomPower -= me.zoomIncrement;
+							DCT.Integration.Spotlight.redraw(function () {
+								DCT.Integration.Spotlight.redrawHighlights();
+							});
+						},
+						scope : spotlightWindow
+					}
+					}
+				}
+			});
+
+			tbar.add({
+				xtype : 'component',
+				autoEl: {
+					tag: 'a',
+					href: '#',
+					style: 'margin:2px;'
+				},
+				//icon : DCT.imageDir + '\icons/arrow_out.png',
+				id : 'spotlightFullPage',
+				cls: 'spotlightFullPageIcon spotlightToolbarBtn',
+				listeners : {
+				el : {
+					click : {
+						fn : function (btn, event, eOpts) {
+							var me = this;
+
+							var spotlightWindow = Ext.getCmp('spotlight');
+							var width = spotlightWindow.width;
+							var height = spotlightWindow.height;
+
+							var imageWidth = DCT.Integration.Spotlight.image.width;
+							var imageHeight = DCT.Integration.Spotlight.image.height;
+							//2000 -> 700 == how much magnification?
+							DCT.Integration.Spotlight.zoomPower = width / imageWidth;
+
+							DCT.Integration.Spotlight.canvas.style.left = 0;
+							DCT.Integration.Spotlight.canvas.style.top = 0;
+
+							DCT.Integration.Spotlight.redraw(function () {
+								DCT.Integration.Spotlight.redrawHighlights();
+							});
+						},
+						scope : spotlightWindow
+					}
+				}
+				
+				}
+			});
+
+			DCT.Integration.Spotlight.zoomPower = 0.5;
+
+		} else {}
+
+		spotlightWindow.setStyle({
+			position : 'fixed !important',
+			background : 'transparent',
+			'box-shadow' : 'none',
+			border : 'none'
+		});
+
+		spotlightWindow.show();
+		DCT.Integration.Spotlight.checkEnableExpand();
+	},
+
+	highlightForConfidence : function (inputField) {
+		var me = this;
+
+		//We have our pdfData initialized and we now want to check if a matching xmlID is found.
+		var fieldReference = Ext.DomQuery.select("pdfData/page/field[@xmlID='" + inputField.dctSpotlight + "']", me.pdfData);
+
+		if (fieldReference != null && fieldReference[0]) {
+			var confidence = Ext.DomQuery.selectValue("score", fieldReference[0]);
+		} else {
+			return;
+		}
+		if (confidence < DCT.spotlightConfidenceThreshold) {
+			inputField.setFieldStyle('background-color: rgba(255, 251, 181, 1);');
+		}
+	},
+
+	getAspectHeight : function (image, desiredWidth) {
+		var originalWidth = DCT.Integration.Spotlight.image.naturalWidth;
+		var originalHeight = DCT.Integration.Spotlight.image.naturalHeight;
+
+		return (originalHeight / originalWidth) * desiredWidth;
+	},
+
+	draw : function (source, callback) {
+
+		var me = this;
+
+		DCT.Integration.Spotlight.clear();
+
+		DCT.Integration.Spotlight.canvas = document.getElementById('panel');
+		DCT.Integration.Spotlight.ctx = DCT.Integration.Spotlight.canvas.getContext('2d');
+
+		//Check for initialization
+		if (DCT.Integration.Spotlight.image == null) {
+			DCT.Integration.Spotlight.image = new Image();
+		} else {
+			DCT.Integration.Spotlight.image.onload = null;
+		}
+
+		DCT.Integration.Spotlight.image.src = source;
+
+		if (DCT.Integration.Spotlight.image.complete) {
+			me.redraw(callback);
+		} else {
+			DCT.Integration.Spotlight.image.onload = function () {
+				me.redraw(callback);
+			};
+		}
+	},
+
+	redraw : function (callback) {
+		var me = this;
+
+		//Get Image Desired Size
+		var desiredWidth = DCT.Integration.Spotlight.image.naturalWidth * DCT.Integration.Spotlight.zoomPower;
+		var desiredHeight = me.getAspectHeight(DCT.Integration.Spotlight.image, desiredWidth);
+
+		//Update Canvas Size
+		DCT.Integration.Spotlight.canvas.width = desiredWidth + 0;
+		DCT.Integration.Spotlight.canvas.height = desiredHeight - 0;
+
+		DCT.Integration.Spotlight.ctx.drawImage(DCT.Integration.Spotlight.image,
+			0, 0, DCT.Integration.Spotlight.canvas.width, DCT.Integration.Spotlight.canvas.height);
+
+		if (DCT.Integration.Spotlight.version == 2) {
+			DCT.Integration.Spotlight.canvas.onmousedown = me.startDrag;
+			DCT.Integration.Spotlight.canvas.onmouseup = me.stopDrag;
+			DCT.Integration.Spotlight.canvas.onmouseout = me.stopDrag;
+		}
+
+		if (callback && typeof(callback) === "function") {
+			callback();
+		}
+	},
+
+	getFieldOriginalValue : function (inputField) {
+		var me = this;
+
+		if (me.pdfData == null) {
+			mapInit(inputField, this);
+		} else {
+			var fieldReference = Ext.DomQuery.select("pdfData/page/field[@xmlID='" + inputField.dctSpotlight + "']", me.pdfData);
+
+			if (fieldReference != null && fieldReference[0]) {
+				return Ext.DomQuery.selectValue("value", fieldReference[0]);
+			}
+		}
+	},
+	isBase : function () {
+		return window.top == window.self ? true : false;
+	},
+
+	mapInit : function (inputField, callbackFunction) {
+		var me = DCT.Integration.Spotlight.isBase() ? this : parent.DCT.Integration.Spotlight;
+		DCT.LocalStorageManager.initialize('spotlight');
+
+		//Initialize PDF Data (Cache for additional use).
+		if (me.pdfData == null) {
+			if (me.callbackQueue[0] == null) {
+				me.callbackQueue.push([callbackFunction, inputField]);
+				Ext.Ajax.request({
+					url : DCT.Util.getPostUrl(),
+					method : "POST",
+					success : function (response, opts) {
+						var data = response.responseText;
+						if (!Ext.isEmpty(data)) {
+							me.pdfData = DCT.Util.loadXMLString(data);
+							me.executeCallbacks.call(me);
+						}
+					},
+					scope : DCT.LoadingMessage,
+					params : {
+						_submitAction : 'spotlightAssistant',
+						_quoteId : DCT.Util.getSafeElement("_QuoteID").value
+					}
+				});
+			} else {
+				me.callbackQueue.push([callbackFunction, inputField]);
+			}
+		} else {
+			callbackFunction.call(me, inputField);
+		}
+
+	},
+
+	executeCallbacks : function () {
+		var me = this;
+		while (me.callbackQueue.length > 0) {
+			var callbackData = me.callbackQueue.pop();
+			callbackData[0].call(me, callbackData[1]);
+		}
+	},
+
+	clear : function () {
+		if (DCT.Integration.Spotlight.ctx != null) {
+			DCT.Integration.Spotlight.ctx.clearRect(0, 0, DCT.Integration.Spotlight.ctx.canvas.width, DCT.Integration.Spotlight.ctx.canvas.height);
+		}
+	}
+});

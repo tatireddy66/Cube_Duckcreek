@@ -1,0 +1,2530 @@
+//# sourceURL=dyn/js/dynamicUI
+var uploadFile;
+
+function initDynamicUI(dynamicInfo)
+{
+    var EQ = 0, NE = 1, LT = 2, GT = 3, BETWEEN = 4, CONTAINS = 5, NOTCONTAINS = 6, ISVALID = 7, IS_FALSE = 8;
+
+    var DEFAULT_DELETE_MSG = 'Are you sure you want to delete this item?';
+    var htmlMap;
+    var runOnReturn, runEvents;
+    var defaultBindings, defaultLists, defaultGuide = {};
+    var masterTableConfig = {};
+    var noop = function(){};
+    var openedRows = [];
+    var lastAddFromServer;
+    var isSaveAddAnother;
+
+    var swapped;
+    var eventFunctions = dynamicInfo.eventFunctions ? dynamicInfo.eventFunctions : {};
+    var rootBindingObject = dynamicInfo.rootBindingObject;
+    var bindingObject = dynamicInfo.bindingObject;
+    var services = dynamicInfo.allServices;
+    var pageService = dynamicInfo.pageService;
+    var domManipService = dynamicInfo.domManipService;
+    var newBinding = dynamicInfo.newBinding;
+    var compiler = dynamicInfo.compile;
+    var cleanse = dynamicInfo.cleanseHtml;
+    var refresh = dynamicInfo.refresh;
+    var toElement = dynamicInfo.toElement;
+    var appendIds = dynamicInfo.appendIds;
+    var appendData = dynamicInfo.appendData;
+    var handleServiceResult = dynamicInfo.handleServiceResult;
+    var getScreenName = dynamicInfo.getScreenName;
+    var deepClone = dynamicInfo.deepClone;
+
+    var confirmButtons =
+    [
+        {
+            "label": "Yes",
+            "onClick":function(){bindingObject.executeConfirm(true);},
+            "closeOnClick": true,
+            "css": "btn-primary",
+            "buttonId": "modalYesButton"
+        },
+        {
+            "label": "No",
+            "onClick":function(){bindingObject.executeConfirm(false);},
+            "closeOnClick": true,
+            "buttonId": "modalNoButton"
+        }
+    ];
+
+    var originalHide;
+    var copyId;
+
+    bindingObject.openModal = undefined;
+    bindingObject.screenContext = undefined;
+    bindingObject.currentBinding = undefined;
+    bindingObject.showTestButton = location.hostname === 'localhost';
+    bindingObject.disabled = {};
+    bindingObject.hide = {};
+    bindingObject.classes = {};
+    bindingObject.searchData = {};
+    bindingObject.suffix = {};
+    bindingObject.emptyResults = {code: bindingObject.emptyCode, desc: 'No results found'};
+    bindingObject.emptyCode = 'XXXX';
+    bindingObject.subBindings = [];
+    bindingObject.newSubBindings = [];
+    bindingObject.uploadFilter = {value: 'all'};
+    bindingObject.uploadFilterOptions = [{label: 'All', value: 'all'}, {label: 'Errors', value: 'errors'}];
+    bindingObject.hiddenBinding = {};
+
+    bindingObject.modal = {
+        buttons: undefined,
+        isOpen: false,
+        size: undefined,
+        title: undefined
+    };
+
+    bindingObject.timeoutModalView = {
+        isOpen: false,
+        footerButtons: [
+            {
+                label: 'OK',
+                css: 'btn-primary',
+                closeOnClick: true
+            }
+        ]
+    };
+
+    bindingObject.confirmModalView = {isOpen: false, footerButtons: confirmButtons};
+    rootBindingObject.hidePageLoading();
+
+    bindingObject.changeListData = function changeListData(event, parameters)
+    {
+        var i, len, item, value, isLabelEqual, isValueEqual, id, curVal,
+            target = (event || {})['target'],
+            text = (target || {})['textContent'],
+            fromListName = parameters['fromListName'],
+            changeListName = parameters['changeListName'],
+            fromList = bindingObject.lists[fromListName] || [],
+            uniqueId = parameters['uniqueId'],
+            binding = parameters['useUniqueId'] ? bindingObject.bindings[uniqueId] : bindingObject.bindings[bindingObject.screenContext] || bindingObject.bindings[uniqueId]  || {},
+            binding = binding.hasOwnProperty(bindingObject.screenContext) ? bindingObject.bindings[uniqueId] : binding,
+            bindValue = (binding[fromListName] || {})['value'],
+            sourceId = bindingObject.dynamicLists.hasOwnProperty(uniqueId) ? undefined : ((bindingObject.bindings[uniqueId] || {})[fromListName] || {})['sourceId'];
+
+        if(parameters['clearList'] === bindingObject.screenContext && event.type === 'click')
+        {
+            bindingObject.lists[changeListName] = [];
+        }
+        else if(uniqueId && (bindingObject.dynamicLists.hasOwnProperty(uniqueId) || bindingObject.dynamicLists.hasOwnProperty(sourceId)))
+        {
+            bindingObject.lists[changeListName] = sourceId ? bindingObject.dynamicLists[sourceId][changeListName][bindValue]:bindingObject.dynamicLists[uniqueId][changeListName][bindValue];
+
+            id = sourceId ? sourceId : uniqueId;
+            curVal = bindingObject.bindings[id][changeListName].value;
+            if (!checkListValue(curVal, bindingObject.lists[changeListName])){
+                bindingObject.bindings[id][changeListName].value = '';
+            }
+        }
+        else
+        {
+            for(i = 0, len = fromList.length; i < len; i++)
+            {
+                item = fromList[i];
+                isLabelEqual = text && text.trim() === item['label'];
+                isValueEqual = bindValue && bindValue === item['value'];
+                if(isLabelEqual || isValueEqual)
+                {
+                    value = item['value'];
+                    bindingObject.lists[changeListName] = bindingObject.dynamicLists[null][changeListName][value];
+                    return;
+                }
+            }
+            bindingObject.lists[changeListName] = [];
+        }
+    };
+
+
+    bindingObject.viewPDF = function viewPDF(event)
+    {
+        var form;
+        var serverArgs = buildServerArgs({}, true, true);
+        delete serverArgs.events;
+        if (event) {
+            event.preventDefault();
+        }
+
+        form = domManipService.buildForm('dispatch/pdf/PresentationController:getPDFPage', 'newWindow', serverArgs);
+        form.submit();
+    };
+
+    bindingObject.navChange = function navChange()
+    {
+        dynamicInfo.clearMessages(bindingObject);
+        rootBindingObject.showPageLoading();
+        var append = document.getElementById('append');
+
+        toElement(append).empty();
+        bindingObject.initPage();
+    };
+
+    bindingObject.initPage = function initPage(screenName)
+    {
+        var serverArgs = buildServerArgs({}, true, true);
+        rootBindingObject.showPageLoading();
+
+        serverArgs.screen = screenName || serverArgs.screen;
+        pageService.getPage(serverArgs, function(result)
+        {
+            var data = handleServiceResult(result, bindingObject);
+            var append = document.getElementById('append');
+            var screen = serverArgs.screen;
+
+            if (result && result.data === TIMEOUT)
+            {
+                rootBindingObject.hidePageLoading();
+                bindingObject.timeoutModalView.isOpen = true;
+                dynamicInfo.rootRefresh();
+                return;
+            }
+
+            bindingObject.lists = data.lists;
+            bindingObject.dynamicLists = data.dynamicLists;
+            bindingObject.complexDrivers = data.complexDrivers;
+            bindingObject.bindings = data.bindings;
+            bindingObject.mapUnique = data.mapUnique;
+            bindingObject.dynamic = data.dynamic;
+            bindingObject.toggle = data.toggle;
+            bindingObject.guide = data.guide;
+            bindingObject.other = data.other;
+            bindingObject.hiddenSections = data.hiddenSections;
+            bindingObject.events = data.events;
+            bindingObject.showErrorsOnModal = true;
+            htmlMap = data.htmlMap;
+            bindingObject.workingSet = {};
+            defaultBindings = deepClone(bindingObject.bindings);
+            defaultLists = serialize(bindingObject.lists);
+            defaultGuide = deepClone(bindingObject.guide);
+            bindingObject.createCharms(data.charmsData);
+
+            toElement(append).append(data.html);
+            compiler(append, newBinding());
+            replaceContent('pageButtons', data.buttonConfigs);
+            findNewTableConfig();
+
+            setErrorsOnLoad(bindingObject.other || {});
+            if(bindingObject.other.hasOwnProperty('masterNested'))
+            {
+                autoExpandAll();
+            }
+
+            dynamicInfo.isViewOnlyMode(screen, function(result)
+            {
+                bindingObject.viewOnlyMode = result;
+                refresh(domManipService.addTooltips);
+                dynamicInfo.rootRefresh();
+                domManipService.addDataTable(masterTableConfig);
+                bindingObject.showPageButtons = toElement(document.getElementById('pageButtons')).children().length > 0;
+                refresh();
+                rootBindingObject.hidePageLoading();
+            });
+        });
+    };
+
+    bindingObject.cancelPage = function(value) {
+        leavePage(value)
+    };
+
+    bindingObject.makeModalBinding = function makeModalBinding(event, parameters)
+    {
+        var bind = parameters['uniqueId'];
+        var sectionName = parameters['section'];
+        setModalBinding(parameters);
+        bindingObject.makeDynamic(sectionName, bind);
+        bindingObject.toggleModal(parameters);
+    };
+
+    function setModalBinding(parameters)
+    {
+        var bindings = bindingObject.bindings;
+        var bind = parameters['uniqueId'];
+        var sectionName = parameters['section'];
+        if(window.event)
+        {
+            window.event.preventDefault();
+        }
+
+        bindings[sectionName] = bindings[bind];
+        if(bindings[bind])
+        {
+            bindings[bind]['@type'] = 'java.util.LinkedHashMap';
+        }
+        bindingObject.currentBinding = bind;
+    }
+
+    bindingObject.makeDynamic = function makeDynamic(section, id)
+    {
+        var sectionMap, fieldName, idMap, hasId, dyn, html;
+        if(!bindingObject.dynamic.hasOwnProperty(section))
+        {
+            section = ((bindingObject.other[section] || {})['dynamicNames'] || {})[id];
+            if(!section)
+            {
+                return;
+            }
+        }
+
+        sectionMap = bindingObject.dynamic[section];
+        if(!sectionMap || !sectionMap.hasOwnProperty(id))
+        {
+            return;
+        }
+
+        idMap = sectionMap[id];
+
+        bindingObject.dynamicBinding = {};
+        for(fieldName in idMap)
+        {
+            if(fieldName.indexOf('@') > -1)
+            {
+                continue;
+            }
+
+            dyn = idMap[fieldName];
+            addSubBindings(dyn['ids']);
+            bindingObject.dynamicBinding['dynamic_' + fieldName] = cleanse(dyn['html']);
+        }
+    };
+
+    bindingObject.remove = function remove(event, parameters)
+    {
+        var args, msg;
+        var objectId = parameters['uniqueId'];
+        var deleteMessages = bindingObject.other['deleteMessages'] || {};
+
+        msg = deleteMessages[objectId] || DEFAULT_DELETE_MSG;
+        if(confirm(msg))
+        {
+            args = {screen: getScreenName(), deleteId: objectId, navBarObject: getNavBarObject()};
+            appendIds(args);
+            saveData('uiDynamic', args, false, false, false, false);
+        }
+    };
+
+    bindingObject.removeRow = function removeRow(event, id)
+    {
+        var msg, args, objectId = id;
+        var deleteMessages = bindingObject.other['deleteMessages'] || {};
+        var confirmDelete = true;
+        if (!isRemovedFromWorkingSet(event, objectId)) {
+            msg = deleteMessages[objectId] || DEFAULT_DELETE_MSG;
+            confirmDelete =confirm(msg);
+            if(confirmDelete){
+                args = {screen: getScreenName(), deleteId: objectId, retainId: bindingObject.currentBinding, navBarObject: getNavBarObject()};
+                appendIds(args);
+                saveSection('uiDynamic', args, undefined);
+            }
+        }
+        return confirmDelete;
+    };
+
+    bindingObject.removeNested = function removeNested(event, parameters)
+    {
+        var sectionName, item, serverArgs, data, nestedMap;
+        var other = bindingObject.other || {};
+        var objectId = parameters.uniqueId;
+        var masterNested = other.masterNested;
+        for(sectionName in masterNested)
+        {
+            if(sectionName.indexOf('@') > -1)
+            {
+                continue;
+            }
+
+            data = masterNested[sectionName];
+            if (data.id === objectId)
+            {
+                nestedMap = data;
+                break;
+            }
+
+            nestedMap = find(data.targets);
+            if(nestedMap)
+            {
+                break;
+            }
+
+            function find(targets)
+            {
+                var i, len, j, jLen, target;
+                var subTargets = [];
+                for(i = 0, len = targets.length; i < len; i++)
+                {
+                    target = targets[i];
+                    if(target.id === objectId)
+                    {
+                        return target;
+                    }
+
+                    for(j = 0, jLen = target.targets.length; j < jLen; j++)
+                    {
+                        subTargets.push(target.targets[j]);
+                    }
+                }
+                return subTargets.length > 0 ? find(subTargets) : undefined;
+            }
+        }
+
+        if(nestedMap.persisted)
+        {
+            bindingObject.remove(event, parameters);
+            if(bindingObject.other.hasOwnProperty('masterNested'))
+            {
+                autoExpandAll();
+            }
+        }
+        else
+        {
+            item = nestedMap.scopedName;
+            serverArgs = buildServerArgs({remove: objectId, nested: true, section: sectionName, item: item, replaceId: sectionName, htmlMap: htmlMap, events: bindingObject.events}, true, true);
+            pageService.getPageSection(serverArgs, function(result)
+            {
+                var reset;
+                var data = handleServiceResult(result, bindingObject);
+                bindingObject.bindings = data.bindings;
+                bindingObject.lists = data.lists;
+                bindingObject.other = data.other;
+
+                if(bindingObject.other.hasOwnProperty('resetNestedBinding'))
+                {
+                    reset = bindingObject.other.resetNestedBinding.bindingName;
+                    bindingObject.bindings[reset][reset].value = undefined;
+                }
+                replaceContent(bindingObject.other.replaceId, data.html, true);
+                if(bindingObject.other.hasOwnProperty('masterNested'))
+                {
+                    autoExpandAll();
+                }
+                refresh(function(){domManipService.addDataTable(masterTableConfig)});
+            });
+        }
+    };
+
+    bindingObject.removeUpload = function removeUpload(event, id)
+    {
+        var serverArgs = buildServerArgs({subAction: 'upload', uploadType: 'remove', deleteUploadId: id});
+        saveSection('uiDynamic', serverArgs, false, false, false);
+    };
+
+    bindingObject.toggleModal = function toggleModal(parameters)
+    {
+        if(bindingObject.modal.isOpen)
+        {
+            bindingObject.hideModal();
+        }
+        else
+        {
+            bindingObject.showModal(parameters);
+        }
+    };
+
+    bindingObject.hideModal = function hideModal()
+    {
+        bindingObject.modal.isOpen = false;
+        bindingObject.hide = originalHide || {};
+    };
+
+    bindingObject.showModal = function showModal(parameters)
+    {
+        var toggleData, otherSection, html, args, isFetch;
+        var sectionName = parameters.section || parameters.modalName;
+        var id = parameters.uniqueId;
+
+        bindingObject.modal.size = parameters.modalSize;
+        bindingObject.screenContext = sectionName;
+        otherSection = bindingObject.other[sectionName] || {};
+        originalHide = deepClone(bindingObject.hide);
+
+        if(!otherSection.suppressErrors)
+        {
+            dynamicInfo.clearMessages(bindingObject);
+        }
+        else
+        {
+            bindingObject.showErrorsOnModal = false;
+        }
+
+        if(bindingObject.toggle.hasOwnProperty(sectionName))
+        {
+            toggleData = bindingObject.toggle[sectionName];
+            if(toggleData.hasOwnProperty(id))
+            {
+                html = toggleData[id];
+                if(html === 'fetch')
+                {
+                    isFetch = true;
+                    runOnReturn = true;
+                    args = buildServerArgs({section: sectionName, fetch: id}, true, true);
+                    pageService.getPageSection(args, function(result)
+                    {
+                        if (result && result.data === TIMEOUT)
+                        {
+                            rootBindingObject.hidePageLoading();
+                            bindingObject.timeoutModalView.isOpen = true;
+                            dynamicInfo.rootRefresh();
+                            return;
+                        }
+
+                        runOnReturn = false;
+                        fetch(result, sectionName, id);
+                        setModalBinding(parameters);
+                        bindingObject.eventHandler(runEvents.screenEvent, runEvents.eventNames, runEvents.uniqueId, runEvents.boolInput);
+                    });
+                }
+                else
+                {
+                    replaceContent('modalContent', html);
+                    addSubBindings(id);
+                }
+            }
+            else if(toggleData.hasOwnProperty('default'))
+            {
+                replaceContent('modalContent', toggleData['default']);
+            }
+        }
+
+        if(!isFetch)
+        {
+            bindingObject.modal.isOpen = true;
+            setModalData(otherSection, id);
+        }
+    };
+
+    bindingObject.removeShuttle = function removeShuttle()
+    {
+        var otherSection = bindingObject.other[bindingObject.screenContext] || {};
+        var warning = otherSection.shuttleWarning;
+        return warning ? confirm(warning) : true;
+    };
+
+    bindingObject.saveModal = function saveModal(doClose, doReload, isUpdate)
+    {
+        var keys;
+        var otherSection = bindingObject.other[bindingObject.screenContext] || {};
+        if(!otherSection.suppressErrors)
+        {
+            dynamicInfo.clearMessages(bindingObject);
+        }
+
+        var serverArgs, bindKey, bind;
+        var context = bindingObject.screenContext;
+        var bindings = getBindings(context);
+
+        if(Object.keys(bindings).length === 0)
+        {
+            bindings = getBindings(bindingObject.currentBinding);
+        }
+
+        keys = Object.keys(bindings || {});
+        if(bindings && keys.length === 1 && !bindings[keys[0]])
+        {
+            bindings[keys[0]] = {};
+        }
+
+        if(isUpdate && copyId)
+        {
+            bind = bindings[context];
+            for(bindKey in bind)
+            {
+                bind[bindKey].id = copyId;
+            }
+            bindings[copyId] = bind;
+            delete bindings[context];
+        }
+
+        serverArgs = buildServerArgs({bindings: bindings, actionContext: (bindingObject.other[context] || {})['actionContext']}, true, false);
+        saveData('uiDynamic', serverArgs, doClose, doReload, false, false);
+    };
+
+    bindingObject.cancelModal = function cancelModal()
+    {
+        var otherSection = bindingObject.other[bindingObject.screenContext] || {};
+        if(!bindingObject.modal.isOpen)
+        {
+            return true;
+        }
+
+        if(!otherSection.suppressErrors)
+        {
+            dynamicInfo.clearMessages(bindingObject);
+        }
+        bindingObject.hideModal();
+
+        bindingObject.bindings = deepClone(defaultBindings);
+        bindingObject.lists = JSON.parse(defaultLists);
+        bindingObject.guide = defaultGuide;
+        bindingObject.modal.size = undefined;
+        bindingObject.screenContext = undefined;
+        bindingObject.currentBinding = undefined;
+        bindingObject.dynamicBinding = {};
+        bindingObject.workingSet = {};
+        bindingObject.searchList = undefined;
+        bindingObject.searchSelectedList = undefined;
+        bindingObject.searchData = {};
+        bindingObject.suffix = {};
+        bindingObject.subBindings = [];
+        bindingObject.hide = originalHide || {};
+        bindingObject.showErrorsOnModal = true;
+        lastAddFromServer = undefined;
+        return true;
+    };
+
+    bindingObject.confirmation = function confirmation(message, confirm, deny)
+    {
+        bindingObject.confirmMessage = {message: message, confirm: confirm || noop, deny: deny || noop};
+        bindingObject.confirmModalView.isOpen = true;
+    };
+
+    bindingObject.executeConfirm = function executeConfirm(isConfirmed)
+    {
+        bindingObject.confirmMessage[isConfirmed ? 'confirm' : 'deny']();
+        bindingObject.confirmMessage = undefined;
+        bindingObject.confirmModalView.isOpen = false;
+    };
+
+    bindingObject.saveModalLocal = function()
+    {
+        defaultBindings = deepClone(bindingObject.bindings);
+        bindingObject.cancelModal();
+    };
+
+    bindingObject.addRow = function addRow(event, parameters)
+    {
+        var serverArgs;
+        var section = parameters['section'];
+        var target = event.target;
+        var item = target.getAttribute('item');
+        var id = getBoundId(bindingObject.bindings[bindingObject.screenContext]);
+        var itemContext = bindingObject.currentBinding ? undefined : getItemContext(section);
+        var itemContextId = bindingObject.currentBinding;
+        var sourceId = id !== bindingObject.screenContext ? id : undefined;
+
+        serverArgs = buildServerArgs({section: section, item: item, itemContext: itemContext, itemContextId: itemContextId, sourceId: sourceId}, true, false);
+        add(serverArgs);
+    };
+
+    bindingObject.addFromServer = function addFromServer(event, parameters)
+    {
+        var serverArgs;
+        var bindingName = parameters['bindingName'];
+        var modalSize = parameters['modalSize'];
+        var target = event.target;
+        var binding = bindingObject.bindings[bindingName];
+        var bindingValue = binding ? binding[bindingName].value : null;
+        var item = bindingValue ? bindingValue : target.getAttribute('item');
+        var sourceId = getBoundId(bindingObject.bindings[bindingObject.screenContext]);
+
+        serverArgs = buildServerArgs({section: parameters['itemSection'] || bindingName, item: item, sourceId: sourceId, uniqueId: parameters['uniqueId'], modalSize: modalSize}, true, false);
+        lastAddFromServer = lastAddFromServer || {event: event, parameters: parameters};
+        add(serverArgs, parameters['saveFromServer']);
+    };
+
+    bindingObject.addNestedFromServer = function addNestedFromServer(event, parameters)
+    {
+        var uniqueId = parameters.uniqueId;
+        var bindingName = parameters['bindingName'];
+        var item = parameters.nestedItem || event.target.value;
+        var sourceId = (bindingObject.other.translate || {})[uniqueId];
+        var replaceId = parameters['replaceId'];
+        var serverArgs = buildServerArgs({nested: true, context: bindingName, section: parameters['itemSection'] || bindingName, item: item, sourceId: sourceId, uniqueId: parameters['uniqueId'], replaceId: replaceId, htmlMap: htmlMap, events: bindingObject.events}, true, false);
+        var bindings = bindingObject.bindings;
+
+        if(bindings.hasOwnProperty(uniqueId))
+        {
+            (bindingObject.bindings[uniqueId][uniqueId] || {}).value = undefined;
+        }
+
+        if(item)
+        {
+            add(serverArgs, parameters['saveFromServer']);
+        }
+    };
+
+    bindingObject.savePage = function savePage(saveAction, subAction, clearMessages, autoSave)
+    {
+        dynamicInfo.clearMessages(bindingObject);
+
+        var serverArgs;
+        var screen = getScreenName();
+        var context = bindingObject.screenContext;
+        var bindings = getBindings(context);
+
+        serverArgs = buildServerArgs({bindings: bindings, save: saveAction, subAction: subAction, actionContext: subAction ? screen + '-' + subAction : screen}, true, false);
+        saveData('uiDynamic', serverArgs, false, false, autoSave, clearMessages);
+    };
+
+    bindingObject.expandAll = function expandAll(surroundingId)
+    {
+        var clear = setInterval(function()
+        {
+            refresh(function()
+            {
+                toElement('#' + surroundingId).find('.icon-chevron-right').not('.icon-chevron-down').click();
+            });
+        }, 100);
+
+        setTimeout(function()
+        {
+            clearInterval(clear);
+        }, 2500);
+    };
+
+    bindingObject.collapseAll = function collapseAll(surroundingId)
+    {
+        var clear = setInterval(function()
+        {
+            refresh(function()
+            {
+                toElement('#' + surroundingId).find('.icon-chevron-down').click();
+            });
+        }, 100);
+
+        setTimeout(function()
+        {
+            clearInterval(clear);
+        }, 500);
+    };
+
+    function autoExpandAll()
+    {
+        refresh(function ()
+        {
+            var i, len;
+            var tables = $('table[id*=-grid]:visible');
+
+            for(i = 0, len = tables.length; i < len; i++)
+            {
+                bindingObject.expandAll(tables[i].id);
+            }
+        });
+    }
+
+    window.poop = function test()
+    {
+        var i, len, obj;
+        var output =
+        [
+            {label: 'Bindings:', value: 'bindings'},
+            {label: 'Lists:', value: 'lists'},
+            {label: 'Dynamic Lists:', value: 'dynamicLists'},
+            {label: 'Hidden Sections:', value: 'hiddenSections'},
+            {label: 'Hidden Fields:', value: 'hide'},
+            {label: 'Map Unique:', value: 'mapUnique'},
+            {label: 'Dynamic:', value: 'dynamic'},
+            {label: 'Toggle:', value: 'toggle'},
+            {label: 'Working Set:', value: 'workingSet'},
+            {label: 'Guide:', value: 'guide'},
+            {label: 'Button Configs:', value: 'buttonConfigs'},
+            {label: 'Sub Bindings:', value: 'subBindings'},
+            {label: 'Other:', value: 'other'},
+            {label: 'Disabled:', value: 'disabled'}
+        ];
+
+        for(i = 0, len = output.length; i < len; i++)
+        {
+            obj = output[i];
+            console.log(obj.label);
+            console.log(bindingObject[obj.value]);
+            console.log('');
+        }
+    };
+
+    bindingObject.toggleDetailsPanel = function toggleDetailsPanel(event, panelId, tableId, tableSection, isOpening)
+    {
+        var i, len, row, compiled, removed, args, isFetch;
+        var content = "";
+        var bind = panelId;
+        var toggle = bindingObject.toggle;
+
+        if(toggle.hasOwnProperty(tableSection) && toggle[tableSection][bind] === 'fetch')
+        {
+            isFetch = true;
+            args = buildServerArgs({section: tableSection, fetch: bind}, true, true);
+            pageService.getPageSection(args, function(result)
+            {
+                if (result && result.data === TIMEOUT)
+                {
+                    rootBindingObject.hidePageLoading();
+                    bindingObject.timeoutModalView.isOpen = true;
+                    dynamicInfo.rootRefresh();
+                    return;
+                }
+
+                fetch(result, tableSection, bind, true);
+                bindingObject.toggleDetailsPanel(event, panelId, tableId, tableSection, isOpening);
+            });
+        }
+
+        if(isFetch)
+        {
+            return;
+        }
+
+        if (htmlMap[tableSection])
+        {
+            content = htmlMap[tableSection][bind];
+        }
+
+        if(!content && htmlMap[tableSection])
+        {
+            content = htmlMap[tableSection]['master'];
+        }
+
+        if(!isOpening)
+        {
+            for(i = 0, len = openedRows.length; i < len; i++)
+            {
+                row = openedRows[i];
+                if(row.panelId === panelId && row.tableId === tableId && row.tableSection === tableSection)
+                {
+                    openedRows.splice(i, 1);
+                    removed = true;
+                    break;
+                }
+            }
+
+            if(!removed)
+            {
+                openedRows.push({event: event, panelId: panelId, tableId: tableId, tableSection: tableSection});
+            }
+        }
+
+        compiled = compiler(content, bindingObject);
+        domManipService.toggleDetailsPanel(panelId, domManipService.getTableId(event), compiled);
+        domManipService.addDataTable(masterTableConfig);
+        refresh(domManipService.addTooltips);
+    };
+
+    bindingObject.addModal = function addModal(event, parameters)
+    {
+        var modalSize = parameters['modalSize'];
+        if(event)
+        {
+            event.preventDefault();
+        }
+        bindingObject.bindings[name] = bindingObject.bindings[modalSize];
+        bindingObject.toggleModal(parameters);
+    };
+
+    bindingObject.search = function search(eventName, code, desc, suffix, codeName, descName, suffixName)
+    {
+        domManipService.showSearchingIndicator();
+        var bind, params = {code: code, desc: desc, suffix: suffix}, split = eventName.split('.');
+        params['screen'] = getScreenName();
+        params['filter'] = getNavBarText();
+        appendIds(params);
+        appendData(params);
+        services[split[0]][split[1]](params, function (result) {
+            var data = handleServiceResult(result, bindingObject) || [];
+            bindingObject.searchList = data;
+            if (data.length === 1) {
+                bindingObject.searchData = {code: data[0].code, desc: data[0].desc, suffix: data[0].suffix};
+            }
+            domManipService.hideSearchingIndicator();
+            if (!data.length) {
+                bindingObject.searchList = [{desc: formatSearchMessage(code, desc, suffix)}];
+                bind = bindingObject.bindings[bindingObject.screenContext];
+                bind[codeName] = {value: undefined};
+                bind[descName] = {value: undefined};
+                bind[suffixName] = {value: undefined};
+                bindingObject.suffix = {};
+            }
+            refresh();
+        });
+    };
+
+    bindingObject.onSearchSelected = function onSearchSelected(event, codeName, descName, suffixName, keyName, searchBindKey, postSearchEvents)
+    {
+        var i, len, obj, bindKey, code, desc, suffix, matchingSuffix, text, firstDash, secondDash, target = event.target, list = bindingObject.searchList;
+        var search = bindingObject.other.search || {};
+        var searchSet = search.set || {};
+        var bindName = bindingObject.screenContext;
+        var bindings = bindingObject.bindings;
+        var bind = bindings[searchBindKey] || bindings[bindName];
+        if (target.value && target.value != bindingObject.emptyCode) {
+            text = target.text;
+            if(text)
+            {
+                firstDash = target.text.indexOf(' - ');
+                secondDash = target.text.indexOf(' - ', firstDash + 1);
+                code = text.substring(0, firstDash);
+                desc = text.substring(secondDash + 3);
+                suffix = text.substring(firstDash + 3, secondDash).trim();
+                bind[codeName] = {value: code};
+                bind[descName] = {value: desc};
+                bind[suffixName] = {value: suffix};
+
+                for(i = 0, len = list.length; i < len; i++)
+                {
+                    obj = list[i];
+                    matchingSuffix = (!suffix.trim() && !obj['suffix']) || obj['suffix'] === suffix;
+                    if(obj['code'] === code && obj['desc'].replace(/ /g,'') === desc.replace(/ /g,'') && matchingSuffix)
+                    {
+                        for(bindKey in searchSet)
+                        {
+                            if(bindKey !== '@type')
+                            {
+                                bind[bindKey] = {field: bindKey, value: obj[searchSet[bindKey]]};
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if(postSearchEvents && postSearchEvents.length > 0)
+            {
+                bindingObject.eventHandler({target: {value: suffix}}, postSearchEvents, -1);
+            }
+        }
+    };
+
+    bindingObject.eventHandler = function eventHandler(screenEvent, eventNames, uniqueId, boolInput)
+    {
+        var i, len, eventName, eventConfig, funcName, params, exec, events = bindingObject.events;
+
+        runEvents = undefined;
+        screenEvent = screenEvent || window.event;
+        for(i = 0, len = eventNames.length; i < len; i++)
+        {
+            if(runOnReturn)
+            {
+                runEvents = {screenEvent: screenEvent, eventNames: eventNames, uniqueId: uniqueId, boolInput: boolInput};
+                return;
+            }
+            eventName = eventNames[i];
+            eventConfig = events[eventName];
+            eventConfig['eventBinding'] = eventConfig.parameters.forceScreenContext ? bindingObject.screenContext : (eventConfig['eventBinding'] || bindingObject.screenContext);
+            funcName = eventConfig['apply'];
+
+            if(eventConfig['server'])
+            {
+                eventConfig['uniqueId'] = uniqueId;
+                if(eventConfig['preventServiceCall'] && Function("$scope", "eventConfig", 'dynamicInfo', eventConfig['preventServiceCall'])(bindingObject, eventConfig, dynamicInfo))
+                {
+                    continue;
+                }
+                exec = makeEventFunction(bindingObject.handleServerEvent, screenEvent, eventConfig, uniqueId);
+            }
+            else if(bindingObject[funcName])
+            {
+                params = eventConfig['parameters'] || {};
+                params['uniqueId'] = uniqueId;
+                if(boolInput){ params['boolInput'] = boolInput; }
+                exec = makeEventFunction(bindingObject[funcName], screenEvent, params)
+            }
+            else
+            {
+                eventConfig['uniqueId'] = uniqueId;
+                if(boolInput){ eventConfig['boolInput'] = boolInput; }
+                exec = makeEventFunction(eventFunctions[funcName], screenEvent, eventConfig)
+            }
+            eventConfig['confirmRequired'] ? bindingObject.confirmation(eventConfig['confirmRequired'], exec) : exec();
+        }
+        refresh();
+    };
+
+    bindingObject.handleServerEvent = function handleServerEvent(event, eventConfig, uniqueId)
+    {
+        var i, elemValue, service, method, dot, binding, eventField, currentField;
+        var server = eventConfig['server'];
+        var params = eventConfig['parameters'] || {};
+        var context = bindingObject.screenContext;
+
+        dot = server.indexOf('.');
+        service = server.substring(0, dot);
+        method = server.substring(dot + 1);
+        if (!event || !event.target)
+            return;
+
+        binding = bindingObject.bindings[eventConfig['eventBinding']] || bindingObject.bindings[uniqueId] || {};
+
+        eventField = eventConfig['eventField'];
+        if(typeof eventField === "object")
+        {
+            elemValue = {};
+            appendIds(elemValue);
+            if(eventField)
+            {
+                for(i = 0; i < eventField.length; i++)
+                {
+                    currentField = eventField[i];
+                    elemValue[currentField] = (binding[currentField] || {})['value'];
+                }
+            }
+        }
+        else if(params['forceBinding'])
+        {
+            elemValue = (binding[eventField] || {})['value'];
+        }
+        else
+        {
+            elemValue = event.target.value || (binding[eventField] || {})['value'];
+        }
+
+        if(elemValue)
+        {
+            domManipService.showSearchingIndicator();
+            service = services[service];
+            elemValue.bindings = getBindings(context);
+            elemValue.allBindings = bindingObject.bindings;
+            elemValue.subBindings = bindingObject.subBindings;
+            elemValue.other = bindingObject.other;
+            elemValue.working = bindingObject.workingSet;
+            service[method](elemValue, function (result)
+            {
+                var i, len, eventName,
+                    data = handleServiceResult(result, bindingObject),
+                    serverEvents = eventConfig['serverEvent'] || [];
+
+                for(i = 0, len = serverEvents.length; i < len; i++)
+                {
+                    eventName = serverEvents[i];
+                    eventConfig.uniqueId = uniqueId;
+                    data = eventFunctions[eventName](event, eventConfig, data) || data;
+                }
+                domManipService.hideSearchingIndicator();
+                refresh();
+
+                if(params['leavePageOnAction']){
+                    leavePage(result);
+                }
+            });
+        }
+    };
+
+    bindingObject.toggleAllFieldsets = function toggleAllFieldsets(direction)
+    {
+        domManipService.toggleAllFieldsets(direction);
+    };
+
+    bindingObject.onSearchExtraSelect = function onSearchExtraSelect(event, elemId, objectId, fieldName)
+    {
+        var binding = event.hiddenBinding[objectId];
+        var endIndex = binding.indexOf('-') > -1 ? binding.indexOf('-') : binding.length;
+        var value = binding.substring(0, endIndex);
+        if(bindingObject.bindings[objectId])
+        {
+            bindingObject.bindings[objectId][fieldName].value = value;
+        }
+        else
+        {
+            event.$eval(toElement('#' + elemId + '-select').attr('support') + ' = \'' + value + '\'');
+        }
+    };
+
+    bindingObject.initPage();
+
+    function makeEventFunction(func, event, eventConfig, uniqueId)
+    {
+        return function()
+        {
+            uniqueId ? func(event, eventConfig, uniqueId) : func(event, eventConfig);
+        }
+    }
+
+    function setErrorsOnLoad(other)
+    {
+        var i, len;
+        var messageData = other.messageData || {};
+        var text = messageData.text || [];
+        var errors = [];
+
+        for(i = 0, len = text.length; i < len; i++)
+        {
+            errors.push({type: 'VALIDATION', context: '', text: text[i]});
+        }
+        bindingObject.validationMessages = errors;
+    }
+
+    function formatSearchMessage(code, desc, suffix)
+    {
+        var addDash = false, msg = 'No results found for [';
+        if(code)
+        {
+            msg += code;
+            addDash = true;
+        }
+
+        if(suffix)
+        {
+            msg += addDash ? (' - ' + suffix) : suffix;
+            addDash = true;
+        }
+
+        if(desc)
+        {
+            msg += addDash ? (' - ' + desc) : desc;
+        }
+        return msg + ']';
+    }
+
+    function findNewTableConfig()
+    {
+        var sName, item;
+        var other = bindingObject.other;
+        for(sName in other)
+        {
+            item = other[sName] || {};
+            if(item.hasOwnProperty('tableConfig'))
+            {
+                appendMasterTableConfig(sName);
+            }
+        }
+    }
+
+    function appendMasterTableConfig(sectionName)
+    {
+        var hasId, tableId;
+        var otherConfig = bindingObject.other[sectionName] || {};
+        var tableConfig = otherConfig['tableConfig'];
+        if(tableConfig)
+        {
+            tableId = tableConfig['tableId'];
+            hasId = masterTableConfig.hasOwnProperty(tableId);
+            masterTableConfig[hasId ? sectionName : tableId] = tableConfig;
+        }
+    }
+
+    function getBindings(propName)
+    {
+        var prop;
+        var bindings = {};
+
+        for(prop in bindingObject.bindings)
+        {
+            if(!propName || prop === propName)
+            {
+                propName == 'navBar' ? bindings[prop] = bindingObject.bindings[prop] : bindings[bindingObject.currentBinding || prop] = bindingObject.bindings[prop];
+            }
+        }
+        return bindings;
+    }
+
+    function addSubBindings(data)
+    {
+        var i, len, id, sub = bindingObject.subBindings;
+        if(!data)
+        {
+            return;
+        }
+
+        data = data instanceof Array ? data : [data];
+        for(i = 0, len = data.length; i < len; i++)
+        {
+            id = data[i];
+            if(sub.indexOf(id) === -1)
+            {
+                sub.push(data[i]);
+            }
+        }
+    }
+
+    function addDynamicSubBindings()
+    {
+        var current, key, dyn = bindingObject.dynamic[bindingObject.screenContext];
+        if(!dyn)
+        {
+            return;
+        }
+
+        current = dyn[bindingObject.currentBinding] || {};
+        for(key in current)
+        {
+            addSubBindings((current[key] || {})['ids']);
+        }
+    }
+
+    function isRemovedFromWorkingSet(event, deleteId)
+    {
+        var i, len, subSection, subSections, sub, id, serverArgs, item, sourceId;
+        var ws = bindingObject.workingSet;
+        var context = bindingObject.screenContext;
+        var bindings = bindingObject.bindings;
+        var workingGuide = bindingObject.guide[context];
+        var itemContext = bindingObject.currentBinding ? undefined : getItemContext(context);
+        var itemContextId = bindingObject.currentBinding;
+
+        item = event.target.getAttribute('item');
+        if(ws.hasOwnProperty(context))
+        {
+            subSections = ws[context];
+            for(sub in subSections)
+            {
+                subSection = subSections[sub] || [];
+                for(i = 0, len = subSection.length; i < len; i++)
+                {
+                    id = subSection[i];
+                    if(id === deleteId)
+                    {
+                        sourceId = getBoundId(bindings[context]);
+                        sourceId = sourceId !== context ? sourceId : undefined;
+                        subSections[sub].splice(i,1);
+
+                        serverArgs = buildServerArgs({section: sub, sourceId: sourceId, item: item, deleteId: deleteId, workingGuide: workingGuide, itemContext: itemContext, itemContextId: itemContextId}, true);
+                        add(serverArgs);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    function evalTrigger(screenEvent, eventConfig, binding)
+    {
+        var i, len, expected, actualValue,
+            triggers = extractTriggers(eventConfig);
+
+        if (screenEvent && !screenEvent.target)
+        {
+            screenEvent = {target: {value: screenEvent}};
+        }
+        else if(!screenEvent)
+        {
+            screenEvent = {target: {}};
+        }
+
+        if (!binding)
+        {
+            binding = getEventFieldBinding(eventConfig) || {};
+        }
+
+        actualValue = getBindingValue(screenEvent, binding, eventConfig);
+        for(i = 0, len = triggers.length; i < len; i++)
+        {
+            expected = triggers[i];
+            if((!expected && expected !== false) || expected === 'null')
+            {
+                continue;
+            }
+
+            switch(i)
+            {
+                case EQ:
+                    return expected === actualValue;
+                case NE:
+                    return expected !== actualValue;
+                case LT:
+                    return actualValue < expected;
+                case GT:
+                    return actualValue > expected;
+                case BETWEEN:
+                    throw('Between trigger not supported yet');
+                case CONTAINS: //TODO: may cause issue w/ Virginia & West Virginia
+                    return (actualValue || '').indexOf(expected) !== -1;
+                case NOTCONTAINS:
+                    return (actualValue || '').indexOf(expected) === -1;
+                case ISVALID:
+                    return (expected) ? !!(actualValue) : !(actualValue);
+                case IS_FALSE:
+                    return actualValue === false || actualValue === 'false';
+            }
+        }
+        return true;
+    }
+
+    function extractTriggers(eventConfig)
+    {
+        return [eventConfig['eq'], eventConfig['ne'], eventConfig['lt'],
+                eventConfig['gt'], eventConfig['between'],
+                eventConfig['contains'], eventConfig['notContains'], eventConfig['isValid'], eventConfig['isFalse']];
+    }
+
+    function getEventBinding(eventConfig)
+    {
+        var bindings = bindingObject.bindings;
+        return bindings[eventConfig['uniqueId']] || {};
+    }
+
+    function getBindingValue(screenEvent, binding, eventConfig)
+    {
+        var target = screenEvent.target;
+        if(target.value)
+        {
+            return target.value;
+        }
+        else if(binding['value'] !== undefined && binding['value'] !== null)
+        {
+            return binding['value'];
+        }
+        return target.innerText || eventConfig['defaultValue'];
+    }
+
+    function getEventFieldBinding(eventConfig)
+    {
+        var binding;
+        var bindings = bindingObject.bindings;
+        var context = bindingObject.screenContext;
+        var eventBindingName = (eventConfig.parameters || {}).eventBinding;
+
+        binding = bindings[context] || bindings[eventConfig['uniqueId']] || bindings[eventBindingName];
+
+        if(binding)
+        {
+            return binding[eventConfig['eventField']];
+        }
+        return bindings.hasOwnProperty(context) && bindings[context] ? bindings[context][eventConfig['eventField']] : {};
+    }
+
+    function getNavBarObject()
+    {
+        var binding = getBindings('navBar');
+        return binding['navBar'] || {};
+    }
+
+    function getNavBarText()
+    {
+        var selector = dynamicInfo.selector;
+        return selector('#navBarSelect option:selected').text()
+    }
+
+    function serialize(value)
+    {
+        return JSON.stringify(value);
+    }
+
+    function getItemContext(section)
+    {
+        var className, scope, inst, guide = bindingObject.guide, guideData;
+
+        guideData = guide[bindingObject.screenContext] || guide[section];
+        if(!guideData || !guideData.length)
+        {
+            return;
+        }
+
+        inst = guideData[0]; // all objects should be the same shape
+        className = inst['className'];
+        if(!className)
+        {
+            return;
+        }
+
+        scope = inst['scope'] || {};
+        return scope[className.toLowerCase()];
+    }
+
+    window.addEventListener('dragover', function(event)
+    {
+        event.preventDefault();
+    });
+
+    bindingObject.setPasteListener = function setPasteListener(elementId)
+    {
+        document.getElementById(elementId).addEventListener('paste', function(event)
+        {
+            var serverArgs = buildServerArgs({uploadData: event.clipboardData.getData('text/plain'), uploadType: 'paste', subAction: 'upload'});
+            saveData('uiDynamic', serverArgs, false, false, false, false);
+        });
+    };
+
+    uploadFile = function uploadFile(files)
+    {
+        var file, fileReader;
+        var event = window.event;
+        event.preventDefault();
+
+        file = files ? files[0] : event.dataTransfer.files[0];
+        fileReader = new FileReader();
+        fileReader.readAsArrayBuffer(file);
+
+        fileReader.onload = function(e)
+        {
+            var serverArgs;
+            var binary = '';
+            var bytes = new Uint8Array(e.target.result);
+            var length = bytes.byteLength;
+            for (var i = 0; i < length; i++)
+            {
+                binary += String.fromCharCode(bytes[i]);
+            }
+
+            serverArgs = buildServerArgs({uploadData: window.btoa(binary), uploadType: 'file', subAction: 'upload'});
+            saveData('uiDynamic', serverArgs, false, false, false, false);
+        };
+    };
+
+    bindingObject.downloadFile = function downloadFile(id)
+    {
+        var element = document.getElementById(id);
+        var link = element.getAttribute('link') || 'dispatch/xls/ReportController:doCreateTemplate';
+        domManipService.buildForm(link, 'newWindow', {screen: getScreenName(), origScreen: swapped}).submit();
+    };
+
+    function getBindKey(other, initKey, uniqueId)
+    {
+        var multiList, concat;
+        if(!other.hasOwnProperty('multiList'))
+        {
+            return initKey;
+        }
+
+        multiList = other.multiList;
+        concat = initKey + '-' + uniqueId;
+        return multiList.hasOwnProperty(concat) ? initKey + '_' + multiList[concat] : initKey;
+    }
+
+    eventFunctions['balls'] = function balls(event, eventConfig)
+    {
+        var fieldName, bindKey, value;
+        var other = bindingObject.other;
+        var uniqueId = eventConfig.uniqueId;
+        var fields = eventConfig.fields || {};
+        var binding = bindingObject.bindings[uniqueId] || {};
+        var lists = bindingObject.lists;
+
+        for(fieldName in fields)
+        {
+            if(fieldName.indexOf('@') > -1)
+            {
+                continue;
+            }
+
+            bindKey = getBindKey(other, fieldName, uniqueId);
+            value = binding[fieldName].value;
+            lists[bindKey] = [{label: value, value: value}];
+        }
+    };
+
+    eventFunctions['addUpload'] = function addUpload(event, eventConfig)
+    {
+        var element = document.getElementById('numberOfRows');
+        var numOfRows = element ? element.value : 1;
+        var serverArgs = buildServerArgs({subAction: 'upload', uploadType: 'add', numberOfRows: numOfRows});
+        saveSection('uiDynamic', serverArgs, false, false, false);
+    };
+
+    eventFunctions['addPrefillRows'] = function addUpload(event, eventConfig)
+    {
+        var serverArgs = buildServerArgs({subAction: 'upload', uploadType: 'prefill'});
+        saveSection('uiDynamic', serverArgs, false, false, false);
+    };
+
+    eventFunctions['swapPages'] = function swapPages(event, eventConfig)
+    {
+        var pageName = eventConfig.parameters.pageName;
+        var append = document.getElementById('append');
+
+        swapped = getScreenName();
+
+        dynamicInfo.clearMessages(bindingObject);
+        dynamicInfo.changeScreen(pageName);
+        toElement(append).empty();
+
+        bindingObject.initPage(pageName);
+    };
+
+    eventFunctions['refresh'] = function swapPages(event, eventConfig)
+    {
+        if(swapped)
+        {
+            dynamicInfo.changeScreen(swapped);
+            swapped = undefined;
+        }
+        window.location = window.location;
+    };
+
+    eventFunctions['changeComplexListData'] = function changeComplexListData(event, eventConfig)
+    {
+        var bindValue, curVal;
+        var parameters = eventConfig.parameters || {};
+        var changeListName = parameters.changeListName;
+        var uniqueId = eventConfig.uniqueId;
+        var listData = bindingObject.complexDrivers[changeListName];
+        var mainBinding = bindingObject.bindings[uniqueId];
+        var subBinding = bindingObject.bindings[listData[uniqueId]];
+        var multiList = changeListName + '_' + bindingObject.other[changeListName][uniqueId];
+
+        if(!mainBinding || !subBinding)
+        {
+            return;
+        }
+
+        bindValue = subBinding[parameters.subBindName].value;
+        listData = listData[bindValue];
+
+        bindValue = mainBinding[parameters.mainBindName].value;
+
+        curVal = bindingObject.bindings[uniqueId][changeListName].value;
+        if (!checkListValue(curVal, listData[bindValue])){
+            bindingObject.bindings[uniqueId][changeListName].value = '';
+        }
+
+        bindingObject.lists[changeListName] = listData[bindValue] || [];
+        bindingObject.lists[multiList] = listData[bindValue] || [];
+    };
+
+    eventFunctions['makeSelectListFromObject'] = function makeSelectListFromObject(event, eventConfig, object)
+    {
+        var field;
+        var size = 0;
+        var list = [];
+        var firstOne = true;
+        var returnValue;
+        var fields = eventConfig['fields'] || {};
+        var uniqueId = eventConfig['uniqueId'];
+
+        if(object)
+        {
+            for(var key in object)
+            {
+                if(key.indexOf('@') === -1)
+                {
+                    size++;
+                    list.push({label: object[key], value: object[key]});
+                    if (firstOne) {
+                        returnValue = {value: object[key]};
+                        firstOne = false;
+                    }
+                }
+            }
+        }
+
+        for(field in fields)
+        {
+            if(field.indexOf('@') === -1)
+            {
+                bindingObject.lists[getBindKey(bindingObject.other, field, uniqueId)] = list;
+            }
+        }
+        return size > 1 ? {} : returnValue;
+    };
+
+    eventFunctions['makeSelectListFromArray'] = function makeSelectListFromArray(event, eventConfig, object)
+    {
+        var key, x, list = [];
+        var objectKey;
+        var fieldKey;
+        var fieldValue;
+        var fields = eventConfig['fields'];
+        var uniqueId = eventConfig['uniqueId'];
+
+        if(object)
+        {
+            for (key in fields)
+            {
+                if(key.indexOf('@') > -1) continue;
+
+                fieldValue = fields[key];
+                fieldKey = fields[key];
+
+                for(objectKey in object)
+                {
+                    if(objectKey.indexOf('@') === -1 && objectKey === fieldValue)
+                    {
+                        if (object[objectKey] instanceof Array)
+                        {
+                            for (x in object[objectKey])
+                            {
+                                list.push({label: object[objectKey][x], value: object[objectKey][x]});
+                            }
+                            bindingObject.lists[getBindKey(bindingObject.other, key, uniqueId)] = list;
+                        }
+                    }
+                }
+            }
+        }
+        return object;
+    };
+
+    eventFunctions['makeSelectListFromMap'] = function makeSelectListFromMap(event, eventConfig, object)
+    {
+        var i, len;
+        var newList = [];
+        var fields = eventConfig['fields']
+        for(i = 0, len = object.length; i < len; i++)
+        {
+            newList.push({label: object[i][fields.label], value: object[i][fields.value]});
+        }
+        bindingObject.lists[fields.list] = newList;
+
+    };
+
+    eventFunctions['setSearchList'] = function setSearchList(event, eventConfig, data)
+    {
+        var fieldName, list, value, listEntry;
+        var uniqueId =  eventConfig.uniqueId;
+        var fields = eventConfig['fields'];
+        var uniqueFieldId;
+
+        bindingObject.searchSelectedList = bindingObject.searchSelectedList || {};
+        list = bindingObject.searchSelectedList;
+        if(!data || !data.length)
+        {
+            list[uniqueId] = [{desc: 'No results found'}];
+        }
+        else
+        {
+            list[uniqueId] = data;
+            if(Object.keys(bindingObject.hiddenBinding).length > 0)
+            {
+                for(fieldName in fields)
+                {
+                    if(fieldName.indexOf('@') === -1)
+                    {
+                        uniqueFieldId = bindingObject.bindings[uniqueId] ? uniqueId : bindingObject.screenContext;
+                        value = bindingObject.bindings[uniqueFieldId][fieldName].value;
+                        listEntry = data.filter(function(object)
+                        {
+                            return object.code === value;
+                        });
+
+                        if(listEntry.length === 1)
+                        {
+                            bindingObject.hiddenBinding[uniqueFieldId] = listEntry[0].code + '-' + listEntry[0].desc;
+                        }
+                    }
+                }
+            }
+
+            if(data.length === 1)
+            {
+                bindingObject.searchData = {code: data[0].code, desc: data[0].desc, suffix: data[0].suffix};
+            }
+        }
+    };
+
+    eventFunctions['setFieldValues'] = function setFieldValues(event, eventConfig, data)
+    {
+        var field, value, setValue, isKeepField,
+            keepIfSet = eventConfig['parameters']['keepIfSet'],
+            keepSetField = eventConfig['parameters']['keepSetField'],
+            binding = bindingObject.bindings[bindingObject.screenContext] || getEventBinding(eventConfig),
+            fields = eventConfig['fields'],
+            eventField = eventConfig['eventField'],
+            defaultField = eventConfig['defaultField'],
+            parameters = eventConfig['parameters'],
+            defaultToEventField = parameters['defaultToEventField'];
+
+        for(field in fields)
+        {
+            if(field.indexOf('@') === -1 && binding.hasOwnProperty(field))
+            {
+                value = binding[field].value;
+                isKeepField = field === keepSetField || (keepSetField instanceof Array ? keepSetField : []).indexOf(field) > -1;
+                if(value && (keepIfSet || isKeepField))
+                {
+                    continue;
+                }
+                setValue = getProperty(data, fields[field], defaultField) || (defaultToEventField ? (binding[eventField] || {}).value : value);
+                binding[field].value = parameters['lookupListLabel'] ? lookupListLabel(bindingObject.lists[eventField], setValue) : setValue;
+            }
+        }
+    };
+
+    eventFunctions['setMapFieldValues'] = function setMapFieldValues(event, eventConfig, data)
+    {
+        var field, value;
+        var keepIfSet = eventConfig['parameters']['keepIfSet'];
+        var uniqueId = eventConfig['uniqueId'];
+        var eventBinding = eventConfig['eventBinding'];
+        var binding = bindingObject.mapUnique[uniqueId] ? bindingObject.bindings[bindingObject.mapUnique[uniqueId]] : bindingObject.bindings[eventBinding];
+        var fields = eventConfig['fields'];
+        var defaultField = eventConfig['defaultField'];
+        var customJS = eventConfig['customJS'];
+
+        for(field in fields)
+        {
+            if(field.indexOf('@') === -1)
+            {
+                value = binding[field].value;
+                if(value && keepIfSet)
+                {
+                    continue;
+                }
+                binding[field].value = getProperty(data, fields[field], defaultField);
+            }
+        }
+
+        if (customJS)
+        {
+            event.data = data; // pass in to custom
+            eventFunctions['custom'](event, eventConfig);
+        }
+    };
+
+    eventFunctions['setFieldDefaults'] = function setFieldDefaults(event, eventConfig)
+    {
+        var field;
+        var binding = getEventBinding(eventConfig);
+        var fields = eventConfig['fields'];
+
+        if(evalTrigger(event, eventConfig))
+        {
+            for(field in fields)
+            {
+                if(field.indexOf('@') === -1 && binding.hasOwnProperty(field))
+                {
+                    binding[field].value = eventConfig['defaultValue'];
+                }
+            }
+        }
+    };
+
+    eventFunctions['clearFieldValues'] = function clearFieldValues(event, eventConfig)
+    {
+        var i, len, field,
+            fields = eventConfig['fields'],
+            binding = bindingObject.bindings[bindingObject.screenContext] || getEventBinding(eventConfig),
+            trigger = evalTrigger(event, eventConfig),
+            uniqueId = eventConfig['uniqueId'];
+
+        if(!fields || !trigger)
+        {
+            return;
+        }
+        fields = fields instanceof Array ? fields : Object.keys(fields);
+
+        for(i = 0, len = fields.length; i < len; i++)
+        {
+            if(fields[i].indexOf('@') === -1)
+            {
+                field = binding[fields[i]];
+                if (!field)
+                {
+                    field = (bindingObject.bindings[uniqueId] || {})[fields[i]];
+                }
+                if(field)
+                {
+                    field.value = undefined;
+                }
+            }
+        }
+    };
+
+    eventFunctions['clearSearchList'] = function clearSearchList(event, eventConfig)
+    {
+        bindingObject.searchList = undefined;
+        delete (bindingObject.searchSelectedList || {})[eventConfig.uniqueId];
+    };
+
+    eventFunctions['disableSections'] = function disableSections(event, eventConfig)
+    {
+        var field, section, strName, compVal, trigger, disabledMap;
+        var disabled = bindingObject.disabled;
+        var fields = eventConfig['fields'];
+        var sectionName = eventConfig['eventField'];
+        var mapUnique = bindingObject.mapUnique;
+        var bindings = bindingObject.bindings;
+        var paramName = eventConfig['parameters']['bindingName'];
+
+        for (section in mapUnique)
+        {
+            strName = mapUnique[section];
+            if (strName.startsWith(sectionName))
+            {
+                compVal = bindings[strName][paramName];
+                trigger = evalTrigger (event, eventConfig, compVal);
+                disabledMap = disabled[strName] || {};
+                for(field in fields)
+                {
+                    if(field.indexOf('@') === -1)
+                    {
+                        disabledMap[field] = trigger;
+                    }
+                }
+                disabled[strName] = disabledMap;
+            }
+        }
+    };
+
+    eventFunctions['disableFields'] = function disableFields(event, eventConfig)
+    {
+        var field,
+            disabled = bindingObject.disabled,
+            fields = eventConfig['fields'],
+            trigger = evalTrigger(event, eventConfig);
+
+        for(field in fields)
+        {
+            if(field.indexOf('@') === -1)
+            {
+                disabled[field] = trigger;
+            }
+        }
+    };
+
+    eventFunctions['toggleSections'] = function toggleSections(event, eventConfig)
+    {
+        var i, len, disabledSection, fieldName;
+        var sectionName = bindingObject.mapUnique[eventConfig.uniqueId];
+        var disabled = bindingObject.disabled;
+        var fields = eventConfig.fields;
+
+        disabledSection = disabled[sectionName];
+        for(i = 0, len = fields.length; i < len; i++)
+        {
+            fieldName = fields[i];
+            disabledSection[fieldName] = !disabledSection[fieldName];
+        }
+    };
+
+    eventFunctions['toggleFields'] = function toggleFields(event, eventConfig)
+    {
+        var field,
+            hide = bindingObject.hide,
+            fields = eventConfig['fields'],
+            trigger = evalTrigger(event, eventConfig),
+            uniqueId = eventConfig['uniqueId'];
+
+        for(field in fields)
+        {
+            if(field.indexOf('@') === -1)
+            {
+                hide[field] = trigger;
+                hide[field + uniqueId] = trigger;
+            }
+        }
+    };
+
+    eventFunctions['makeRequired'] = function makeRequired(event, eventConfig)
+    {
+        var field,
+            classes = bindingObject.classes,
+            fields = eventConfig['fields'],
+            trigger = evalTrigger(event, eventConfig);
+
+        for(field in fields)
+        {
+            if(field.indexOf('@') === -1)
+            {
+                classes[field] = trigger ? 'required' : '';
+            }
+        }
+    };
+
+    eventFunctions['stringToShuttle'] = function stringToShuttle(event, eventConfig)
+    {
+        var uniqueId = eventConfig['uniqueId'],
+            shuttleId = 'shuttle' + uniqueId,
+            bindId = uniqueId || {},
+            binding = bindingObject.bindings[bindId] || {},
+            fields = eventConfig['fields'] || {},
+            rightList = [],
+            fieldName, field, fieldValue, leftList, found, val, i, j;
+        for( fieldName in fields ) {
+            field = binding[fieldName] || {};
+            fieldValue = field['value'];
+            leftList = bindingObject.lists[fieldName];
+        }
+
+        if( !bindingObject.shuttle ) {
+            bindingObject.shuttle = {};
+        }
+
+        if( fieldValue ) {
+            fieldValue = fieldValue.split(','); // csv
+            for (i in fieldValue) {
+                val = fieldValue[i];
+                found = false;
+                for (j in leftList) {
+                    if (val === leftList[j].value) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) {
+                    rightList.push(val)
+                }
+            }
+
+            // rebuild value string to handle removed objects
+            storeShuttleString(field, rightList);
+        }
+        bindingObject.shuttle[shuttleId] = rightList;
+    };
+
+    eventFunctions['shuttleToString'] = function shuttleToString(event, eventConfig)
+    {
+        var uniqueId = eventConfig['uniqueId'],
+            shuttleId = 'shuttle' + uniqueId,
+            bindId = uniqueId || {},
+            binding = bindingObject.bindings[bindId] || {},
+            fields = eventConfig['fields'] || {},
+            value = bindingObject.shuttle[shuttleId],
+            fieldName, field, valueString, i;
+        for( fieldName in fields ) {
+            field = (binding[fieldName] || {});
+        }
+
+        storeShuttleString(field, value);
+    };
+
+    function storeShuttleString(field, values) { // will save the values array as string to field
+        var i, valueString = '';
+        for( i in values ) {
+            valueString += ',' + values[i];
+        }
+        field['value'] = valueString.substring(1); // ignore 1st ,
+    }
+
+    eventFunctions['custom'] = function custom(event, eventConfig)
+    {
+        var opts = {buildServerArgs: buildServerArgs, getBindKey: getBindKey, getProperty: getProperty};
+        var func = Function("$scope", "event", "eventConfig", 'dynamicInfo', 'opts', eventConfig['customJS']);
+        func(bindingObject, event, eventConfig, dynamicInfo, opts);
+    };
+
+    eventFunctions['showMessage'] = function showMessage(event, eventConfig)
+    {
+        bindingObject.infoMessages = [];
+        bindingObject.infoMessages.push({type: MESSAGE_INFO, context: '', text: eventConfig.parameters.message});
+    };
+
+    eventFunctions['clearMessage'] = function clearMessage(event, eventConfig)
+    {
+        bindingObject.infoMessages = [];
+        bindingObject.successMessages = [];
+    };
+
+    eventFunctions['allowOnlyAlphaNumerics'] = function allowOnlyAlphaNumerics(event, eventConfig)
+    {
+        dynamicInfo.restrictChars(event);
+    };
+
+    eventFunctions['copy'] = function copy(event, eventConfig)
+    {
+        var fieldName;
+        var bindings = bindingObject.bindings;
+        var parameters = eventConfig['parameters'];
+        var copyBindingName = parameters['copyBindingName'];
+        var bindId = event.target.value || eventConfig['uniqueId'];
+        var copySource = bindings[bindId];
+        var copyTarget = bindings[copyBindingName];
+        var fields = eventConfig['fields'];
+        copyId = bindId;
+
+        for(fieldName in fields)
+        {
+            if(copySource.hasOwnProperty(fieldName) && copyTarget.hasOwnProperty(fieldName))
+            {
+                copyTarget[fieldName]['value'] = copySource[fieldName]['value'];
+            }
+        }
+    };
+
+    eventFunctions['pageSave'] = function pageSave(event, eventConfig)
+    {
+        var params = eventConfig.parameters || {};
+        var subAction = params.subAction;
+        var clearMessages = params.hasOwnProperty('clearMessages') ? params.clearMessages : true;
+        bindingObject.savePage('uiDynamic', subAction, clearMessages, true);
+    };
+
+    eventFunctions['showByMessage'] = function showByMessage(event, eventConfig)
+    {
+        var i, len, msg;
+        var isHidden = true;
+        var hide = bindingObject.hide;
+        var uniqueId = eventConfig.uniqueId;
+        var field = eventConfig.eventField;
+        var params = eventConfig.parameters || {};
+        var messages = bindingObject.validationMessages;
+        var binding = bindingObject.bindings[bindingObject.screenContext];
+        var ctx = params.msgContext;
+        var value;
+
+        if (binding[field]) {
+            value = binding[field].value;
+        }
+
+        if(value !== undefined && value !== null) // false and '' are both legal here
+        {
+            isHidden = false;
+        }
+        else
+        {
+            for(i = 0, len = messages.length; i < len; i++)
+            {
+                msg = messages[i];
+                if(msg.context === ctx)
+                {
+                    isHidden = false;
+                    break;
+                }
+            }
+        }
+        hide[field] = isHidden;
+        hide[field + uniqueId] = isHidden;
+    };
+
+    function lookupListLabel(list, value)
+    {
+        var i, len, obj;
+        for(i = 0, len = list.length; i < len; i++)
+        {
+            obj = list[i];
+            if(obj['value'] === value)
+            {
+                return obj['label'];
+            }
+        }
+    }
+
+    function getProperty(data, propString, defaultField) // helper function for events
+    {
+        var i, len, prop = data;
+        var split = propString.split('.');
+
+        if(!prop)
+        {
+            return;
+        }
+
+        for(i = 0, len = split.length; i < len; i++)
+        {
+            prop = prop[split[i]];
+            if(!prop)
+            {
+                return;
+            }
+            else if(prop instanceof Array)
+            {
+                if (data.hasOwnProperty(defaultField) && prop.indexOf(data[defaultField]) > -1) {
+                    prop = prop[prop.indexOf(data[defaultField])]
+                }
+                else {
+                    prop = prop[0];
+                }
+            }
+        }
+        return typeof prop !== 'object' ? prop : undefined;
+    }
+
+    function replaceContent(baseTagId, content, keepScope)
+    {
+        var append = document.getElementById(baseTagId);
+        toElement(append).empty();
+        toElement(append).append(content);
+        compiler(append, keepScope ? bindingObject : dynamicInfo.getChildMain());
+        refresh();
+    }
+
+    function fetch(result, sectionName, id, keepBindings)
+    {
+        var i, len, dynId, dynamicSection, dynSectionName, ids, msg, newMessages;
+        var data = handleServiceResult(result, bindingObject);
+        var bindings = bindingObject.bindings;
+        var dynamic = bindingObject.dynamic;
+        var other = bindingObject.other;
+
+        if(!keepBindings)
+        {
+            bindings[id] = data.bindings[id];
+        }
+        other[sectionName] = data.other[sectionName];
+        other[sectionName].isLazy = true;
+        bindingObject.toggle[sectionName][id] = data.toggle[sectionName][id] !== 'fetch' ? data.toggle[sectionName][id] : undefined;
+
+        if(htmlMap.hasOwnProperty(sectionName))
+        {
+            htmlMap[sectionName][id] = data.htmlMap[sectionName][id];
+        }
+        else if(Object.keys(htmlMap).length === 0)
+        {
+            htmlMap = data.htmlMap;
+        }
+
+        if(data.dynamic.hasOwnProperty(sectionName))
+        {
+            if(!dynamic.hasOwnProperty(sectionName))
+            {
+                dynamic[sectionName] = {};
+            }
+            dynamicSection = data.dynamic[sectionName][id];
+            dynamic[sectionName][id] = dynamicSection;
+            for(dynSectionName in dynamicSection)
+            {
+                if(dynSectionName === '@type')
+                {
+                    continue;
+                }
+
+                ids = dynamicSection[dynSectionName].ids || [];
+                for(i = 0, len = ids.length; i < len; i++)
+                {
+                    dynId = ids[i];
+                    bindings[dynId] = data.bindings[dynId];
+                }
+            }
+        }
+
+        newMessages = data.other.deleteMessages;
+        for(msg in newMessages)
+        {
+            if(!other.deleteMessages.hasOwnProperty(msg))
+            {
+                other.deleteMessages[msg] = newMessages[msg];
+            }
+        }
+        defaultBindings = deepClone(bindingObject.bindings);
+    }
+
+    function setModalData(otherSection, id)
+    {
+        var allTitles, allButtonConfigs;
+
+        allTitles = otherSection['allTitles'] || {};
+        bindingObject.modal.title = allTitles.hasOwnProperty(id) ? allTitles[id] : otherSection['title'];
+
+        allButtonConfigs = otherSection['allButtonConfigs'] || {};
+        bindingObject.modal.buttons = prepareModalButtons(allButtonConfigs.hasOwnProperty(id) ? allButtonConfigs[id] : otherSection['buttons']);
+    }
+
+    function add(args, isSaveFromServer)
+    {
+        var sectionName = args['section'];
+        var modalSize = args['modalSize'];
+        appendData(args);
+        args['saveFromServer'] = isSaveFromServer;
+
+        pageService.getPageSection(args, function(result)
+        {
+            var newHtml, append, serverArgs, ctx, otherSection;
+            var data = handleServiceResult(result, bindingObject);
+
+            if (result && result.data === TIMEOUT)
+            {
+                rootBindingObject.hidePageLoading();
+                bindingObject.timeoutModalView.isOpen = true;
+                dynamicInfo.rootRefresh();
+                return;
+            }
+
+            otherSection = data.other[sectionName] || {};
+            if(isSaveFromServer || otherSection['autoSave'])
+            {
+                lastAddFromServer = undefined;
+                serverArgs = buildServerArgs({session: isSaveFromServer ? data.session : undefined, guide: data.guide, autoSave: otherSection['autoSave'],
+                                              actionContext: 'autoSave', saveFromServer: isSaveFromServer}, true, false);
+                saveData('uiDynamic', serverArgs, false, false, isSaveFromServer, false);
+                return;
+            }
+
+            if(!data.html && Object.keys(data.toggle).length === 0)
+            {
+                append = document.getElementById('append');
+                toElement(append).empty();
+                bindingObject.initPage();
+                return;
+            }
+
+            bindingObject.bindings = data.bindings;
+            ctx = bindingObject.screenContext || sectionName;
+            bindingObject.workingSet = data.workingSet;
+
+            bindingObject.lists = data.lists;
+            bindingObject.events = data.events;
+            bindingObject.dynamicLists = data.dynamicLists;
+            bindingObject.toggle = data.toggle;
+            bindingObject.other = data.other;
+            bindingObject.hiddenSections = data.hiddenSections;
+            appendMasterTableConfig(sectionName);
+
+            bindingObject.guide[ctx] = Object.keys(data.guide || {}).length > 0 ? data.guide : bindingObject.guide[ctx];
+
+            newHtml = data.html;
+            if(data.toggle.hasOwnProperty(sectionName))
+            {
+                newHtml = newHtml || getOnlyToggle(data.toggle[sectionName]);
+            }
+
+            bindingObject.dynamicBinding = bindingObject.dynamicBinding || {};
+            bindingObject.dynamicBinding['dynamic_' + sectionName] = cleanse(newHtml);
+            addDynamicSubBindings();
+
+            if(bindingObject.other.replaceId)
+            {
+                htmlMap = data.htmlMap;
+                replaceContent(bindingObject.other.replaceId, newHtml, true);
+                delete bindingObject.other.replaceId;
+                autoExpandAll();
+            }
+            else if(!bindingObject.modal.isOpen || isSaveAddAnother)
+            {
+                replaceContent('modalContent', newHtml);
+                bindingObject.showModal({modalSize: modalSize, section: sectionName});
+                isSaveAddAnother = false;
+            }
+
+            refresh();
+            refresh(function(){domManipService.addDataTable(masterTableConfig)});
+        });
+    }
+
+    function saveData(action, args, closeModal, doReload, isSaveFromServer, clearMessages)
+    {
+        var doOpenModal = bindingObject.modal.isOpen;
+        dynamicInfo.clearMessages(bindingObject);
+        rootBindingObject.showPageLoading();
+        args['sourceId'] = getBoundId(bindingObject.bindings[bindingObject.screenContext]);
+        copyId = undefined;
+
+        executePipeline(action, args, undefined, function(result)
+        {
+            var i, len, row, toggleData, rpmSession, data, append, eventName, events, status, origBinding;
+            var resultData = handleServiceResult(result, bindingObject);
+
+            if (result && result.data === TIMEOUT)
+            {
+                rootBindingObject.hidePageLoading();
+                bindingObject.timeoutModalView.isOpen = true;
+                dynamicInfo.rootRefresh();
+                return;
+            }
+
+            status = result.data['RpmPipelineController.route'].status;
+            if(!status)
+            {
+                events = bindingObject.events;
+                bindingObject.modal.isOpen = doOpenModal || closeModal;
+                for(eventName in events)
+                {
+                    if(events[eventName].runOnFail)
+                    {
+                        bindingObject.eventHandler({}, [eventName])
+                    }
+                }
+                rootBindingObject.hidePageLoading();
+            }
+            else
+            {
+                rpmSession = new Dynamis.RpmSession(resultData);
+                data = rpmSession.getNamedObjects()['htmlMap'];
+
+                append = document.getElementById('append');
+                toElement(append).empty();
+
+                origBinding = bindingObject.bindings[bindingObject.screenContext];
+
+                bindingObject.lists = data.lists;
+                bindingObject.dynamicLists = data.dynamicLists;
+                bindingObject.complexDrivers = data.complexDrivers;
+                bindingObject.bindings = data.bindings;
+                bindingObject.dynamic = data.dynamic;
+                bindingObject.mapUnique = data.mapUnique;
+                bindingObject.toggle = data.toggle;
+                bindingObject.workingSet = {};
+                bindingObject.guide = data.guide;
+                bindingObject.other = data.other;
+                bindingObject.events = data.events;
+                bindingObject.hiddenSections = data.hiddenSections;
+                htmlMap = data.htmlMap;
+                defaultBindings = deepClone(bindingObject.bindings);
+                defaultLists = serialize(bindingObject.lists);
+                defaultGuide = deepClone(bindingObject.guide);
+                bindingObject.searchList = undefined;
+                bindingObject.suffix = {};
+                bindingObject.subBindings = [];
+
+                toElement(append).append(data.html);
+                compiler(append, newBinding());
+                findNewTableConfig();
+                domManipService.addDataTable(masterTableConfig);
+                bindingObject.uploadFilter = {value: 'all'};
+
+                // if a successful save (not 'save and add another') OR a successful delete, refresh the page
+                if (closeModal || args.hasOwnProperty('deleteId'))
+                {
+                    if(bindingObject.modal.isOpen)
+                    {
+                        bindingObject.hideModal();
+                    }
+                    bindingObject.currentBinding = undefined;
+                    bindingObject.screenContext = undefined;
+                    bindingObject.dynamicBinding = {};
+                    bindingObject.hide = originalHide || {};
+                    lastAddFromServer = undefined;
+                }
+                else
+                {
+                    // hit the 'save and add another' button
+                    // need to clean out the ADD context modal (in case editing , then save and add another)
+                    bindingObject.dynamicBinding = {};
+                    if(bindingObject.toggle.hasOwnProperty(bindingObject.screenContext))
+                    {
+                        toggleData = bindingObject.toggle[bindingObject.screenContext];
+                        if(toggleData.hasOwnProperty('default'))
+                        {
+                            replaceContent('modalContent', toggleData['default']);
+                        }
+                    }
+                    else if(lastAddFromServer)
+                    {
+                        isSaveAddAnother = true;
+                        bindingObject.infoMessages = [];
+                        bindingObject.successMessages = [];
+                        bindingObject.bindings[bindingObject.screenContext] = origBinding;
+                        bindingObject.screenContext = undefined;
+                        bindingObject.addFromServer(lastAddFromServer.event, lastAddFromServer.parameters);
+                    }
+                }
+
+                refresh(function()
+                {
+                    domManipService.addDataTable(masterTableConfig);
+                    dynamicInfo.broadcast(rootBindingObject, 'pageSubmitted');
+                    dynamicInfo.broadcast(rootBindingObject, 'updateLHN');
+                    for(i = 0, len = openedRows.length; i < len; i++)
+                    {
+                        row = openedRows[i];
+                        bindingObject.toggleDetailsPanel(row.event, row.panelId, row.tableId, row.tableSection, true);
+                    }
+                });
+
+                leavePage(result);
+                if(clearMessages)
+                {
+                    bindingObject.infoMessages = [];
+                    bindingObject.successMessages = [];
+                }
+
+                if(bindingObject.other.hasOwnProperty('masterNested'))
+                {
+                    autoExpandAll();
+                }
+                rootBindingObject.hidePageLoading();
+                refresh(domManipService.addTooltips);
+
+                if(doReload)
+                {
+                    location.reload(false); // force full page reload
+                }
+            }
+        });
+    }
+
+    var leavePage = function (result) {
+        if (bindingObject.notifyContainer) {
+            bindingObject.notifyContainer(result, bindingObject.messageScope);
+        } else {
+            rootBindingObject.showMainContent = true;
+        }
+    }
+
+    bindingObject.refreshKeepRowsOpen = function refreshKeepRowsOpen()
+    {
+        var i, row, len;
+        for(i = 0, len = openedRows.length; i < len; i++)
+        {
+            row = openedRows[i];
+            bindingObject.toggleDetailsPanel(row.event, row.panelId, row.tableId, row.tableSection, true);
+        }
+    };
+
+    function saveSection(action, args, session)
+    {
+        dynamicInfo.clearMessages(bindingObject);
+        rootBindingObject.showPageLoading();
+        executePipeline(action, args, session, function(result)
+        {
+            var id, toggle, binding, append, other, name = bindingObject.screenContext;
+            var resultData = handleServiceResult(result, bindingObject);
+            var rpmSession = new Dynamis.RpmSession(resultData);
+            var data = rpmSession.getNamedObjects()['htmlMap'];
+
+            if(!result.data['RpmPipelineController.route'].status)
+            {
+                refresh(function()
+                {
+                    dynamicInfo.broadcast(rootBindingObject, 'pageSubmitted');
+                    dynamicInfo.broadcast(rootBindingObject, 'updateLHN');
+                    bindingObject.refreshKeepRowsOpen();
+                });
+                rootBindingObject.hidePageLoading();
+                return;
+            }
+
+            binding = bindingObject.bindings[name];
+            bindingObject.lists = data.lists;
+            bindingObject.dynamicLists = data.dynamicLists;
+            bindingObject.complexDrivers = data.complexDrivers;
+            bindingObject.bindings = data.bindings;
+            bindingObject.dynamic = data.dynamic;
+            bindingObject.toggle = data.toggle;
+            bindingObject.events = data.events;
+            bindingObject.other = data.other;
+
+            bindingObject.bindings[name] = binding;
+            bindingObject.dynamicBinding = {};
+            bindingObject.makeDynamic(name, getBoundId(binding));
+            bindingObject.workingSet = {};
+            htmlMap = data.htmlMap;
+            defaultBindings = deepClone(bindingObject.bindings);
+            defaultLists = serialize(bindingObject.lists);
+            defaultGuide = deepClone(bindingObject.guide);
+
+            append = document.getElementById('append');
+            toElement(append).empty();
+
+            toElement(append).append(data.html);
+            compiler(append, newBinding());
+            findNewTableConfig();
+            domManipService.addDataTable(masterTableConfig);
+            bindingObject.uploadFilter = {value: 'all'};
+
+            other = bindingObject.other[name] || {};
+            if(bindingObject.modal.isOpen && other.isLazy)
+            {
+                toggle = (data.toggle || {})[name] || {};
+                for(id in toggle)
+                {
+                    if(id !== '@type' && toggle[id] !== 'fetch')
+                    {
+                        replaceContent('modalContent', toggle[id]);
+                        bindingObject.toggle[name][id] = 'fetch';
+                        break;
+                    }
+                }
+            }
+
+            refresh(function()
+            {
+                bindingObject.refreshKeepRowsOpen();
+            });
+
+            rootBindingObject.hidePageLoading();
+        });
+    }
+
+    function getBoundId(binding)
+    {
+        var key;
+        var ignore = ['@id', '@type'];
+
+        if(binding)
+        {
+            for(key in binding)
+            {
+                if(ignore.indexOf(key) === -1)
+                {
+                    return (key) ? binding[key]['id'] : null;
+                }
+            }
+        }
+    }
+
+    function getOnlyToggle(toggle)
+    {
+        var key, keys = Object.keys(toggle);
+        if(keys.length === 2)
+        {
+            for(key in toggle)
+            {
+                if(key.indexOf('@') === -1)
+                {
+                    return toggle[key];
+                }
+            }
+        }
+    }
+
+    function executePipeline(action, args, session, handler)
+    {
+        dynamicInfo.pipeline(action, args, session, handler);
+    }
+
+    function prepareModalButtons(modalButtons)
+    {
+        var i, len, button, buttonConfig;
+        var buttons = [];
+
+        modalButtons = modalButtons || [];
+        for(i = 0, len = modalButtons.length; i < len; i++)
+        {
+            buttonConfig = modalButtons[i];
+            button = deepClone(buttonConfig);
+            button.onClick = wrap(buttonConfig.onClick);
+            buttons.push(button);
+        }
+        return buttons
+    }
+
+    function wrap(callType)
+    {
+        return function(){executeModalButton(callType);}
+    }
+
+    function executeModalButton(callType)
+    {
+        switch(callType)
+        {
+            case 'save':
+                bindingObject.saveModal(true);
+                break;
+            case 'saveAndReload':
+                bindingObject.saveModal(true, true);
+                break;
+            case 'saveAddAnother':
+                bindingObject.saveModal();
+                break;
+            case 'cancel':
+                bindingObject.cancelModal();
+                break;
+            case 'saveLocal':
+                bindingObject.saveModalLocal();
+                break;
+            case 'update':
+                bindingObject.saveModal(true, false, true);
+                break;
+        }
+    }
+
+    function buildServerArgs(addlArgs, doAppendIds, doAppendData)
+    {
+        var key;
+        var context = bindingObject.screenContext;
+        var args =
+        {
+            '@type': 'java.util.LinkedHashMap',
+            multiId: sessionStorage['dynamicIds'],
+            instSubmission: sessionStorage['instSubmission'],
+            screen: getScreenName(),
+            navBarObject: getNavBarObject(),
+            allBindings: bindingObject.bindings,
+            dynamic: (bindingObject.dynamic || {})[context],
+            working: bindingObject.workingSet,
+            toggle: (bindingObject.toggle || {})[context],
+            other: bindingObject.other,
+            guide: (bindingObject.guide || {})[context],
+            context: context,
+            subBindings: bindingObject.subBindings,
+            lists: bindingObject.lists,
+            events: bindingObject.events,
+            dynamicLists: bindingObject.dynamicLists,
+            hiddenSections: bindingObject.hiddenSections,
+            allToggle: bindingObject.toggle,
+            origScreen: swapped
+        };
+
+        addlArgs = addlArgs || {};
+        for(key in addlArgs)
+        {
+            args[key] = addlArgs[key];
+        }
+
+        if(doAppendIds)
+        {
+            appendIds(args);
+        }
+
+        if(doAppendData)
+        {
+            appendData(args);
+        }
+        return args;
+    }
+
+    function checkListValue(value, listData){
+        for (var lData in listData){
+            if (listData[lData].value == value){
+                return true;
+            }
+        }
+        return false;
+    }
+}

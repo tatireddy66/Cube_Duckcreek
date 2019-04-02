@@ -1,0 +1,566 @@
+/**
+*
+*/
+Ext.define('DCT.DeveloperToolbar', {
+	extend: 'Ext.Toolbar',
+
+	dctControl: true,
+	inputXType: 'dctdevelopertoolbar',
+	enableOverflow: true,
+	renderTo: 'dctDeveloperToolbarContainer',
+	xtype: 'dctdevelopertoolbar',
+
+	/**
+	*
+	*/
+	constructor: function (config) {
+		var me = this;
+		me.checkControlExists(config);
+		me.setToolbarItems(config);
+		me.setListeners(config);
+		me.callParent([config]);
+		DCT.hubEvents.addListener('ajaxcomplete', me.onAjaxComplete, me);
+	},
+	/**
+	*
+	*/
+	setToolbarItems: function (config) {
+		var me = this;
+		config.items = [
+			{
+				cls: 'x-btn-icon',
+				tooltip: 'Current Information',
+				icon: (DCT.skinsDir + '/images/icons/information.png'),
+				handler: function (btn) { me.showInfoWin(); },
+				scope: me
+			}, {
+				cls: 'x-btn-icon',
+				tooltip: 'Cutoff Inspector',
+				icon: (DCT.skinsDir + '/images/icons/text_cutoff.png'),
+				menu: [
+					{
+						text: 'Show Cutoffs',
+						icon: (DCT.skinsDir + '/images/icons/add.png'),
+						handler: function (btn) { me.showCutoffs(); },
+						scope: me
+					},{
+						text: 'Hide Cutoffs',
+						icon: (DCT.skinsDir + '/images/icons/delete.png'),
+						handler: function (btn) { me.clearOverlays(); },
+						scope: me
+					}]
+			}, {
+				cls: 'x-btn-icon',
+				tooltip: 'Skip required field checking',
+				icon: (DCT.skinsDir + '/images/icons/application_lightning.png'),
+				handler: function (btn) { DCT.Util.setSkipRequiredFields(); }
+			},
+			'-',
+			{
+				cls: 'x-btn-icon',
+				tooltip: 'Theme Preview',
+				icon: (DCT.skinsDir + '/images/icons/color_swatch.png'),
+				menu: [
+					{
+						text: 'Skin Theme',
+						menu: {
+							items: [ {
+								text: 'Paprika',
+								handler: function () {
+									me.swapTheme("ExtJsTheme", DCT.skinsDir + "/themes/Paprika/css/theme-gray-all.css");
+									me.swapTheme("DctExtJsTheme", DCT.skinsDir + "/themes/Paprika/css/dctExt-xtheme.css");
+									me.swapTheme("SkinTheme", DCT.skinsDir + "/themes/Paprika/css/theme.css");
+								},
+								scope: me
+							}]
+						}
+					}]
+			},
+			'-',
+			{
+				xtype: 'dctinputdatefield',
+				id: 'devToolbarSystemDate',
+				format: 'n/j/Y g:i a',
+				width: 'auto',
+				value: DCT.Util.getSafeElement('_currentSystemDate').value,
+				hidden: DCT.portals.filter(function (x) { return x.portalType == 'bil' }).length === 0
+			},
+			{
+				xtype: 'button',
+				id: 'devToolbarSetSystemDateButton',
+				text: 'Set System Date',
+				hidden: DCT.portals.filter(function (x) { return x.portalType == 'bil' }).length === 0,
+				handler: function () {
+					DCT.Util.getSafeElement('_targetPage').value = DCT.currentPage;
+					var dateField = document.getElementsByName("_systemDateField")[0];
+					var useDateOnly = document.getElementsByName("_useDateOnly")[0];
+					if (dateField) {
+						dateField.value = Ext.getCmp('devToolbarSystemDate').getRawValue();
+						Ext.getCmp('useDateOnly').setValue(true);
+					}
+					else {
+						dateField = DCT.Util.getSafeElement('_systemDateField');
+						dateField.value = Ext.getCmp('devToolbarSystemDate').getValue().toLocaleDateString();
+						useDateOnly = DCT.Util.getSafeElement('_useDateOnly');
+						useDateOnly.value = true;
+					}
+
+					DCT.Submit.submitAction('processSystemDate');
+				}
+			},
+			'->',
+			{
+				xtype: 'label',
+				id: 'devToolbarManuscript',
+				text: DCT.manuscriptID || 'No Manuscript Active'
+			}
+			, '-',
+			{
+				xtype: 'textfield',
+				name: 'jsField',
+				emptyText: 'JavaScript...',
+				submitValue: false,
+				width: 110,
+				listeners: {
+					specialkey: function (f, e) {
+						if (e.getKey() == e.ENTER) {
+							eval(f.getValue());
+						}
+					}
+				}
+			},
+			'',
+			{
+				xtype: 'textfield',
+				name: 'classField',
+				emptyText: 'Count by selector...',
+				submitValue: false,
+				style: 'margin-right:5px;',
+				width: 110,
+				listeners: {
+					specialkey: function (f, e) {
+						if (e.getKey() == e.ENTER) {
+							f.setValue(Ext.query(f.getValue()).length);
+						}
+					}
+				}
+			}];
+	},
+	/**
+	*
+	*/
+	setListeners: function (config) {
+		var me = this;
+		config.listeners = {
+			afterrender: {
+				fn: function () {
+					var me = this;
+					me.removeCls("x-unselectable");
+				},
+				scope: me
+			},
+			destroy: {
+				fn: function () {
+					var me = this;
+					DCT.hubEvents.removeListener('ajaxcomplete', me.onAjaxComplete, me);
+				},
+				scope: me
+			}
+		};
+	},
+	/**
+	*
+	*/
+	onAjaxComplete: function () {
+		var me = this;
+		Ext.getCmp('devToolbarManuscript').setText(DCT.manuscriptID);
+		var billingNotPresent = DCT.portals.filter(function (x) { return x.portalType == 'bil' }).length === 0;
+		Ext.getCmp('devToolbarSystemDate').setHidden(billingNotPresent);
+		Ext.getCmp('devToolbarSetSystemDateButton').setHidden(billingNotPresent);
+		Ext.defer(function () {
+			if (!me.el.destroyed)
+				me.updateLayout();
+		}, 1);
+	},
+	/**
+	*
+	*/
+	getSkinsPath: function () {
+		var originalPath = DCT.skinsDir;
+		var originalPathLower = originalPath.toLowerCase();
+		var token = '$guid=';
+		var index = originalPathLower.indexOf(token);
+		var skinsPath = DCT.skinsDir;
+		if (index > -1) {
+			var windowGuidNotClean = originalPath.substring(index);
+			var windowGuidWithToken = windowGuidNotClean.substring(0, windowGuidNotClean.indexOf('/') + 1);
+			skinsPath = originalPath.replace(windowGuidWithToken, '');
+		}
+		return skinsPath;
+	},
+	/**
+	*
+	*/
+	showInfoWin: function () {
+		var me = this;
+		var skinsPath = me.getSkinsPath();
+		var infoWin = Ext.create('Ext.Window', {
+			id: 'infoWindow',
+			title: "Current Information",
+			width: 920,
+			height: 500,
+			constrain: true,
+			modal: true,
+			layout: 'border',
+			items: [{
+				autoScroll: true,
+				collapsible: false,
+				region: 'center',
+				margins: '5 5 5 5',
+				bodyStyle: 'padding:15px',
+				data: {
+					sections: [{
+						title: "Manuscript",
+						id: 'iWinManuscript',
+						parameters: [{
+							name: 'Manuscript ID',
+							val: DCT.manuscriptID || '-'
+						}, {
+							name: 'Pageset',
+							val: DCT.topic || '-'
+						}, {
+							name: 'Page',
+							val: DCT.page || '-'
+						}, {
+							name: 'Caption',
+							val: DCT.caption || '-'
+						}, {
+							name: 'Version ID',
+							val: DCT.versionID || '-'
+						}, {
+							name: 'Version Date',
+							val: DCT.versionDate || '-'
+						}, {
+							name: 'Inherited',
+							val: DCT.inherited || '-'
+						}, {
+							name: 'Inherited Page',
+							val: DCT.inheritedPage || '-'
+						}, {
+							name: 'Culture',
+							val: DCT.cultureCode || '-'
+						}]
+					}, {
+						title: "Session",
+						id: 'iWinSession',
+						parameters: [{
+							name: 'Session ID',
+							val: DCT.sessionID || '-'
+						}, {
+							name: 'Window GUID',
+							val: DCT.Util.getWindowGuid() || '-'
+						}]
+					}]
+				},
+				tpl: [
+						'<tpl for="sections">',
+							'<div class="iWinSection">',
+								'<h2 class="iWinHeading">{title}</h2>',
+								'<tpl for="parameters">',
+									'<div class="iWinGroup">',
+										'<tpl><div class="i-paramName">{name}</div></tpl>',
+										'<tpl><div class="i-paramVal x-selectable">{val}</div></tpl>',
+									'</div>',
+								'</tpl>',
+							'</div>',
+						'</tpl>']
+			}, {
+				autoScroll: true,
+				collapsible: false,
+				region: 'east',
+				width: 300,
+				margins: '5 5 5 5',
+				bodyStyle: 'padding:15px',
+				data: {
+					sections: [{
+						title: "System",
+						id: 'iWinSystem',
+						parameters: [
+						// [kellyke Nov 30, 10] removing server/express version display from current info window until
+						// 		the platform enhancement is finished that sends these versions through the XML.  
+						//	{
+						//	name: 'Server Version',
+						//	val: DCT.versionServer || '-'
+						//},{
+						//	name: 'Express Version',
+						//	val: DCT.versionExpress || '-'
+						//},
+							{
+							name: 'Culture',
+							val: DCT.systemCulture || '-'
+						}]
+					}, {
+						title: "Skin",
+						id: 'iWinSkin',
+						parameters: [{
+							name: 'Active XSL',
+							val: DCT.currentPage || '-'
+						}, {
+							name: 'Skin Directory',
+							val: skinsPath || '-'
+						}, {
+							name: 'ExtJS Version',
+							val: Ext.version || '-'
+						}]
+					}, {
+						title: "User",
+						id: 'iWinUser',
+						parameters: [{
+							name: 'Username',
+							val: DCT.currentUser || '-'
+						}, {
+							name: 'Full Name',
+							val: DCT.currentFullName || '-'
+						}, {
+							name: 'Active Entity',
+							val: DCT.activeAgency || '-'
+						}, {
+							name: 'Context(s)',
+							val: DCT.userContexts.replace(/\|/g, '<br/>') || '-'
+						}, {
+							name: 'Role(s)',
+							val: DCT.userRoles.replace(/\|/g, '<br/>') || '-'
+						}]
+					}]
+				},
+				tpl: [
+						'<tpl for="sections">',
+							'<div class="iWinSection iWinRightSection">',
+								'<h2 class="iWinHeading">{title}</h2>',
+								'<tpl for="parameters">',
+									'<div class="iWinGroup">',
+										'<tpl><div class="i-paramName">{name}</div></tpl>',
+										'<tpl><div class="i-paramVal x-selectable">{val}</div></tpl>',
+									'</div>',
+								'</tpl>',
+							'</div>',
+						'</tpl>']
+			}]
+		});
+		infoWin.show();
+	},
+	/**
+	*
+	*/
+	clearOverlays: function () {
+		var me = this;
+		Ext.each(Ext.query('div[class^=OFlow]'), function (item) { Ext.removeNode(item); }, me);
+	},
+	/**
+	*
+	*/
+	showCutoffs: function () {
+		var me = this,
+				fields = Ext.getDom('fields');
+		if (fields){
+			me.clearOverlays();
+			var arr = Ext.dom.Query.select('*{overflow=hidden}', fields);
+			Ext.each(arr, function (parent) {
+				var pWidth = Ext.get(parent).getWidth();
+	
+				Ext.each(parent.children, function (child) {
+					var me = this;
+					var childEl = Ext.get(child);
+					var childID = Ext.id(childEl);
+					var cWidth = childEl.getWidth();
+					var cHeight = childEl.getHeight();
+	
+					if (cWidth > pWidth) {
+						var diffWidth = cWidth - pWidth;
+	
+						function makeEl(cls, anc, w, h) {
+							var domEl = Ext.DomHelper.append('htmlBody', {
+								tag: 'div',
+								cls: cls,
+								id: cls + '-' + childID
+							});
+							var el = Ext.get(domEl);
+							el.setSize(w, h);
+							el.anchorTo(childEl, anc);
+							return el;
+						}
+	
+						var indEl = makeEl('OFlowIndicators', 'r-l', 16, 16);
+						var contentEl = makeEl('OFlowContent', 'l-l', pWidth, cHeight);
+						var cutoffEl = makeEl('OFlowCutoff', 'r-r', diffWidth, cHeight);
+	
+						indEl.on({
+							'click': {
+								fn: function (evt, el, o) {
+									var me = this;
+									var CutoffWin = Ext.create('Ext.Window', {
+										title: 'Cutoff Inspector',
+										width: 300,
+										height: 300,
+										autoScroll: true,
+										layout: 'fit',
+										bbar: [{
+											text: 'Remove Highlights',
+											handler: me.clearOverlays
+										}],
+										defaults: { bodyStyle: 'padding:5px 5px 5px 5px;' },
+										items: [{
+											data: {
+												sections: [{
+													title: "Attributes",
+													id: 'cutoffAttributes',
+													parameters: [{
+														name: 'Parent Width',
+														val: pWidth + "px"
+													}, {
+														name: 'Child Width',
+														val: cWidth + "px"
+													}, {
+														name: 'Amount Clipped',
+														val: diffWidth + "px"
+													}]
+												}]
+											},
+											tpl: [
+												'<tpl for="sections">',
+													'<div class="cutoffSection">',
+														'<h2 class="cutoffHeading">{title}</h2>',
+														'<tpl for="parameters">',
+															'<div class="cutoffGroup">',
+																'<tpl><div class="cutoff-paramName">{name}</div></tpl>',
+																'<tpl><div class="cutoff-paramVal x-selectable">{val}</div></tpl>',
+															'</div>',
+														'</tpl>',
+													'</div>',
+												'</tpl>']
+										}]
+									});
+									CutoffWin.show();
+								}, scope: me
+							}
+						});
+	
+					}
+				}, me);
+	
+			}, me);
+		}
+	},
+	/**
+	*
+	*/
+	showDocWin: function () {
+		var docPanel = Ext.create('Ext.Panel', {
+			collapsible: false,
+			region: 'center',
+			margins: '5 5 5 0'
+		});
+		var win = Ext.create('Ext.Window', {
+			id: 'documentationWindow',
+			title: 'Quick Reference',
+			layout: 'border',
+			constrain: true,
+			width: 720,
+			height: 500,
+			maximizable: true,
+			modal: true,
+			defaults: {
+				split: true,
+				bodyStyle: 'padding:15px'
+			},
+			items: [{
+				region: 'west',
+				collapsible: false,
+				xtype: 'treepanel',
+				width: 200,
+				autoScroll: true,
+				split: true,
+				margins: '5 0 5 5',
+				loader: Ext.create('Ext.tree.TreeLoader', {}),
+				root: Ext.create('Ext.tree.AsyncTreeNode', {
+					expanded: true,
+					children: [{
+						text: 'Page Designer',
+						leaf: false,
+						expanded: true,
+						children: [{
+							text: 'Field Parameters',
+							leaf: true
+						}, {
+							text: 'Section Parameters',
+							leaf: true
+						}, {
+							text: 'Action Parameters',
+							leaf: true
+						}]
+					}, {
+						text: 'ApplicationLayoutMap',
+						leaf: false,
+						expanded: true,
+						children: [{
+							text: 'Menu Items',
+							leaf: true
+						}, {
+							text: 'Modules',
+							leaf: true
+						}]
+					}, {
+						text: 'Skin.config',
+						leaf: true
+					}, {
+						text: 'Themes',
+						leaf: true
+					}, {
+						text: 'Additional Features',
+						leaf: true
+					}, {
+						text: 'Best Practices',
+						leaf: true
+					}]
+				}),
+				rootVisible: false,
+				listeners: {
+					click: function (n) {
+						var data = {
+							title: n.attributes.text,
+							description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+							parameters: [{
+								name: 'Foo',
+								description: 'Sed eu tortor elit. Vestibulum ac risus orci.'
+							}, {
+								name: 'Bar',
+								description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris non lacus mi. Ut pellentesque augue sed mi lacinia interdum. Curabitur semper fermentum convallis. Pellentesque nisl nibh, vestibulum ac egestas a, pharetra eget ante. Mauris ut bibendum arcu. Nulla adipiscing, sem vel ultricies varius, orci sapien vestibulum nunc, eget lacinia libero eros in nisi. Aenean pretium nisl nec leo lacinia luctus. Duis lacus eros, pellentesque laoreet commodo a, sollicitudin non erat. Donec et metus felis. Vivamus ut mi id massa gravida ultrices nec ac tortor. Maecenas tincidunt tortor a odio tristique faucibus.'
+							}, {
+								name: 'Baz',
+								description: 'Phasellus nec eros id nulla interdum euismod. Curabitur.'
+							}]
+						};
+						var tpl = Ext.create('Ext.XTemplate', 
+							'<p class="documentationTitle">{title}</p>',
+							'<p class="documentationDescription">{description}</p>',
+							'<tpl for="parameters">',
+								'<tpl><h2>{name}</h2></tpl>',
+								'<tpl><p>{description}</p></tpl>',
+							'</tpl>'
+						);
+						tpl.overwrite(docPanel.body, data);
+					}
+				}
+			}, docPanel]
+		});
+		win.show();
+	},
+	/**
+	*
+	*/
+	swapTheme: function (theme, themePath) {
+		Ext.util.CSS.swapStyleSheet(theme, themePath);
+		Ext.util.CSS.refreshCache();
+	}
+});
+DCT.Util.reg('dctdevelopertoolbar', 'developerToolbar', 'DCT.DeveloperToolbar');

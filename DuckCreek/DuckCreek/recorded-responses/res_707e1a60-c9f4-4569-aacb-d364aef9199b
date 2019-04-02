@@ -1,0 +1,821 @@
+/**********************************
+ * RA.Session
+ **********************************/
+function getLocalStorageItem(key)
+{
+    return $.parseJSON(localStorage.getItem(key));
+}
+
+function setLocalStorageItem(key, value)
+{
+    localStorage.setItem(key, RA.Controller.stringify(value));
+}
+
+function removeLocalStorageItem(key)
+{
+    localStorage.removeItem(key);
+}
+
+RA.Session.pushLocalStorageStack = function(key, value)
+{
+    var stack = RA.Session.getLocalStorageStack(key);
+    stack.push(value);
+    if (stack.length > 100) {
+        stack.shift();
+    }
+    setLocalStorageItem(key, stack);
+}
+
+RA.Session.popLocalStorageStack = function(key)
+{
+    var stack = RA.Session.getLocalStorageStack(key);
+    if (stack.length == 0)
+    {
+        throw key + " stack is empty";
+    }
+
+    var item = stack.pop();
+    setLocalStorageItem(key, stack);
+    return item;
+}
+
+RA.Session.peekLocalStorageStack = function(key)
+{
+    var stack = RA.Session.getLocalStorageStack(key);
+    if (stack.length == 0)
+    {
+        throw key + " stack is empty";
+    }
+    return stack.pop();	// doesn't rewrite stack
+}
+
+RA.Session.getLocalStorageStackSize = function(key)
+{
+    return RA.Session.getLocalStorageStack(key).length;
+}
+
+RA.Session.getLocalStorageStack = function(key)
+{
+    var stack = getLocalStorageItem(key);
+    if (stack == null || stack == "undefined")
+    {
+        stack = [];
+    }
+    return stack;
+}
+
+RA.Session.getRaToken = function()
+{
+    var req = new XMLHttpRequest();
+    req.open('GET', "ras.html", false);
+    req.send(null);
+    return req.getResponseHeader("ra-s");
+}
+
+RA.Session.getDateStr = function()
+{
+    var date = new Date();
+    var year = '' + date.getFullYear();
+    var month = date.getMonth() + 1;
+    if (month < 10)
+    {
+        month = '0' + month;
+    }
+    else
+    {
+        month = '' + month;
+    }
+    var day = date.getDate();
+    if (day < 10)
+    {
+        day = '0' + day;
+    }
+    else
+    {
+        day = '' + day;
+    }
+    return year + '' + month + '' + day;
+}
+
+RA.Session.getSessionKey = function(key)
+{
+    return RA.Session.getDateStr() + '.' + RA.Session.getRaToken() + '.' + key;
+}
+
+RA.Session.getDateFromKey = function(key)
+{
+    var year = parseInt(key.substring(0, 4));
+    var month = parseInt(key.substring(4, 6));
+    var day = parseInt(key.substring(6, 8));
+    return new Date(year, month - 1, day);
+}
+
+RA.Session.isChromeFrame = function()
+{
+    // testing this for the time being
+    return window.externalHost != null;
+}
+
+// Public API to get session scoped item
+function getSessionItem(key)
+{
+    var value;
+    if (RA.Session.isChromeFrame())
+    {
+        value = localStorage.getItem(RA.Session.getSessionKey(key));
+    }
+    else
+    {
+        value = sessionStorage.getItem(key);
+    }
+    return value;
+}
+
+// Public API to set session scoped item
+function setSessionItem(key, value)
+{
+    if (RA.Session.isChromeFrame())
+    {
+        localStorage.setItem(RA.Session.getSessionKey(key), value);
+    }
+    else
+    {
+        sessionStorage.setItem(key, value);
+    }
+}
+
+// Public API to remove session scoped item
+function removeSessionItem(key)
+{
+    if (RA.Session.isChromeFrame())
+    {
+        localStorage.removeItem(RA.Session.getSessionKey(key));
+    }
+    else
+    {
+        sessionStorage.removeItem(key);
+    }
+}
+
+// Public API to clear all session scoped items
+function clearSession()
+{
+    if (RA.Session.isChromeFrame())
+    {
+        localStorage.clear();
+    }
+    else
+    {
+        sessionStorage.clear();
+    }
+}
+
+// Public API to clear stale session keys (needed because
+// localStorage is being used to storage session scoped data).
+RA.Session.clearStaleKeys = function()
+{
+    var keys = [];  //Object.keys(localStorage);.....one guess which browser blows up on Object.keys.....
+    for(var prop in localStorage)
+    {
+        keys.push(prop);
+    }
+    var now = new Date().getTime();
+    var fiveDays = 1000 * 60 * 60 * 24 * 5;
+
+    for ( var i = 0; i < keys.length; i++)
+    {
+        var key = keys[i];
+        if (key != null && key.length > 8 && key[8] == '.')
+        {
+            var date = RA.Session.getDateFromKey(keys[i]);
+            if (now - date.getTime() > fiveDays)
+            {
+                localStorage.removeItem(key);
+            }
+        }
+    }
+}
+
+RA.Session.addCustomerExperienceClaims = function(customerExperienceClaims)
+{
+    setSessionItem(SESSION_CUSTOMER_EXPERIENCE_CLAIMS, customerExperienceClaims);
+};
+
+RA.Session.addCustomerNumber = function(customerNumber)
+{
+    setSessionItem(SESSION_CUSTOMER_NO, customerNumber);
+};
+
+RA.Session.addInsuredName = function(insuredName)
+{
+    setSessionItem(SESSION_INSURED_NAME, insuredName);
+}
+
+RA.Session.addDeepSearchString = function(searchString)
+{
+    setSessionItem(SESSION_DEEP_SEARCH_STRING, searchString);
+};
+
+RA.Session.addLastScreenAccessed = function(lastScreenAccessed)
+{
+    setSessionItem(SESSION_LAST_SCREEN_ACCESSED,lastScreenAccessed);
+};
+
+RA.Session.addPolicyEffectiveDate = function(policyEffectiveDate)
+{
+    setSessionItem(SESSION_POLICY_EFFECTIVE_DATE, policyEffectiveDate);
+};
+
+RA.Session.addPolicyKeyObject = function addPolicyKey( policyKeyObject )
+{
+    setSessionItem(SESSION_POLICY_KEY_OBJECT, RA.Controller.stringify(policyKeyObject));
+
+}
+
+RA.Session.addPolicyNumber = function(policyNumber)
+{
+    setSessionItem(SESSION_POLICY_NUMBER, policyNumber);
+};
+
+RA.Session.addPolicyMod = function(policyMod)
+{
+    setSessionItem(SESSION_POLICY_MOD, policyMod);
+};
+
+RA.Session.addProducerDetails = function(producerDetails)
+{
+    setSessionItem(SESSION_PRODUCER_DETAILS, producerDetails);
+};
+
+RA.Session.addSelectedPolicy = function(selectedPolicy)
+{
+    setSessionItem(SESSION_SELECTED_POLICY, RA.Controller.stringify(selectedPolicy));
+};
+
+RA.Session.buildSelectedPolicyObject = function buildSelectedPolicyObject( effectiveDate,
+                                                                           expirationDate,
+                                                                           submissionId,
+                                                                           customerNumber,
+                                                                           policyNumber,
+                                                                           policyMod,
+                                                                           policySymbol,
+                                                                           policyVersion,
+                                                                           policyId )
+{
+
+    return { "policyTermEffectiveDate": effectiveDate,
+        "policyTermExpirationDate": expirationDate,
+        "submissionId": submissionId,
+        "customerNumber": customerNumber,
+        "policyNumber": policyNumber,
+        "policyMod": policyMod,
+        "policySymbol": policySymbol,
+        "policyVersion": policyVersion,
+        "policyId": policyId };
+}
+RA.Session.buildSelectedPolicyObjectForPolicyIdOnly = function buildSelectedPolicyObjectForPolicyIdOnly( policyId )
+{
+
+    var sessionVar =   RA.Session.getSelectedPolicy();
+    if( !sessionVar )
+    {
+        return { "policyTermEffectiveDate": null,
+            "policyTermExpirationDate": null,
+            "submissionId": null,
+            "customerNumber": null,
+            "policyNumber": null,
+            "policyMod": null,
+            "policySymbol": null,
+            "policyVersion": null,
+            "policyId": policyId };
+    }
+    else
+    {
+        sessionVar.policyId = policyId;
+        return sessionVar;
+
+    }
+}
+
+
+RA.Session.addIsSearchForSubmissionId = function(isSearchForSubmissionId)
+{
+    setSessionItem(SESSION_IS_SEARCH_FOR_SUBMISSION_ID, isSearchForSubmissionId);
+};
+
+RA.Session.addSubmissionId = function(submissionId)
+{
+    setSessionItem(SESSION_SUBMISSION_ID, submissionId);
+};
+
+RA.Session.addSubmissionIdCopy = function(submissionId)
+{
+    setSessionItem(SESSION_SUBMISSION_ID_COPY, submissionId);
+};
+
+RA.Session.addSubmissionIdSearch = function(submissionId)
+{
+    setSessionItem(SESSION_SUBMISSION_ID_SEARCH, submissionId);
+};
+
+RA.Session.addUserChoice = function(userChoice)
+{
+    setSessionItem(SESSION_USER_CHOICE, userChoice);
+};
+
+RA.Session.addViewOnlyMode = function(viewOnlyMode)
+{
+    setSessionItem(SESSION_VIEW_ONLY_MODE, viewOnlyMode);
+};
+RA.Session.addViewOnlyModeCustNo = function(viewOnlyMode)
+{
+    setSessionItem(SESSION_VIEW_ONLY_MODE_CUSTNO, viewOnlyMode);
+};
+
+RA.Session.addNoteEvent = function(addNoteEvent)
+{
+    setSessionItem(SESSION_ADD_NOTE_EVENT, addNoteEvent);
+};
+
+RA.Session.addCurrentUserHid = function(userHid)
+{
+    setSessionItem(SESSION_CURRENT_USER_HID, userHid);
+};
+
+RA.Session.getCustomerExperienceClaims = function()
+{
+    return getSessionItem(SESSION_CUSTOMER_EXPERIENCE_CLAIMS);
+};
+
+RA.Session.getCustomerNumber = function()
+{
+    return getSessionItem(SESSION_CUSTOMER_NO);
+};
+
+RA.Session.getInsuredName = function()
+{
+    return getSessionItem(SESSION_INSURED_NAME);
+};
+
+RA.Session.getDeepSearchString = function(searchString)
+{
+    return getSessionItem(SESSION_DEEP_SEARCH_STRING);
+};
+
+RA.Session.getIsSearchForSubmissionId = function()
+{
+    return getSessionItem(SESSION_IS_SEARCH_FOR_SUBMISSION_ID);
+};
+
+RA.Session.getLastScreenAccessed = function()
+{
+    return getSessionItem(SESSION_LAST_SCREEN_ACCESSED);
+};
+
+RA.Session.getPolicyEffectiveDate = function()
+{
+    return getSessionItem(SESSION_POLICY_EFFECTIVE_DATE);
+};
+
+RA.Session.getPolicyKeyObject = function()
+{
+    return $.parseJSON( getSessionItem(SESSION_POLICY_KEY_OBJECT));
+};
+
+RA.Session.getPolicyNumber = function()
+{
+    return getSessionItem(SESSION_POLICY_NUMBER);
+};
+
+RA.Session.getPolicyMod = function()
+{
+    return getSessionItem(SESSION_POLICY_MOD);
+};
+
+RA.Session.getProducerDetails = function()
+{
+    return getSessionItem(SESSION_PRODUCER_DETAILS);
+};
+
+RA.Session.getSelectedPolicy = function()
+{
+    return $.parseJSON( getSessionItem(SESSION_SELECTED_POLICY));
+};
+
+RA.Session.getSubmissionId = function()
+{
+    return getSessionItem(SESSION_SUBMISSION_ID);
+};
+
+RA.Session.getProductName = function()
+{
+    return getSessionItem(SESSION_PRODUCT_NAME);
+};
+
+RA.Session.getProductNames = function()
+{
+    return getSessionItem(SESSION_PRODUCT_NAMES);
+};
+
+RA.Session.getLocationName = function()
+{
+    return getSessionItem(SESSION_LOCATION_NAME);
+};
+
+
+RA.Session.getSubmissionIdCopy = function()
+{
+    return getSessionItem(SESSION_SUBMISSION_ID_COPY);
+};
+
+RA.Session.getSubmissionIdSearch = function()
+{
+    return getSessionItem(SESSION_SUBMISSION_ID_SEARCH);
+};
+
+RA.Session.getUserChoice = function()
+{
+    return getSessionItem(SESSION_USER_CHOICE);
+};
+
+RA.Session.getAddNoteEvent = function()
+{
+    return getSessionItem(SESSION_ADD_NOTE_EVENT);
+};
+
+RA.Session.removeAddNoteEvent = function()
+{
+    removeSessionItem(SESSION_ADD_NOTE_EVENT);
+};
+
+RA.Session.getViewOnlyMode = function()
+{
+    return getSessionItem(SESSION_VIEW_ONLY_MODE);
+};
+RA.Session.getViewOnlyModeCustNo = function()
+{
+    return getSessionItem(SESSION_VIEW_ONLY_MODE_CUSTNO);
+};
+
+RA.Session.getCurrentUserHid = function()
+{
+    return getSessionItem(SESSION_CURRENT_USER_HID);
+};
+
+RA.Session.removeCustomerExperienceClaims = function()
+{
+    removeSessionItem(SESSION_CUSTOMER_EXPERIENCE_CLAIMS);
+};
+
+RA.Session.removeCustomerNumber = function()
+{
+    removeSessionItem(SESSION_CUSTOMER_NO);
+};
+
+RA.Session.removeDeepSearchString = function()
+{
+    removeSessionItem(SESSION_DEEP_SEARCH_STRING);
+};
+
+RA.Session.removeIsSearchForSubmissionId = function()
+{
+    removeSessionItem(SESSION_IS_SEARCH_FOR_SUBMISSION_ID);
+};
+
+RA.Session.removeLastScreenAccessed = function()
+{
+    removeSessionItem(SESSION_LAST_SCREEN_ACCESSED);
+};
+
+RA.Session.removePolicyKeyObject = function()
+{
+    removeSessionItem(SESSION_POLICY_KEY_OBJECT);
+};
+
+
+RA.Session.removeProducerDetails = function()
+{
+    removeSessionItem(SESSION_PRODUCER_DETAILS);
+};
+
+RA.Session.removeSelectedPolicy = function()
+{
+    removeSessionItem(SESSION_SELECTED_POLICY);
+};
+
+RA.Session.removeSubmissionId = function()
+{
+    removeSessionItem(SESSION_SUBMISSION_ID);
+};
+
+RA.Session.removeSubmissionIdCopy = function()
+{
+    removeSessionItem(SESSION_SUBMISSION_ID_COPY);
+};
+
+RA.Session.removeSubmissionIdSearch = function()
+{
+    removeSessionItem(SESSION_SUBMISSION_ID_SEARCH);
+};
+
+RA.Session.removeUserChoice = function()
+{
+    removeSessionItem(SESSION_USER_CHOICE);
+};
+
+RA.Session.removeViewOnlyMode = function()
+{
+    removeSessionItem(SESSION_VIEW_ONLY_MODE);
+};
+
+RA.Session.removeCurrentUserHid = function()
+{
+    removeSessionItem(SESSION_CURRENT_USER_HID);
+};
+
+RA.Session.addAdvancedSearch = function(additionalSearch)
+{
+    setSessionItem(SESSION_ADVANCED_SEARCH, additionalSearch);
+};
+
+RA.Session.removeAdvancedSearch = function()
+{
+    removeSessionItem(SESSION_ADVANCED_SEARCH);
+};
+
+RA.Session.getAdvancedSearch = function()
+{
+    return getSessionItem(SESSION_ADVANCED_SEARCH);
+};
+
+RA.Session.addSearchString = function(searchString)
+{
+    setSessionItem(SESSION_SEARCH_STRING, searchString);
+};
+
+RA.Session.removeSearchString = function()
+{
+    removeSessionItem(SESSION_SEARCH_STRING);
+};
+
+RA.Session.getSearchString = function()
+{
+    return getSessionItem(SESSION_SEARCH_STRING);
+};
+
+RA.Session.addAdvancedSearchCharms = function(additionalSearchCharms)
+{
+    setSessionItem(SESSION_ADVANCED_SEARCH_CHARMS, additionalSearchCharms);
+};
+
+RA.Session.removeAdvancedSearchCharms = function()
+{
+    removeSessionItem(SESSION_ADVANCED_SEARCH_CHARMS);
+};
+
+RA.Session.getAdvancedSearchCharms = function()
+{
+    return getSessionItem(SESSION_ADVANCED_SEARCH_CHARMS);
+};
+
+RA.Session.addRenewalSearch = function(renewalSearch)
+{
+    setSessionItem(SESSION_RENEWAL_SEARCH, renewalSearch);
+};
+
+RA.Session.removeRenewalSearch = function()
+{
+    removeSessionItem(SESSION_RENEWAL_SEARCH);
+};
+
+RA.Session.getRenewalSearch = function()
+{
+    return getSessionItem(SESSION_RENEWAL_SEARCH);
+};
+
+RA.Session.addPreviousPage = function(previousPage)
+{
+    setSessionItem(SESSION_PREVIOUS_PAGE, previousPage);
+};
+
+RA.Session.removePreviousPage = function()
+{
+    removeSessionItem(SESSION_PREVIOUS_PAGE);
+};
+
+RA.Session.getPreviousPage = function()
+{
+    return getSessionItem(SESSION_PREVIOUS_PAGE);
+};
+
+RA.Session.addPreviousSearchField = function(previousSearchField)
+{
+    setSessionItem(SESSION_PREVIOUS_SEARCH_FIELD, previousSearchField);
+};
+
+RA.Session.removePreviousSearchField = function()
+{
+    removeSessionItem(SESSION_PREVIOUS_SEARCH_FIELD);
+};
+
+RA.Session.getPreviousSearchField = function()
+{
+    return getSessionItem(SESSION_PREVIOUS_SEARCH_FIELD);
+};
+
+RA.Session.addPreviousSearchDto = function(previousSearchDto)
+{
+    setSessionItem(SESSION_PREVIOUS_SEARCH_DTO, previousSearchDto);
+};
+
+RA.Session.removePreviousSearchDto = function()
+{
+    removeSessionItem(SESSION_PREVIOUS_SEARCH_DTO);
+};
+
+RA.Session.getPreviousSearchDto = function()
+{
+    return getSessionItem(SESSION_PREVIOUS_SEARCH_DTO);
+};
+
+RA.Session.addPreviousSearchType = function(previousSearchType)
+{
+    setSessionItem(SESSION_PREVIOUS_SEARCH_TYPE, previousSearchType);
+};
+
+RA.Session.removePreviousSearchType = function()
+{
+    removeSessionItem(SESSION_PREVIOUS_SEARCH_TYPE);
+};
+
+RA.Session.getPreviousSearchType = function()
+{
+    return getSessionItem(SESSION_PREVIOUS_SEARCH_TYPE);
+};
+
+RA.Session.addPreviousCustomerExperience = function(customerExperienceObject)
+{
+    setSessionItem(SESSION_CUSTOMER_EXPERIENCE, customerExperienceObject);
+};
+
+RA.Session.removePreviousCustomerExperience = function()
+{
+    removeSessionItem(SESSION_CUSTOMER_EXPERIENCE);
+};
+RA.Session.getPreviousCustomerExperience = function()
+{
+    return getSessionItem(SESSION_CUSTOMER_EXPERIENCE);
+};
+
+
+RA.Session.addPreviousAccountSummary = function(accountSummaryObject)
+{
+    setSessionItem(SESSION_ACCOUNT_SUMMARY, accountSummaryObject);
+};
+
+RA.Session.removePreviousAccountSummary = function()
+{
+    removeSessionItem(SESSION_ACCOUNT_SUMMARY);
+};
+
+RA.Session.getPreviousAccountSummary = function()
+{
+    return getSessionItem(SESSION_ACCOUNT_SUMMARY);
+};
+
+RA.Session.addPreviousRenewalDto = function(previousRenewalDto)
+{
+    setSessionItem(SESSION_PREVIOUS_RENEWAL_DTO, previousRenewalDto);
+};
+
+RA.Session.removePreviousRenewalDto = function()
+{
+    removeSessionItem(SESSION_PREVIOUS_RENEWAL_DTO);
+};
+
+RA.Session.getPreviousRenewalDto = function()
+{
+    return getSessionItem(SESSION_PREVIOUS_RENEWAL_DTO);
+};
+
+RA.Session.getSourceSystemRefCode = function()
+{
+    return getSessionItem(SESSION_SOURCE_SYSTEM_CODE);
+};
+
+RA.Session.getTransactionTypeRefCode = function()
+{
+    return getSessionItem(SESSION_TRANSACTION_TYPE_CODE);
+};
+
+
+RA.Session.addRenewalSearchCharms = function(renewalSearchCharms)
+{
+    setSessionItem(SESSION_RENEWAL_SEARCH_CHARMS, renewalSearchCharms);
+};
+
+RA.Session.removeRenewalSearchCharms = function()
+{
+    removeSessionItem(SESSION_RENEWAL_SEARCH_CHARMS);
+};
+
+RA.Session.getRenewalSearchCharms = function()
+{
+    return getSessionItem(SESSION_RENEWAL_SEARCH_CHARMS);
+};
+
+RA.Session.addDashboardViewByName = function( name )
+{
+    setSessionItem(SESSION_DASHBOARD_VIEW_BY_NAME_KEY, name);
+};
+
+RA.Session.removeDashboardViewByName = function()
+{
+    removeSessionItem(SESSION_DASHBOARD_VIEW_BY_NAME_KEY);
+};
+
+RA.Session.getDashboardViewByName = function()
+{
+    return getSessionItem(SESSION_DASHBOARD_VIEW_BY_NAME_KEY);
+};
+
+RA.Session.addSessionMode = function(sessionMode)
+{
+    setSessionItem(SESSION_MODE, sessionMode);
+};
+
+RA.Session.removeSessionMode = function()
+{
+    removeSessionItem(SESSION_MODE);
+};
+
+RA.Session.getSessionMode = function()
+{
+    return getSessionItem(SESSION_MODE);
+};
+
+RA.Session.addQuoteId = function(quoteId)
+{
+    setSessionItem(SESSION_QUOTE_ID, quoteId);
+};
+RA.Session.addSelectedQuoteId = function(quoteId)
+{
+    setSessionItem(SESSION_SELECTED_QUOTE_ID, quoteId);
+};
+RA.Session.addSelectedLocationNumber = function(locNum)
+{
+    setSessionItem(SESSION_SELECTED_QUOTE_ID, locNum);
+};
+
+RA.Session.removeQuoteId = function()
+{
+    removeSessionItem(SESSION_QUOTE_ID);
+};
+
+RA.Session.removeSelectedQuoteId = function()
+{
+    removeSessionItem(SESSION_SELECTED_QUOTE_ID);
+};
+
+
+RA.Session.getQuoteId = function()
+{
+    return getSessionItem(SESSION_QUOTE_ID);
+};
+
+RA.Session.getSelectedQuoteId = function()
+{
+    return getSessionItem(SESSION_SELECTED_QUOTE_ID);
+};
+
+RA.Session.setTimeout = function(milliseconds)
+{
+    var timeout = parseInt(milliseconds);
+    if (timeout >= 0) {
+        setSessionItem(SESSION_TIMEOUT, timeout);
+    }
+    else {
+        throw 'setTimeout: Invalid timeout=' + milliseconds + ' specified. Timeout value must be >= 0.';
+    }
+};
+
+RA.Session.getTimeout = function()
+{
+    return getSessionItem(SESSION_TIMEOUT) || RA.Service.DEFAULT_TIMEOUT_MILLIS;
+};
+
+/*************** DO NOT USE THESE METHODS.  THIS IS A TEMPORARY FIX UNTIL WE GET THE LHN CODED ***********/
+RA.Session.addBusinessUnit = function(businessUnit)
+{
+    setSessionItem("businessUnit", businessUnit);
+};
+
+RA.Session.removeBusinessUnit = function()
+{
+    removeSessionItem("businessUnit");
+};
+
+RA.Session.getBusinessUnit = function()
+{
+    return getSessionItem("businessUnit");
+};

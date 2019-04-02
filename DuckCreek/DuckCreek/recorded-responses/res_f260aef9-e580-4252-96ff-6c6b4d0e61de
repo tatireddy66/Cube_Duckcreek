@@ -1,0 +1,39 @@
+Ext.apply(DCT.LoadingMessage, {
+	waitTime: 500, /* override for BIS */
+	
+	show: function () {
+		// Bail out if there is no loading window or it is already visible
+		var loadingWindow = Ext.get('loadingWindow');
+		if (loadingWindow == null || loadingWindow.isVisible(false))
+			return;
+
+		loadingWindow.setDisplayed(true);
+		var message = DCT.Util.getSafeElement('loadingMessage'); 
+		var body = Ext.getBody();
+		var viewSize = body.getViewSize();
+		
+		DCT.Util.centerElement(message, body, viewSize);
+		
+		Ext.get(message).setStyle({
+			display: 'block',
+			position: 'fixed'
+		});
+		
+		var mask = Ext.get('loadingMask');
+		mask.setDisplayed(true);
+		mask.animate({ 
+				from: {
+					opacity: 0.0
+				}, 
+				to: {
+					/* BEGIN change for BIS */
+					opacity: 0.6
+					/* END change for BIS */
+				},
+				duration: 0.2 
+			});
+
+		body.dom.style.cursor = 'wait';
+	}
+	
+});

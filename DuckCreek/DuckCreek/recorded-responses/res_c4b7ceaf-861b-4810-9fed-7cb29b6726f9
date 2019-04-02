@@ -1,0 +1,95 @@
+(function () {
+    var LETTER_NAV = {
+        CSS_LETTER_TAB: 'letter-tab',
+        CSS_LETTER_TAB_ACTIVE: 'letter-tab--active'
+    };
+
+    angular.module('letterNav', [])
+        .constant('LETTER_NAV', LETTER_NAV)
+        .factory('letterNavFactory', letterNavFactory)
+        .directive('letterTab', letterTabDirective);
+
+    function letterNavFactory() {
+        var _tabs = [];
+
+        return {
+            getTabs: function getTabs() {
+                return _tabs;
+            },
+            registerTab: function registerTab(tab) {
+                _tabs.push(tab);
+            }
+        }
+    }
+
+    function letterTabDirective(LETTER_NAV, letterNavFactory, $rootScope) {
+
+        return {
+            restrict: 'A',
+            link: function letterTabLink(scope, element, attr) {
+                var focusableElement;
+                var letterTabElement = angular.element('<div class="' + LETTER_NAV.CSS_LETTER_TAB + ' ui-only"></div>');
+
+                letterNavFactory.registerTab({
+                    scope: scope,
+                    element: element
+                });
+
+                // allow groups to finish loading
+                $rootScope.$on('letterGroupsDone', function () {
+                    scope.$evalAsync(function () {
+                        render();
+                    });
+                });
+
+                scope.$on('$destroy', handleDestroy);
+
+                function render() {
+                    focusableElement = findFocusableElement();
+                    element.before(letterTabElement);
+                    attachEventHandlers(letterTabElement);
+                }
+
+                function attachEventHandlers(letterTabElement) {
+                    focusableElement
+                        .on('focus', handleElementFocus)
+                        .on('blur', handleElementBlur);
+
+                    letterTabElement.on('click', handleClick);
+                }
+
+                function handleElementFocus(event) {
+                    letterTabElement.addClass(LETTER_NAV.CSS_LETTER_TAB_ACTIVE);
+                }
+
+                function handleElementBlur(event) {
+                    letterTabElement.removeClass(LETTER_NAV.CSS_LETTER_TAB_ACTIVE);
+                }
+
+                function handleClick(event) {
+                    event.preventDefault();
+                    focusableElement.focus();
+                }
+
+                function findFocusableElement() {
+                    if (isFocusable(element)) {
+                        return element;
+                    } else {
+                        return element
+                            .find('a[href], area[href], input, select, textarea, button, iframe, object, embed, *[tabindex], *[contenteditable]')
+                            .filter(':visible')
+                            .first();
+                    }
+                }
+
+                function isFocusable(targetElement) {
+                    return targetElement.is('a[href], area[href], input, select, textarea, button, iframe, object, embed, *[tabindex], *[contenteditable]');
+                }
+
+                function handleDestroy() {
+
+                }
+            }
+        }
+    }
+})();

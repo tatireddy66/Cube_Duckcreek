@@ -1,0 +1,15 @@
+POST https://uncd63.duckcreekondemand.com:443/Policy/default.aspx?_windowGuid=d7a71aba-ddc1-4e65-9e22-3428907c4ce3 HTTP/1.1
+Host: uncd63.duckcreekondemand.com
+Connection: keep-alive
+Content-Length: 2207
+Origin: https://uncd63.duckcreekondemand.com
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept: */*
+Referer: https://uncd63.duckcreekondemand.com/Policy/default.aspx
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: ASP.NET_SessionId=ddl2hpu0e2ocnpdngsmcpam0
+
+_popUp=1&_sortColumn=&_sortDirection=&_targetPage=&_submitAction=&_action=a_pDD9C323CC44E4552ACC4B31694A41E6A2EA_3_1&_pageSet=&_fieldChanged=1&_autoSaveState=1&_stateID=473d3e82-0f49-4c46-9866-7ee07e485c73&_focusField=pDD9C323CC44E4552ACC4B31694A41E6A2EA_3_1&_prevFocusField=&_previewXSL=&_currentPageID=37079254880F47E7B43CE31FFBBEB82A&_parentGroupIsPaged=&_hiddenFormatNumMask=!.%2C-%24&_secure=&_hiddenFormatDtMask=m%2Fd%2Fyyyy&_hiddenExtJsDateformat=n%2Fj%2FY&_hiddenExtJsDateTimeformat=n%2Fj%2FY%20h%3Ai%20A&_windowGuid=d7a71aba-ddc1-4e65-9e22-3428907c4ce3&_newTabOpened=&_duplicateWindow=0&_sectionStates=&_debugMode=0&_openPopUp=true&_clientChanges=%3CAjaxRequest%3E%3Caction%3EnoAction%3C%2Faction%3E%3CcurrentPageID%3E37079254880F47E7B43CE31FFBBEB82A%3C%2FcurrentPageID%3E%3CpopUp%3E1%3C%2FpopUp%3E%3CclientChanges%3E%7B%22items%22%3A%5B%7B%22path%22%3A%22%2F%40value%22%2C%22id%22%3A%22_popUp%22%2C%22value%22%3A%221%22%2C%22type%22%3A%22change%22%7D%2C%7B%22path%22%3A%22%2F%40value%22%2C%22id%22%3A%22_action%22%2C%22value%22%3A%22a_pDD9C323CC44E4552ACC4B31694A41E6A2EA_3_1%22%2C%22type%22%3A%22change%22%7D%2C%7B%22path%22%3A%22%2F%40value%22%2C%22id%22%3A%22_focusField%22%2C%22value%22%3A%22pDD9C323CC44E4552ACC4B31694A41E6A2EA_3_1%22%2C%22type%22%3A%22change%22%7D%2C%7B%22path%22%3A%22%2Finput%5B25%5D%22%2C%22id%22%3A%22hiddenFields%22%2C%22value%22%3A%22%26lt%3Binput%20type%3D%5C%22hidden%5C%22%20name%3D%5C%22_openPopUp%5C%22%20id%3D%5C%22_openPopUp%5C%22%20value%3D%5C%22true%5C%22%26gt%3B%22%2C%22type%22%3A%22add%22%7D%5D%7D%3C%2FclientChanges%3E%3C%2FAjaxRequest%3E&_currentAction=Carrier_CommercialAuto_Pages_US_10_22_0_0_MainInterview_PolicyDetail&_PortfolioID=&_UsingPortfolio=0&_ClientID=70490B2E33D93050&_QuoteID=17105&_taskId=&_SuppressAutoSave=&string_2A0%7C=&string_2A9=GAIC&f_pDD9C323CC44E4552ACC4B31694A41E6A2A9_3_1-inputEl=GAIC&string_2B1%7C=2947&string_2B6=DuckCreekTech_Product_US_00_22&f_pDD9C323CC44E4552ACC4B31694A41E6A2B6_3_1-inputEl=Duck%20Creek%20Product%20Template&boolean_2D9=0&f_pDD9C323CC44E4552ACC4B31694A41E6A2D9_3_1-inputEl=No&footerImageComboHidden=en-US&footerImageComboInputId-inputEl=English&devToolbarSystemDate-inputEl=&jsField=&classField=&ajax=true

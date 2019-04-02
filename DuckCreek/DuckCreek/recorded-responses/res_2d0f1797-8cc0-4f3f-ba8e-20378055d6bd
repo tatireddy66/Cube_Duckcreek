@@ -1,0 +1,777 @@
+'use strict'
+//# sourceURL=dyn/js/search
+
+var VIEW_SUPPORTING_DOCUMENTS = "VIEW_SUPPORTING_DOCUMENTS";
+var VIEW_POLICY_DOCUMENTS = "VIEW_POLICY_DOCUMENTS";
+var VIEW_ACCOUNT_DOCUMENTS = "VIEW_ACCOUNT_DOCUMENTS";
+
+var editAccess = false;
+
+function SEARCH()
+{
+}
+
+SEARCH.UI = function ()
+{
+};
+SEARCH.UI.SEARCH_TABLE = 'listViewTable';
+
+var toggleTwisty;
+var copySubmission;
+var handleMenuAction;
+var filterTable;
+var policyObjects = {};
+
+var BU1_COLUMN_INDEX                                         = 4;
+var AGENCY_NAME_PRODUCER_CODE_INDEX                          = 8;
+var BU2_COLUMN_INDEX                                         = 12;
+var SUBMISSION_ID_COLUMN_INDEX                               = 13;
+
+// HIDE BU SPECIFIC FIELDS
+// - Only Set to true when there are no BU Specific Fields
+var SHOW_BU1_SPECIFIC_COLUMN = false;
+var SHOW_BU2_SPECIFIC_COLUMN = false;
+var TEMP_BU1_SPECIFIC_COLUMN = EMPTY_STRING;		// ** THIS CODE WILL BE REMOVED ONCE THE QUERY/DTO RETURNS the BU1 and BU2 columns
+var TEMP_BU2_SPECIFIC_COLUMN = EMPTY_STRING;		// ** THIS CODE WILL BE REMOVED ONCE THE QUERY/DTO RETURNS the BU1 and BU2 columns
+
+function SearchController($rootScope, $scope, Search, Navigation,Presentation, $compile)
+{
+	$scope.policyDetails = {};
+	$scope.isAdditionalFieldsOpen = false;
+	$scope.noResultsFound = true;
+	$scope.showTimeout = false;
+	$scope.pageLoadedSearch = false;
+    $rootScope.charms = {"charmsList": null};
+	$scope.charmsList = [];
+
+
+	toggleTwisty = function(e)
+	{
+		var idSubmissionId = $(e).attr('id');
+		var idArray = idSubmissionId.split('z');
+		// Need to get submissionId before invoking findSearchPolicyDetails
+		var submissionId = idArray[0];
+		var id = idSubmissionId;
+
+		var tr = $($(e)).closest('tr')[0];
+		var dataTable = $('#listViewTable').dataTable({"bRetrieve":true});
+		if(dataTable.fnIsOpen(tr))
+		{
+			$('#' + id).addClass('icon icon-chevron-right');
+			$('#' + id).removeClass('icon icon-chevron-down');
+			dataTable.fnClose(tr);
+		}
+		else
+		{
+            $rootScope.showPageLoading();
+
+			$('#' + id).removeClass('icon icon-chevron-right');
+			$('#' + id).addClass('icon icon-chevron-down');
+			Search.findSearchPolicyDetails(submissionId, function(result)
+			{
+				var data = RA.Service.handleServiceResult(result, $scope);
+				$scope.policyDetails = {id:data};
+				if(data){
+				    data.dbaName = setDbaName(data.dbaName, ",");
+                }
+                //if policyDetails is null do not continue loading
+                if($scope.policyDetails.id == null){
+                    $rootScope.hidePageLoading();
+                    return;
+                }
+                // setting city variable to sentence case
+                $scope.policyDetails.id.policyCity = RA.UI.toTitleCase($scope.policyDetails.id.policyCity);
+                $scope.policyDetails.id.insuredCity = RA.UI.toTitleCase($scope.policyDetails.id.insuredCity);
+
+                // the "'$' +" thing below is because a $ is a special character in a regex and IE doesn't recognize it.
+
+                // Convert Quoted and Issued Premium Fields to Money Format
+                var text = $scope.policyDetails.id.quotedPremium;
+                if(text != null && text != EMPTY_STRING) {
+                	$scope.policyDetails.id.quotedPremium = '$' + accounting.formatMoney(text);
+                }
+                else {
+                	$scope.policyDetails.id.quotedPremium = EMPTY_STRING;
+                }
+                //Jira REFONE - 1415
+                var lineOfBusinessList = $scope.policyDetails.id.lineOfBusinessSet;
+                if(lineOfBusinessList && (lineOfBusinessList.length == undefined || lineOfBusinessList.length <1)){
+                    $scope.policyDetails.id.lineOfBusinessSet=null;
+                }
+                text = $scope.policyDetails.id.issuedPremium;
+                if(text != null && text != EMPTY_STRING) {
+                	$scope.policyDetails.id.issuedPremium = '$' + accounting.formatMoney(text);
+                }
+                else {
+                	$scope.policyDetails.id.issuedPremium = EMPTY_STRING;
+                }
+
+                var tempObj = policyDetails;
+				for(var v in data)
+                {
+                    if(data[v] instanceof Array)
+                    {
+                        var select = '<select size="2" class="select-field" disabled="true" style="width:100%">';
+                        if(data[v].length == 0  ){
+                                data[v] = ['- -'];
+                        }
+                        for(var val in data[v])
+                        {
+                            select += '<option>' + data[v][val] + '</option>';
+                        }
+                        select += '</select>';
+                        tempObj = tempObj.replace(new RegExp('@' + v, 'g'), select);
+                    }
+                    else
+                    {
+                        tempObj = tempObj.replace(new RegExp('@' + v, 'g'), RA.UI.nvl(data[v],''));
+                    }
+                }
+                var index = dataTable.fnGetPosition(tr);
+                while(tempObj.indexOf('@policyDetailsClass') > -1)
+                {
+                    tempObj = tempObj.replace('@policyDetailsClass', 'policyDetails_' + index);
+                }
+
+                //  If Policy Details not found, replace @ fields with empty string
+                if(data == null)
+                {
+                	tempObj = tempObj.replace('Policy Details', 'Policy Details Not Found');
+                	tempObj = tempObj.replace(' / ','');
+                	tempObj = tempObj.replace(' - ','');
+                	tempObj = tempObj.replace(/@\w{0,}/gi, '');
+                }
+
+				dataTable.fnOpen(tr, tempObj, 'innerDetails');
+                var color = (index % 2 == 0 ? 'background-color:#D8D8D8; border-bottom:1px solid #D8D8D8': 'background-color:#EEEEEE; border-top:1px solid #EEEEEE; border-bottom:1px solid #EEEEEE');
+                $('.policyDetails_' + index).attr('style', color);
+                $('div').each(function()
+                {
+                    if($(this).text() == 'null')
+                    {
+                        $(this).text('')
+                    }
+                });
+                $rootScope.hidePageLoading();
+			});
+		}
+	};
+
+	// Toggle Timeout Modal Method
+	$scope.toggleTimeoutModal = function()
+    {
+	 	$scope.isTimeoutOpen = !$scope.isTimeoutOpen;
+    	$scope.showTimeout = false;
+    };
+
+    $scope.navigate = function navigate(submissionId , url)
+    {
+        RA.Session.addSubmissionId(submissionId);
+        RA.Session.addSessionMode(SESSION_POLICY_MODE);
+        RA.Session.addSelectedPolicy(policyObjects[submissionId]);
+        RA.Session.removeQuoteId();
+        //Remove Selected Quoted Id which was added in Quote List if it exist
+        RA.Session.removeSelectedQuoteId();
+        $scope.applyLayout(url)
+    };
+
+	copySubmission = function(anchor)
+	{
+		RA.Session.removeSubmissionId();
+        RA.Session.removeQuoteId();
+        RA.Session.removeSelectedQuoteId();
+        RA.Session.removeSubmissionIdSearch();
+
+        $rootScope.showPageLoading();
+
+        var dataTable = $('#listViewTable').dataTable({"bRetrieve":true});
+        var rowIndex = dataTable.fnGetPosition($(anchor).closest('tr')[0]);
+        var rowData = dataTable.fnGetData(rowIndex);
+
+		var submissionId = rowData[SUBMISSION_ID_COLUMN_INDEX];
+            RA.Session.addSubmissionIdCopy(submissionId);
+            $scope.applyLayout('submission');
+	};
+
+    filterTable = function(tableBodyId, text)
+    {
+        var dataTable = $('#' + tableBodyId).dataTable({"bRetrieve":true});
+        dataTable.fnFilter(text);
+    };
+
+    handleMenuAction = function(anchor, action, submissionId)
+    {
+        var polSplit = $($($(anchor).closest('tr')).children()[3]).text().split(' ');
+        var policySymbol = polSplit[0];
+        var policyNumber = polSplit[1];
+        var policyMod = polSplit[2];
+        var customerNumber = $($($(anchor).closest('tr')).children()[5]).text();
+
+        switch(action)
+        {
+            case VIEW_SUPPORTING_DOCUMENTS:
+                RA.Controller.viewDocumentsMyfile($scope.myFileLink, 'SubmissionID=' + submissionId);
+                break;
+            case VIEW_POLICY_DOCUMENTS:
+                RA.Controller.viewDocumentsMyfile($scope.myFileLink, 'PolicyNumber=' + policyNumber + '&Symbol=' + policySymbol + '&MOD=' + policyMod);
+                break;
+            case VIEW_ACCOUNT_DOCUMENTS:
+                RA.Controller.viewDocumentsMyfile($scope.myFileLink, 'CustomerNumber=' + customerNumber);
+                break;
+        }
+    }
+
+	var search = RA.Session.getSearchString();
+	var advancedSearchDto = JSON.parse(RA.Session.getAdvancedSearch());
+
+    $scope.removeSingleSearchCharm = function() {
+        $rootScope.charms.charmsList = [];
+        $scope.noResultsFound = true;
+        $scope.searchResults == null;
+    };
+
+    $scope.removeSearchCharm = function(charmRemoved) {
+        var originalSearchDto =  advancedSearchDto;
+        advancedSearchDto = RA.UI.doRemoveFieldFromDto(originalSearchDto, charmRemoved.labelDtoField);
+
+        $rootScope.showPageLoading();
+        if (!RA.UI.doCheckIfAllFieldsEmpty(advancedSearchDto)) {
+            Search.searchAdvanced(advancedSearchDto, function(result)
+            {
+                $scope.searchResults = RA.Service.handleServiceResult(result, $scope);
+                if($scope.searchResults == null || $scope.searchResults.numRecordsFound == 0)
+                {
+                    $scope.noResultsFound = true;
+                    $scope.pageLoadedSearch = true;
+                    $rootScope.hidePageLoading();
+                    buildSearchListView([$scope.searchResults],$scope, $compile);
+                    return;
+                }
+                else
+                {
+                    //  Handle Timeout for Advanced Search
+                    if($scope.searchResults == TIMEOUT)
+                    {
+                        $scope.noResultsFound = true;
+                        $scope.pageLoadedSearch = true;
+                        $rootScope.hidePageLoading();
+                        //  Display Modal When Timeout Occurs
+                        $scope.isTimeoutOpen = true;
+                        $scope.showTimeout = true;
+                        $scope.$apply();
+                        return;
+                    }
+                }
+                $scope.noResultsFound = false;
+                buildSearchListView([$scope.searchResults],$scope, $compile);
+                $scope.pageLoadedSearch = true;
+                $rootScope.hidePageLoading();
+                $scope.$apply();
+            });
+        }  else {
+            $scope.searchResults == null;
+            $scope.noResultsFound = true;
+            $scope.pageLoadedSearch = true;
+            $rootScope.hidePageLoading();
+        }
+    };
+
+    setTimeout(function()
+    {
+    	$scope.charmsList = [];
+
+    	if(search)      // indicates the user entered something in the search bar and hit either an entry in the drop
+    	                // down list of the magnifying glass
+        {
+            var charmsItem = {"label": search, "onRemove": function() { $scope.removeSingleSearchCharm() }};
+    		$scope.charmsList.push(charmsItem);
+            $rootScope.charms.charmsList = $scope.charmsList;
+            RA.Session.addPreviousSearchField(search);
+            RA.Session.addPreviousSearchType(SEARCH_TYPE_SINGLE);
+            RA.Session.removeSubmissionIdSearch();
+            // If in Session, remove Advanced Search Dto
+        	RA.Session.removeAdvancedSearch();
+            RA.Session.removeAdvancedSearchCharms();
+            $rootScope.showPageLoading();
+            Search.searchDeep(search, function(result)
+            {
+                $scope.searchResults = RA.Service.handleServiceResult(result, $scope);
+                if($scope.searchResults == null || $scope.searchResults.numRecordsFound == 0)
+                {
+                    $scope.noResultsFound = true;
+                    buildSearchListView([$scope.searchResults],$scope, $compile);
+                    $scope.pageLoadedSearch = true;
+                    $rootScope.hidePageLoading();
+                    return;
+                } else {
+                    //  Handle Timeout for Advanced Search
+                    if($scope.searchResults == TIMEOUT)
+                    {
+                        $scope.noResultsFound = true;
+                        $scope.pageLoadedSearch = true;
+                        $rootScope.hidePageLoading();
+                        //  Display Modal When Timeout Occurs
+                        $scope.isTimeoutOpen = true;
+                        $scope.showTimeout = true;
+                        $scope.$apply();
+                        return;
+                    }
+                }
+
+                $scope.noResultsFound = false;
+                buildSearchListView([$scope.searchResults],$scope, $compile);
+                $scope.pageLoadedSearch = true;
+                $rootScope.hidePageLoading();
+
+            });
+        }
+    	else
+    	{
+    		if(advancedSearchDto)    // indicates the user clickedon the "Additional Search fields" and hit the magnifying glass
+            {
+                $rootScope.charms.charmsList = RA.UI.doGetDisplayCharms(JSON.parse(RA.Session.getAdvancedSearchCharms()), $scope.removeSearchCharm);
+                RA.Session.addPreviousSearchType(SEARCH_TYPE_DTO);
+                RA.Session.addPreviousSearchDto(JSON.stringify(advancedSearchDto));
+            	// Do not remove Advanced Search Dto from Session to meet Clear Submission requirement
+                //RA.Session.removeAdvancedSearch();
+                $rootScope.showPageLoading();
+
+                Search.searchAdvanced(advancedSearchDto, function(result)
+                {
+                    $scope.searchResults = RA.Service.handleServiceResult(result, $scope);
+                    if($scope.searchResults == null || $scope.searchResults.numRecordsFound == 0)
+                    {
+                    	$scope.noResultsFound = true;
+                    	$scope.pageLoadedSearch = true;
+                        $rootScope.hidePageLoading();
+                        buildSearchListView([$scope.searchResults],$scope, $compile);
+                        return;
+                    }
+                    else
+                    {
+                    	//  Handle Timeout for Advanced Search
+                    	if($scope.searchResults == TIMEOUT)
+                    	{
+                    		$scope.noResultsFound = true;
+                    		$scope.pageLoadedSearch = true;
+                            $rootScope.hidePageLoading();
+                            //  Display Modal When Timeout Occurs
+                            $scope.isTimeoutOpen = true;
+    	                    $scope.showTimeout = true;
+    	                    $scope.$apply();
+                            return;
+                    	}
+                    }
+                    $scope.noResultsFound = false;
+                    buildSearchListView([$scope.searchResults],$scope, $compile);
+                    $scope.pageLoadedSearch = true;
+                    $rootScope.hidePageLoading();
+                });
+            }
+    	}
+    }, 10);
+
+    // Toggle Timeout Modal Method
+	$scope.toggleTimeoutModal = function()
+    {
+	 	$scope.isTimeoutOpen = !$scope.isTimeoutOpen;
+    	$scope.showTimeout = false;
+    };
+
+    async.auto
+    (
+        {
+            init:function(callback)
+            {
+                async.parallel
+                (
+                    {
+                        editAccess:function(callback)
+                        {
+                            Presentation.hasPermission({'resource':'submission', 'action': 'edit'},function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                callback(null, data);
+                            })
+                        },
+                        myFileLink:function(callback)
+                        {
+                            Navigation.doGetMyFileLink(function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                callback(null, data);
+                            });
+                        },
+                        searchResultColumns: function(callback)
+                        {
+                            Presentation.findSearchResultColumnList(function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                callback(null, data);
+                            });
+                        },
+                        producerConfiguration: function(callback)
+                        {
+                        	Presentation.findProducerConfiguration(function(result)
+                        	{
+                        		var data = RA.Service.handleServiceResult(result, $scope);
+                                callback(null, data);
+                        	});
+                        }
+                    },
+                    function(err, results)
+                    {
+                        editAccess = results.editAccess;
+                        $scope.myFileLink = results.myFileLink;
+                        $scope.searchResultColumns = results.searchResultColumns;
+
+                        // Check to Ensure bu specific fields exist.  Hide Columns if BU Specific Field is not defined in NCUBE
+                        if ($scope.searchResultColumns) {
+                            for (var i in $scope.searchResultColumns)
+                            {
+                            	if (i == "bu1") {
+                            		SHOW_BU1_SPECIFIC_COLUMN = true;
+                            		TEMP_BU1_SPECIFIC_COLUMN = $scope.searchResultColumns[i];		// TEMP SOLUTION UNTIL THE DTO CAN RETURN THE COLUMNS
+                            	}
+                               	if (i == "bu2") {
+                            		SHOW_BU2_SPECIFIC_COLUMN = true;
+                            		TEMP_BU2_SPECIFIC_COLUMN = $scope.searchResultColumns[i];	// TEMP SOLUTION UNTIL THE DTO CAN RETURN THE COLUMNS
+                            	}
+                            }
+                        }
+
+                        // configuration factors for producer, including producerSource (CRM/PRM), subAgency (String true/false),
+                        // underwriter, businessDeveloper, csr
+                        $scope.producerConfiguration = results.producerConfiguration;
+                        if (!$scope.producerConfiguration) {
+                      	  $scope.producerConfiguration = {};
+                        }
+
+                        $scope.$apply();
+                    }
+                );
+            }
+        }, function(err, results)
+        {
+            $scope.pageLoaded = YES;
+            $scope.$apply();
+        }
+    )
+}
+
+function buildSearchListView(rows, $scope, $compile)
+{
+	var aaData = [];
+	var hideColumns = [];
+	var tableRow = 0;
+    var policyAnchor = $scope.viewPolicyAnchor;
+    var iter = 0;
+    var disable = [];
+
+	// if BU Specific fields do not exist, hide these columns
+	if (!SHOW_BU1_SPECIFIC_COLUMN) {
+		// Column 4 is BU1 Specific Column Index
+		hideColumns.push(BU1_COLUMN_INDEX);
+	}
+	if (!SHOW_BU2_SPECIFIC_COLUMN) {
+		// Column 12 is BU2 Specific Column Index
+		hideColumns.push(BU2_COLUMN_INDEX);
+	}
+	// Always Hide Submission ID column (Used to obtain Policy Details)
+	hideColumns.push(SUBMISSION_ID_COLUMN_INDEX);
+
+    var dataTable = $('#listViewTable').dataTable(
+        {
+            "bLengthChange":false,
+			"bSortClasses":false,
+            "aaData":aaData,
+            "bRetrieve":true,
+            "aoColumnDefs":
+                [
+                    {"bSortable":false, 'aTargets':[0,1]},
+                    {'aTargets': hideColumns, 'bVisible':false}
+                ],
+            "oLanguage": { "sInfo": "_TOTAL_ Records" , "sInfoEmpty": "&nbsp;&nbsp;0 Records" ,  "sInfoFiltered": "&nbsp;" },
+            "sDom":'<"rowsFound"i>',
+            "bPaginate": false
+        });
+    dataTable.fnClearTable();
+
+
+	for(var i = 0; i < rows.length; i++)
+	{
+		var records = rows[i].records;
+		for(var j = 0; j < records.length; j++)
+		{
+			var bu1 = "";
+	        var bu2 = "";
+
+	        var row = records[j];
+            iter++;
+			var twisty = '<i id="' + (row.submissionId + 'z' + tableRow++) + '" onclick="toggleTwisty(this)" class="icon icon-chevron-right makeThisWhite"></i>';
+
+            var copyButton = editAccess ? '<li><a href="#" onclick="copySubmission(this)">Copy</a></li>' : '<li class="disabled">Copy</li>' ;
+            var dropDown = 	'<div class="btn-group">' +
+							'<gaig-context-menu>' +
+							'<button class="btn dropdown-toggle" id="searchContextButton">' +
+								'<span class="caret"></span>' +
+							'</button>' +
+							'<ul>' +
+								'<li class="dropdown-submenu"><a>Documents</a>' +
+									'<ul>' +
+                            // No need to pass submissionid param in other links.It is only needed for view supporting docs. If you do not pass method parameter Javascript assumes it as null.
+                                        '<li id="viewSupportingLink_' + (iter - 1) + '"><a href="#" onclick="handleMenuAction(this, ' + VIEW_SUPPORTING_DOCUMENTS + ',' + row.submissionId + ')">View Supporting Documents</a></li>' +
+										'<li id="viewPolicyLink_' + (iter - 1) + '"><a href="#" onclick="handleMenuAction(this, ' + VIEW_POLICY_DOCUMENTS + ')">View Policy Documents</a></li>' +
+                                        '<li id="viewAccountLink_' + (iter - 1) + '"><a href="#" onclick="handleMenuAction(this, ' + VIEW_ACCOUNT_DOCUMENTS + ')">View Account Documents</a></li>' +
+									'</ul>' +
+								'</li>' +
+                                copyButton +
+							'</ul>' +
+							'</gaig-context-menu>' +
+						'</div>';
+
+
+            // THIS CODE NEEDS TO BE REPLACED ONCE THE BU1 & BU2 Rows are added to the results dto and this can be handled programatically instead of hard-coded
+            if (SHOW_BU1_SPECIFIC_COLUMN) {
+            	// Submission ID
+            	// Product
+            	// CSR
+            	if (TEMP_BU1_SPECIFIC_COLUMN.search("Product") > -1) {
+            		bu1 = row.products;
+            	} else if (TEMP_BU1_SPECIFIC_COLUMN.search("Submission") > -1) {
+            		bu1 = row.submissionId;
+            	}
+            } else {
+            	bu1 = EMPTY_STRING;
+            }
+
+            if (SHOW_BU2_SPECIFIC_COLUMN) {
+            	//not currently being used by any BU ..
+            	bu2 = EMPTY_STRING;
+            }
+
+            var insuredName = row.insuredName;
+            if (row.dbaName) {
+                insuredName = insuredName  + " / " + row.dbaName;
+            }
+
+            var temp = {'policyNumber': row.policyNumber};
+            disable.push(temp);
+    		var dataRow =
+			[
+				twisty,
+				dropDown,
+				OPEN_DIV_TABLE_OBJECT + '<a id="' + row.submissionId + '" class="submissionColumn"  ng-click="navigate(' + row.submissionId + ',\'manageActivities\')">' + insuredName + '</a>' + CLOSE_DIV_TAG,
+				OPEN_DIV_TABLE_OBJECT + (RA.UI.nvl(row.policySymbol,'') + ' <br/>' + RA.UI.nvl(row.policyNumber, '') + ' <br/>' + RA.UI.nvl(row.policyModule, '') + ' ' + RA.UI.nvl(row.policyRewriteVersion, '')) + CLOSE_SPAN_TAG,
+				OPEN_DIV_TABLE_OBJECT + RA.UI.nvl(bu1,'') + CLOSE_DIV_TAG,
+				OPEN_SPAN_RIGHT_TAG + OPEN_DIV_TABLE_OBJECT + RA.UI.nvl(row.customerNumber,'') + CLOSE_DIV_TAG,
+				OPEN_DIV_TABLE_OBJECT + (RA.UI.nvl(row.policyState,'') + ', ' + RA.UI.nvl(row.policyCountry,'')) + CLOSE_DIV_TAG,
+				OPEN_DIV_TABLE_OBJECT + RA.UI.nvl(row.policyStatus,'') + CLOSE_DIV_TAG,
+				OPEN_DIV_TABLE_OBJECT + (RA.UI.nvl(row.agencyName,'') + '/' + RA.UI.nvl(row.producerCode,''))  + CLOSE_DIV_TAG,
+				OPEN_DIV_TABLE_OBJECT + RA.UI.nvl(row.policyTermEffectiveDate, '') + ' - ' + RA.UI.nvl(row.policyTermExpirationDate, '') + CLOSE_SPAN_TAG,
+				OPEN_DIV_TABLE_OBJECT + RA.UI.nvl(row.underwriter,'') + CLOSE_DIV_TAG,
+				OPEN_DIV_TABLE_OBJECT + RA.UI.nvl(row.profitCenter,'') + '<br/>' + RA.UI.nvl(row.territory,'') + '<br/>' + RA.UI.nvl(row.field,'') + CLOSE_DIV_TAG,
+				OPEN_DIV_TABLE_OBJECT + RA.UI.nvl(bu2,'') + CLOSE_DIV_TAG,
+                RA.UI.nvl(row.submissionId,'')
+			];
+
+            policyObjects[row.submissionId] =
+            {
+                policyTermEffectiveDate: row.policyTermEffectiveDate,
+                policyTermExpirationDate: row.policyTermExpirationDate,
+                submissionId: row.submissionId,
+                customerNumber: row.customerNumber,
+                policyNumber: row.policyNumber,
+                policySymbol: row.policySymbol,
+                policyMod: row.policyModule,
+                policyVersion: row.policyRewriteVersion
+            };
+			aaData.push(dataRow);
+		}
+	}
+    dataTable.fnAddData(aaData);
+
+
+
+	$($($(($('#listViewTable')).children('thead')[0]).children('tr')).children('td')[0]).attr('style', 'background-color:white');
+	$($($('.makeThisWhite')).closest('td'));
+	$('.submissionColumn').click(function()
+	{
+		var policyInfo = $($($(this).closest('tr')).children('td')[3]).text().split(' ');
+        var policyTerm = $($($(this).closest('tr')).children('td')[9]).text().split(' - ');
+        var submissionId = row.submissionId;
+        var customerNumber = $($($(this).closest('tr')).children('td')[5]).text();
+        var sessionVars = RA.Session.buildSelectedPolicyObject( policyTerm[0], policyTerm[1], submissionId, customerNumber, policyInfo[1], policyInfo[2], policyInfo[0], policyInfo[3]);
+        RA.Session.addSelectedPolicy(sessionVars);
+		RA.Session.pushLocalStorageStack('previousSearchResult', row.submissionId);
+	});
+
+    $('td', dataTable.fnGetNodes()).hover(function()
+    {
+          var tr = $(this).closest('tr');
+    },
+    function()
+    {
+        var tr = $(this).closest('tr');
+    });
+
+    for (var v in disable)
+    {
+        var policyNumber = disable[v].policyNumber;
+        if($('#viewPolicyLink_' + v))
+        {
+            RA.UI.doAdjustAnchor('viewPolicyLink_' + v, policyNumber && policyNumber.length > 0, policyAnchor)
+        }
+    }
+    $compile(dataTable)($scope);
+}
+
+function filterTable(tableBodyId, text)
+{
+	var dataTable = $('#' + tableBodyId).dataTable({"bRetrieve":true});
+	dataTable.fnFilter(text);
+}
+
+function setDbaName(list, separator){
+    if(list != null){
+        var values = list.split(separator);
+        if(values.length > 1){
+            return values[0] + " (See Submission Info for More DBAs)";
+        }
+    }
+    return list;
+}
+
+var policyDetails = '<div>' +
+						'<h4 class="leftMargin36">Policy Details</h4>' +
+						'<div class="leftMargin36 searchHeader" id="policy">@policySymbol @policyNumber @policyMod @policyVersion' + ' / ' + '@insuredName</div>' +
+						'<div class="container-fluid @policyDetailsClass backgroundWhite">' +
+							'<div class="row-form leftMargin30">' +
+								'<div class="form-cell width45Percent">'+
+									'<div class="borderOutlineBlack @policyDetailsClass">' +
+										'<div class="row-form">' +
+											'<div class="span2andAHalf">' +
+												'<label for="policy" class="default-cursor">Policy</label>' +
+												'<div id="policy">@policySymbol @policyNumber @policyMod  @policyVersion</div>' +
+											'</div>' +
+											'<div class="span4">' +
+												'<label for="term" class="default-cursor">Term</label>' +
+												'<div id="term">@policyTermEffectiveDate - @policyTermExpirationDate</div>' +
+											'</div>' +
+											'<div class="span2andAHalf">' +
+												'<label for="status" class="default-cursor">Status</label>' +
+												'<div id="status">@policyStatus</div>' +
+											'</div>' +
+											'<div class="span2andAHalf">' +
+												'<label for="state" class="default-cursor">State</label>' +
+												'<div id="state">@policyStateName</div>' +
+											'</div>' +
+										'</div>' +
+										'<div class="row-form">' +
+											'<div class="span2andAHalf">' +
+												'<label for="quoted" class="default-cursor">Quoted Premium</label>' +
+												'<div id="quoted">@quotedPremium</div>' +
+											'</div>' +
+											'<div class="span4">' +
+												'<label for="issued" class="default-cursor">Issued Premium</label>' +
+												'<div id="issued">@issuedPremium</div>' +
+											'</div>' +
+											'<div class="span2andAHalf">' +
+												'<label for="city" class="default-cursor">City</label>' +
+												'<div id="city">@policyCity</div>' +
+											'</div>' +
+											'<div class="span2andAHalf">' +
+												'<label for="country" class="default-cursor">Country</label>' +
+												'<div id="country">@policyCountryName</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+									'<div class="borderOutlineBlack @policyDetailsClass">' +
+										'<div class="row-form">' +
+											'<div class="span2andAHalf">' +
+												'<label for="agency" class="default-cursor">Agency Name</label>' +
+												'<div id="agency">@agencyName</div>' +
+											'</div>' +
+											'<div class="span4">' +
+												'<label for="producer" class="default-cursor">Prod. Code</label>' +
+												'<div id="producer">@producerCode</div>' +
+											'</div>' +
+											'<div class="span5">' +
+												'<label for="underwriter" class="default-cursor">Underwriter</label>' +
+												'<div id="underwriter">@underwriter</div>' +
+											'</div>' +
+										'</div>' +
+										'<div class="row-form">' +
+											'<div class="span2andAHalf">' +
+												'<label for="profit" class="default-cursor">Profit Center</label>' +
+												'<div id="profit">@profitCenter</div>' +
+											'</div>' +
+											'<div class="span4">' +
+												'<label for="territory" class="default-cursor">Territory</label>' +
+												'<div id="territory">@territory</div>' +
+											'</div>' +
+											'<div class="span5">' +
+												'<label for="field" class="default-cursor">Field</label>' +
+												'<div id="field">@field</div>' +
+											'</div>' +
+										'</div>' +
+										'<div class="row-form">' +
+											'<div class="span12">' +
+												'<label for="line" class="default-cursor">Line of Business - Product</label>' +
+												'<div id="line">@lineOfBusinessSet</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+								'<div class="form-cell width45Percent">'+
+									'<div class="borderOutlineBlack @policyDetailsClass">' +
+										'<div class="row-form">' +
+											'<div class="span3andAHalf">' +
+												'<label for="insured" class="default-cursor">Insured Name <span style="position:relative; top:5px; display: inline-block; background:url(dyn/images/primary.png); background-repeat: no-repeat; width: 22px; height: 22px;"></span></label>' +
+												'<div id="insured">@insuredName</div>' +
+											'</div>' +
+											'<div class="span3andAHalf">' +
+												'<label for="dba" class="default-cursor">Insured DBA <span style="position:relative; top:5px; display: inline-block; background:url(dyn/images/secondary.png); background-repeat:repeat-x; width: 22px; height: 22px;"></span></label>' +
+												'<div id="dba">@dbaName</div>' +
+											'</div>' +
+											'<div class="span4andThreeQuarters">' +
+												'<label for="longer" class="default-cursor">Longer Named Insured <span style="position:relative; top:5px; display: inline-block; background:url(dyn/images/secondary.png); background-repeat:repeat-x; width: 22px; height: 22px;"></span></label>' +
+												'<div id="longer">@longerNamed</div>' +
+											'</div>' +
+										'</div>' +
+										'<div class="row-form">' +
+											'<div class="span7andAnEighth">' +
+												'<label for="more" class="default-cursor">More Named Insured <span style="position:relative; top:5px; display: inline-block; background:url(dyn/images/secondary.png); background-repeat:repeat-x; width: 22px; height: 22px;"></span></label>' +
+												'<div id="more" class="searchMoreNameScroll">@moreNamed</div>' +
+											'</div>' +
+											'<div class="span4">' +
+												'<label for="customer" class="default-cursor">Customer #</label>' +
+												'<div id="customer">@customerNumber</div>' +
+											'</div>' +
+										'</div>' +
+										'<div class="row-form">' +
+											'<div class="span3andAHalf">' +
+												'<label for="phone" class="default-cursor">Phone #</label>' +
+												'<div id="phone">@insuredPhoneNumber</div>' +
+											'</div>' +
+											'<div class="span3andAHalf">' +
+												'<label for="insCountry" class="default-cursor">Country</label>' +
+												'<div id="insCountry">@insuredCountryName</div>' +
+											'</div>' +
+											'<div class="span4andAHalf">' +
+												'<label for="address" class="default-cursor">Address</label>' +
+												'<div id="address">@insuredAddressLine1<br/>@insuredCity, @insuredStateName<br/>@insuredZip</div>' +
+											'</div>' +
+										'</div>' +
+										'<div class="row-form">' +
+											'<div class="span12">' +
+												'<label for="description" class="default-cursor">Description of Operations</label>' +
+												'<div id="description">@descriptionOfOperations</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div>' +
+						'</div>' +
+						'</div>' +
+					'</div>';

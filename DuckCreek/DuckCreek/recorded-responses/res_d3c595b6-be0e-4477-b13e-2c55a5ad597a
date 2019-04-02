@@ -1,0 +1,80 @@
+var notesApp = angular.module('refAppDirectivesNotes',['submissionServices','presentationServices','searchServices',
+                         'notesServices','accountServices','activityServices','navigationServices','dashboardServices','reportServices','renewalServices']);
+
+/****************************
+ * noteTable
+ ****************************/
+notesApp.directive('noteTable', function($compile) {
+    return  {
+        scope:false,
+    	link: function(scope, element, attrs, controller) {
+
+		  	var options = {};
+		  	var ACCT_NOTE_TABLE_ID = "accountNoteTable";
+		  	var FIRST_COL = "noteTwistyColumn";
+		  	var CLOSED_CLASS = "icon icon-twisty-closed";
+		  	var OPENED_CLASS = "icon icon-twisty-open";
+		  	var fullNote = EMPTY_STRING;
+		  	options["bPaginate"] = false;
+			options["bSortClasses"] = false,
+		  	options["bDeferRender"] = true;
+	        options['bAutoWidth'] = false;
+		  	options["sDom"] = 'rt';
+		  	options["aaSorting"] = [[2,'desc']];
+
+		  	// adding the column headings to the element
+		  	options["aoColumns"] = scope.$eval(attrs.headings);
+
+		  	// add the column definitions, if any
+		  	if (attrs.columnDefs) {
+		  		options["aoColumnDefs"] = scope.$eval(attrs.columnDefs);
+		  	}
+
+		  	options["fnRowCallback"] = function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+	  			$('td:eq(0)',nRow).on ('click', function() {
+	  				// Display complete note when twisty clicked (More than 250 Characters).
+	  				fullNote = aData[8];
+	  			});
+		  	};
+
+		  	if(element[0].id != ACCT_NOTE_TABLE_ID){
+		  		var idObj = scope.$eval(element[0].id);
+		  		element[0].id = idObj.id;
+		  	}
+
+		  	// declaring the dataTable element
+		  	var dataTable = element.dataTable(options);
+		  	dataTable.attr('style', 'width:100%;');
+
+		  	// setting the data on the table
+	        scope.$watch(attrs.data, function(value) {
+	            var val = value || null;
+	            if (val) {
+	                dataTable.fnClearTable();
+	                dataTable.fnAddData(scope.$eval(attrs.data));
+	            }
+	            var dataTableBody = dataTable.find('tbody');
+	    		$compile(dataTableBody)(scope);
+	        });
+
+	        dataTable.on('click', function(e) {
+		  		 var myTarget = e.target ? e.target : e.srcElement;
+		  		 // should really use ID
+		  		 var theCellId = myTarget.id;
+		  		 var theClassName = myTarget.className;
+
+		  		 if (FIRST_COL == theCellId) {
+		  			 var nTr = myTarget.parentElement.parentElement;
+		  			 if (CLOSED_CLASS == theClassName) {
+
+		  				 myTarget.className = OPENED_CLASS;
+		  				 dataTable.fnOpen(nTr, fullNote, "noteDetailRow");
+		  			 } else {
+		  				myTarget.className = CLOSED_CLASS;
+		  				dataTable.fnClose(nTr);
+		  			 }
+		  		 }
+		  	});
+	   	}
+    }
+});

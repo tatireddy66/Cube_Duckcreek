@@ -1,0 +1,4 @@
+/*
+ * Duck Creek TaskBar JavaScript
+ */
+Ext.onReady(function(){var a=DCT.Util.getSafeElement("_popUp").value;if(a=="true"||a=="1"||(DCT.Util.getParent()&&DCT.Util.getParent().Ext.getCmp("dctPopupWindow"))){}else{WorkbenchToolbar=Ext.create("DCT.Mvc.Taskbar",{hub:DCT.hubEvents,controllerUrl:"workbench/",configuredGroups:DCT.Util.getSafeElement("_enabledGroups").value,id:"workbenchToolbar",renderTo:Ext.getBody().dom})}});

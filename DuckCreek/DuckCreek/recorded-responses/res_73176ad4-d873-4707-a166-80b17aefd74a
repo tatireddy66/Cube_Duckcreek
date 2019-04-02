@@ -1,0 +1,120 @@
+(function () {
+
+    function coverageTableRun() {
+
+    }
+
+    function coverageTableFactory() {
+        var MAX_PRERENDER_SECTIONS_AT_A_TIME = 20;
+        var _currentTimeout, _sectionCount = 0;
+        var _coverageTables = [];
+
+        function autoExpandNextTable(nextTable) {
+            var okayToAutoRenderMoreSections = _sectionCount < MAX_PRERENDER_SECTIONS_AT_A_TIME;
+            cancelAnyExpansionsAlreadyInProgress();
+
+            if (okayToAutoRenderMoreSections) {
+                _sectionCount++;
+                _currentTimeout = setTimeout(function () {
+                    var shouldSectionStopWatchingForScroll = _sectionCount < (MAX_PRERENDER_SECTIONS_AT_A_TIME / 2);
+                    nextTable.expand(shouldSectionStopWatchingForScroll);
+                }, 50);
+            }
+            else {
+                _sectionCount = 0;
+            }
+        }
+
+        function cancelAnyExpansionsAlreadyInProgress() {
+            clearTimeout(_currentTimeout);
+        }
+
+        function expandCoverageTable(coverageTable) {
+            var nextTable = coverageTable.next;
+            if (nextTable) {
+                autoExpandNextTable(nextTable);
+            }
+        }
+
+        function registerCoverageTable(coverageTable) {
+            var last;
+            last = _coverageTables[_coverageTables.length - 1];
+            if (last) {
+                last.next = coverageTable;
+            }
+            _coverageTables.push(coverageTable);
+        }
+
+        function showAllCoverageTables() {
+            _coverageTables.forEach(function (coverageTable) {
+                coverageTable.show();
+            });
+        }
+
+        return {
+            expandNext: expandCoverageTable,
+            register: registerCoverageTable,
+            showAll: showAllCoverageTables
+        };
+    }
+
+    function coverageTableDirective(coverageTableFactory) {
+        return {
+            bindToController: true,
+            controllerAs: 'coverageTable',
+            require: ['coverageTable'],
+            scope: true,
+            template: '<div ng-include="templateUrl"></div>',
+            controller: function letterGroupController($scope) {
+                var coverageTable = this;
+
+                coverageTable.visible = false;
+
+                coverageTable.show = function showCoverageTable() {
+                    coverageTable.visible = true;
+                };
+
+                coverageTable.hide = function hideCoverageTable() {
+                    coverageTable.visible = false;
+                };
+
+                coverageTableFactory.register(coverageTable);
+            },
+            link: function letterGroupLink(scope, element, attr, controllers) {
+                var coverageTable = controllers[0];
+                var viewport = angular.element('#letter-template');
+                var _handleScroll = cubeUtils.debounce(_handleCoverageTable, 0);
+                var id = makeString(14);
+
+                scope.templateUrl = attr.templateUrl;
+
+                coverageTable.expand = expandCoverageTable;
+
+                viewport.on('scroll.coverageTable' + id, _handleScroll);
+
+                function _handleCoverageTable() {
+                    element.isInViewport({ tolerance: 0, viewport: viewport }).run(expandCoverageTable);
+                }
+
+                function expandCoverageTable(stopWatchingScroll){
+                    coverageTable.show();
+                    if(stopWatchingScroll) {
+                        viewport.off('scroll.coverageTable' + id);
+                    }
+                    scope.$evalAsync();
+                    coverageTableFactory.expandNext(coverageTable);
+                }
+
+                scope.$on('$destroy', function () {
+                    viewport.off('scroll.coverageTable' + id);
+                });
+
+            }
+        }
+    }
+
+    angular.module('coverageTable', [])
+        .directive('coverageTable', coverageTableDirective)
+        .factory('coverageTableFactory', coverageTableFactory)
+        .run(coverageTableRun);
+})();

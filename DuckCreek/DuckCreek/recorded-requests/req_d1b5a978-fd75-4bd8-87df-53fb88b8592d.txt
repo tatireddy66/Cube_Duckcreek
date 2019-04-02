@@ -1,0 +1,10 @@
+GET https://cdn.gaic.com:443/cdn/ui-bootstrap/0.78.3/js/gaig-plugins.js HTTP/1.1
+Host: cdn.gaic.com
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: */*
+Referer: https://cubeshsdev.td.afg/UwdRefApp/dyn/html/main
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: cookiemonster=!m+Rgr6Avs5MMnvES8/4zppzveG5js1hpPmJ+RfJdywR/ss2mDM2ldg8x/GRF05A56NWB4rQsCMYF1R1JprPT7PWgN6tXYBQwE++rNranzrfpHP0Jey10XpW0eNsuwY/jjtPWunE89UJfB5+WiWw8CKmhCDIElLE=
+

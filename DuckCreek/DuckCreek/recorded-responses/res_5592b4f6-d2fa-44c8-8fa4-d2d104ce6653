@@ -1,0 +1,48 @@
+/**
+ * Created by golmsted on 5/3/2016.
+ */
+var appTrnStatusModal = angular.module('trnStatusModal', ['submissionServices'])
+
+    .directive('statusModal',
+    function() {
+        return ({
+            controller: 'setTRNStatusModalController',
+            link: function (scope, element, attributes, controllers) {
+                scope.$watchGroup(['isOpen', 'oneStatusValid'], function(newVal) {
+                    if (newVal[0] == false) {
+                        scope.resetModal();
+                    }
+                    if (scope.footerButtons && scope.footerButtons[0]) {
+                        scope.evaluateFooterState();
+                    }
+
+                });
+
+                scope.$watchCollection('table', function(oldVal, newVal) {
+                    if (newVal && scope.isOpen && scope.disposition && scope.disposition.dispositionTypeCode) {
+                        scope.verifyStatusChange();
+                    }
+                });
+
+            },
+            scope: {
+                table : '=submissions',
+                results : '=',
+                onClose: '=',
+                isOpen: '=',
+                dispositionStatusList: '=',
+                viewOnlyMode: '=',
+                disposition: '=',
+                submission: '=',
+                isAdmin: '=',
+                errorMessages: '=',
+                successMessages: '=',
+                validationMessages: '=',
+                infoMessages: '='
+            },
+            restrict: 'A',
+            templateUrl: 'dyn/html/templates/directives/setTRNStatusModal'
+        });
+
+    }
+);

@@ -1,0 +1,15 @@
+function changeSubStatusController($rootScope, $scope, Admin) {
+
+    $scope.changeSubmissionStatus = {"submissionId" : EMPTY_STRING, "statusCd" : EMPTY_STRING};
+
+    $scope.changeSubmissionStatusDevLocalOnly = function() {
+
+        RA.UI.doClearMessages($scope);
+        $rootScope.showPageLoading();
+
+        Admin.changeSubmissionStatusDevLocalOnly($scope.changeSubmissionStatus.submissionId, $scope.changeSubmissionStatus.statusCd, function (result) {
+            RA.Service.handleServiceResult(result, $scope);
+            $rootScope.hidePageLoading();
+        });
+    };
+}

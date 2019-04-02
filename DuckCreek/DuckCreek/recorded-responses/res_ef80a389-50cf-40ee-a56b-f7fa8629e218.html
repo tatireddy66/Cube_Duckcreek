@@ -1,0 +1,1861 @@
+<style type="text/css">
+div.topArea
+{
+  font-size: 0;
+  width: 100%;
+  background-color: #f1f1f1;
+}
+div.chartArea
+{
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  background-color: transparent;
+}
+div.chartAreaHeader
+{
+  display: none;
+  background-color: transparent;
+  font-size: 11px;
+  padding: 5px 5px 0 5px;
+}
+div.chartAreaHeader .btn-group {
+  margin-top: 0 !important;
+}
+#chartContainer {
+  margin: 5px 0 0 0;
+  background-color: #f1f1f1;
+}
+#filterLoading {
+  position: absolute;
+  z-index: 3000;
+  background-color: #000;
+  background-image: url(data:image/gif;base64,R0lGODlhEAALAPQAAP///wAzZtrh6NDZ4uru8gY3aQAzZi5XgYKas2B/n7rH1SJOekpukoqhuGSCob7K1yZRfAQ2aE5xlObq79jf5/T2+Dhfh9zi6fL09rbE0qCyxcrU3u7x9AAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCwAAACwAAAAAEAALAAAFLSAgjmRpnqSgCuLKAq5AEIM4zDVw03ve27ifDgfkEYe04kDIDC5zrtYKRa2WQgAh+QQJCwAAACwAAAAAEAALAAAFJGBhGAVgnqhpHIeRvsDawqns0qeN5+y967tYLyicBYE7EYkYAgAh+QQJCwAAACwAAAAAEAALAAAFNiAgjothLOOIJAkiGgxjpGKiKMkbz7SN6zIawJcDwIK9W/HISxGBzdHTuBNOmcJVCyoUlk7CEAAh+QQJCwAAACwAAAAAEAALAAAFNSAgjqQIRRFUAo3jNGIkSdHqPI8Tz3V55zuaDacDyIQ+YrBH+hWPzJFzOQQaeavWi7oqnVIhACH5BAkLAAAALAAAAAAQAAsAAAUyICCOZGme1rJY5kRRk7hI0mJSVUXJtF3iOl7tltsBZsNfUegjAY3I5sgFY55KqdX1GgIAIfkECQsAAAAsAAAAABAACwAABTcgII5kaZ4kcV2EqLJipmnZhWGXaOOitm2aXQ4g7P2Ct2ER4AMul00kj5g0Al8tADY2y6C+4FIIACH5BAkLAAAALAAAAAAQAAsAAAUvICCOZGme5ERRk6iy7qpyHCVStA3gNa/7txxwlwv2isSacYUc+l4tADQGQ1mvpBAAIfkECQsAAAAsAAAAABAACwAABS8gII5kaZ7kRFGTqLLuqnIcJVK0DeA1r/u3HHCXC/aKxJpxhRz6Xi0ANAZDWa+kEAA7AAAAAAAAAAAA);
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: .6;
+  filter: alpha(opacity=60);
+}
+#chartLoading {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    width: 100px;
+    height: 100px;
+    z-index: 3000;
+    background-color: #000;
+    background-image: url(data:image/gif;base64,R0lGODlhEAALAPQAAP///wAzZtrh6NDZ4uru8gY3aQAzZi5XgYKas2B/n7rH1SJOekpukoqhuGSCob7K1yZRfAQ2aE5xlObq79jf5/T2+Dhfh9zi6fL09rbE0qCyxcrU3u7x9AAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCwAAACwAAAAAEAALAAAFLSAgjmRpnqSgCuLKAq5AEIM4zDVw03ve27ifDgfkEYe04kDIDC5zrtYKRa2WQgAh+QQJCwAAACwAAAAAEAALAAAFJGBhGAVgnqhpHIeRvsDawqns0qeN5+y967tYLyicBYE7EYkYAgAh+QQJCwAAACwAAAAAEAALAAAFNiAgjothLOOIJAkiGgxjpGKiKMkbz7SN6zIawJcDwIK9W/HISxGBzdHTuBNOmcJVCyoUlk7CEAAh+QQJCwAAACwAAAAAEAALAAAFNSAgjqQIRRFUAo3jNGIkSdHqPI8Tz3V55zuaDacDyIQ+YrBH+hWPzJFzOQQaeavWi7oqnVIhACH5BAkLAAAALAAAAAAQAAsAAAUyICCOZGme1rJY5kRRk7hI0mJSVUXJtF3iOl7tltsBZsNfUegjAY3I5sgFY55KqdX1GgIAIfkECQsAAAAsAAAAABAACwAABTcgII5kaZ4kcV2EqLJipmnZhWGXaOOitm2aXQ4g7P2Ct2ER4AMul00kj5g0Al8tADY2y6C+4FIIACH5BAkLAAAALAAAAAAQAAsAAAUvICCOZGme5ERRk6iy7qpyHCVStA3gNa/7txxwlwv2isSacYUc+l4tADQGQ1mvpBAAIfkECQsAAAAsAAAAABAACwAABS8gII5kaZ7kRFGTqLLuqnIcJVK0DeA1r/u3HHCXC/aKxJpxhRz6Xi0ANAZDWa+kEAA7AAAAAAAAAAAA);
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: .6;
+    filter: alpha(opacity=60);
+}
+div.filterArea
+{
+  display: inline-block;
+  width: 230px;
+  height: 382px;
+  background-color: transparent;
+  position: relative;
+}
+div.dataArea
+{
+  display: inline-block;
+  vertical-align: top;
+  width: 100%;
+  padding: 0 0 18px 0;
+  background-color: #fff;
+  border-bottom-left-radius: 2px;
+  border-bottom-right-radius: 2px;
+  -webkit-border-bottom-left-radius: 2px;
+  -webkit-border-bottom-right-radius: 2px;
+  text-align: left;
+}
+div.dataAreaHeader
+{
+  background-color: #f1f1f1;
+  border: 1px solid #000;
+  width: 1023px;
+  height: 40px;
+  text-align: center;
+}
+th.dataAreaHeader
+{
+  border: 1px solid #000;
+  text-align: center;
+  font-size: 11px;
+  min-width: 70px;
+  background-color: #cccccc;
+}
+div.filterButtons
+{
+  margin-top: 5px;
+  /*
+  position: relative;
+  bottom: 5px;
+  margin-top: 15px;
+  margin-left: 10px;
+  */
+}
+.getActivitiesBtn {
+  margin: 5px 5px;
+  width: 205px;
+}
+.rowCountSelect {
+    margin: 5px 5px;
+    width: 70px;
+}
+.selectAssignToBtn {
+  margin: 0;
+  width: 218px;
+}
+div.filterButtonsAssigned
+{
+  margin-top: 5px;
+  /*
+  position: relative;
+  bottom: 5px;
+  margin-left: 10px;
+  */
+}
+.twisty
+{
+  position: relative;
+}
+.twisty-open
+{
+  cursor: hand;
+}
+.twisty-closed
+{
+  cursor: pointer;
+}
+div.filterListBlock
+{
+  min-width: 170px;
+  min-height: 30px;
+  height: auto;
+  max-height: 370px;
+  margin-top: 5px;
+  margin-left: 5px;
+  margin-right: 5px;
+  background-color: #f1f1f1;
+  border: 1px solid #999;
+  display: block;
+}
+div.filterListHeader
+{
+  display: block;
+  width: 216px;
+  /*min-width: 170px;*/
+  min-height: 30px;
+  background-color: #ddd;
+  margin-left: 0 !important;
+  padding-left: 2px !important;
+  border-bottom: 1px solid #999;
+}
+#filterListBox {
+
+}
+.filterControls {
+  float: right;
+  margin-top: 4px;
+  margin-right: 3px;
+}
+div.filterListItem
+{
+  font-size: 10pt;
+  color: #222;
+  text-shadow: none;
+  padding-top: 5px;
+  padding-left: 10px;
+  font-size: 8pt;
+}
+div.filterListSelectItem
+{
+
+}
+span.filterListAnchor
+{
+  display: inline-block;
+  font-size: 10pt;
+  font-weight: bold;
+  color: #D64D35;
+  text-shadow: none;
+  text-indent: 20px;
+  padding-top: 5px;
+}
+span.filterListAnchorLink
+{
+  display: inline-block;
+  font-size: 8pt;
+  text-shadow: none;
+  text-indent: 45px;
+  float:right;
+}
+div.hr
+{
+  width: 100%;
+  height: 3px;
+  background-color:#555;
+  overflow: hidden;
+}
+div.hide
+{
+  display:none;
+}
+div.show
+{
+  display:inline-block;
+}
+div.filterSelectedUnderwriterAssignee {
+    background-color: white;
+    height: 100px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 1px solid #d9d9d9;
+    width: 225px;
+}
+div.underwriterAssigneeLabel {
+    height: 20px;
+    display:block;
+    line-height:20px;
+    padding:0 2px;
+    background:#f1f1f1;
+    border:1px solid #d9d9d9;
+    font-size:8pt;
+    font-weight:bold;
+    color:#222222;
+}
+div.underwriterAssigneeItem {
+    width: 100%;
+    display:inline-block;
+    padding-left: 2px;
+}
+div.underwriterAssigneeName {
+    float:left;
+    display:inline-block;
+}
+div.underwriterAssigneeRemove {
+    float:right;
+    display:inline-block;
+}
+
+.popover-title{
+    display: none;
+}
+.popover{
+    background-color: #333;
+    color: white;
+    -webkit-box-shadow: 0 0 0;
+    box-shadow: 0 0 0;
+
+}
+.popover.bottom .arrow:after{
+    border-bottom-color: #333;
+}
+</style>
+
+<div id="controller" ng-controller="DashboardController" class="with-bg">
+
+    <!-- Stage - main content presentation area -->
+    <div class="gaig-loading" ng-show="pageLoaded == null">
+    </div>
+    <div  ng-show="showMainContent">
+        <div class="topArea">
+        <div id="dashboard-pulldown-control" class="ra-pulldown-control">
+            <div id="dashboard-pulldown-container" class="container">
+
+              <!-- FILTER CONTROL -->
+              <div id="filterLoading"></div>
+              <div class="filterArea">
+                <div id="myFilters" class="filterListBlock">
+                  <div id="myFiltersHeader" class="twisty twisty-open filterListHeader">
+                    <span class="filterListAnchor">Filters</span>
+                    <div class="filterControls btn-group" id="myFiltersControls">
+                      <a id ="newFilter" href="#" class="btn btn-mini" title="New Filter" ng-click="doToggleAddFilterModal($event)">
+                        <i class="icon icon-plus"></i>
+                      </a>
+                      <a id ="manageFilters" href="#" class="btn btn-mini" title="Manage Filters" ng-click="doToggleManageFilterModal($event)">
+                        <i class="icon icon-cog"></i>
+                      </a>
+                      <a id ="refreshFilters" href="#" class="btn btn-mini" title="Refresh Filters" ng-click="doRunFiltersForCount(undefined, undefined, undefined, $event)">
+                        <i class="icon icon-refresh"></i>
+                      </a>
+                    </div>
+                  </div>
+                  <div id="myFiltersCollapsible">
+                    <div id="myFilterButtons" class="filterButtons">
+                      <button id="runFilterButton" class="btn getActivitiesBtn" type="submit" ng-click="doRunMySelectedFiltersFromGUI()" ng-disabled="filtersAreRunning">Get Activities</button>
+                        <!--
+                        <select id="filterRowCount" class="rowCountSelect"
+                            gaig-select="{ 'allowClear': false }"
+                            ng-model="rowCount.filters">
+                          <option ng-repeat="rowCount in dashboardRowCountOptions" value="{{rowCount.value}}">{{rowCount.label}}</option>
+                      </select>
+                      -->
+                    </div>
+                  </div>
+                </div>
+
+                <div id="myAssignedTo" class="filterListBlock">
+                  <div id="myAssignedToHeader" class="twisty twisty-open filterListHeader" >
+                    <span class="filterListAnchor" ><b>People</b></span>
+                    <div class="btn-group filterControls" id="myAssignedToControls">
+                      <a href="#" class="btn btn-mini" title="Refresh Filters" ng-click="doRunFiltersForCount(undefined, undefined, undefined, $event)">
+                        <i class="icon icon-refresh"></i>
+                      </a>
+                    </div>
+                  </div>
+                  <div id="myAssignedToCollapsible">
+                    <div id="filterListBox">
+                      <select id="enterName_PeopleFilter" class="selectAssignToBtn"
+                              gaig-select="{ 'allowClear': true, 'maximumInputLength': 50 }"
+                              on-change="doAddAssignedTo()"
+                              data-placeholder="Enter name..."
+                              ng-model="assignedToPersonFromSelection">
+                        <option value=""></option>
+                        <option ng-repeat="person in assignToSelectList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                      </select>
+                    </div>
+                    <div id="myAssignedToButtons" class="filterButtonsAssigned">
+                      <div id="pendedButtons" class="pendedBtns">
+                        <span class="pendedLabel">Pended: </span>
+                        <div class="btn-group gaig-radio-buttons">
+                          <a id="excludeButton" class="btn btn-mini raRadio">Exclude</a>
+                          <a id="includeButton" class="btn btn-mini raRadio">Include</a>
+                          <a id="onlyButton" class="btn btn-mini raRadio">Only</a>
+                        </div>
+                      </div>
+                      <button id="runFilterButtonPeople" class="btn getActivitiesBtn" type="submit" ng-click="doRunMySelectedFiltersFromGUI()" >Get Activities</button>
+                      <!--
+                      <select id="peopleRowCount" class="rowCountSelect"
+                                gaig-select="{ 'allowClear': false }"
+                                ng-model="rowCount.assignedTo">
+                            <option ng-repeat="rowCount in dashboardRowCountOptions" value="{{rowCount.value}}">{{rowCount.label}}</option>
+                      </select>
+
+                      -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CHART CONTROL -->
+              <div class="chartArea">
+                <div class="chartAreaHeader">
+                  <span><b>View By</b></span>
+                  <gaig-radio-buttons id="viewByButton" options="chartViewTypeList" ng-model="chartViewSelection" onclick="doChangeChartView(event)">
+                  </gaig-radio-buttons>
+                </div>
+                <div >
+                  <div id="chartContainer"></div>
+                </div>
+
+              </div>
+           </div>
+            <a class="ra-pulldown-control-toggle" title="Toggle Chart" ng-click="doToggleChart()"></a>
+        </div>
+    </div>
+
+    <div class="dataArea">
+      <div>
+        <gaig-validation-panel ng-model="validationMessages"></gaig-validation-panel> <br />
+        <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+        <div error-catcher></div>
+      </div>
+      <br />
+      <div>
+        <table class="table gaig-table table-striped" id="dashboardItemsTable"></table>
+      </div>
+    </div>
+
+	<br />
+	<br />
+
+    <!-- ADD FILTER MODAL -->
+    <div id="addFilterModal">
+        <ra-modal modal-class="btn" modal-size="xxxlarge"
+                  display-title="Add Filter" ng-cloak
+                  toggle="isAddFilterOpen"
+                  func="doToggleAddFilterModal()"
+                  close-btn-label="Cancel"
+                  buttons="saveFilterModalButtons"
+                  cancel-function="doSaveFilterCancel()">
+
+	    	<div class="container-fluid">
+                <div class="row-fluid">
+        	    	<messages-modal validation="validationMessages"></messages-modal>
+	    	    	<messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+                    <div error-catcher></div>
+                	<div class="span12">
+                        <br>
+                        <label style="font-size:1.1em;margin-left:-10px;"><strong>Select Filter Criteria</strong></label>
+                    	<div class="row-fluid bottomPad16">
+                      		<div class="span2">
+                        		<div>
+                          			<label for="filterNameInput" class="required">Filter Name</label>
+                          			<input id="filterNameInput" type="text" class="input-medium" ng-model="directiveModels.editFilter.filterName"
+                          			maxlength="20"/>
+                        		</div>
+                            </div>
+                            <div class="span2andAHalf">
+                        		<div>
+	    	                        <label for="copyFromSelect">Copy From</label>
+                                    <select id="copyFromSelect" class="input-medium2"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doToggleCopyFromFilter()"
+                                        data-placeholder="Select a filter to copy..."
+                                        ng-model="directiveModels.filterToCopyFrom">
+                                        <option value=""></option>
+                                        <option ng-repeat="filter in filterList" value="{{filter}}">{{filter.filterName}}</option>
+                                    </select>
+	                        	</div>
+                      		</div>
+                      		<div class="span4 marginLeft-2 topMargin20">
+                        		<div>
+                          			<span>View By</span>
+                        			<gaig-radio-buttons options="chartViewTypeList" ng-model="directiveModels.editFilter.viewByOption">
+                        			</gaig-radio-buttons>
+                        		</div>
+                      		</div>
+                      		<div class="span4 marginLeft-2 topMargin20">
+                        		<div>
+                          			<span>Pended</span>
+                          			<gaig-radio-buttons options="pendedOptionList" ng-model="directiveModels.editFilter.pendedOption">
+                          			</gaig-radio-buttons>
+                        		</div>
+                      		</div>
+                    	</div>
+                  	</div>
+                    <div class="span12">
+                        <div class="row-fluid">
+                            <div class="span6andAHalf" style="padding: 0">
+                                <div style="display:inline-block">
+                                    <label>Effective</label>
+                                    <!--<gaig-datepicker ng-model="directiveModels.editFilter.effectiveDateFrom" on-select="doValidateNewEffectiveDateRange()"></gaig-datepicker>-->
+                                    <gaig-datepicker id="addEffectiveFrom" ng-model="directiveModels.editFilter.effectiveDateFrom"></gaig-datepicker>
+                                </div>
+                                <div style="display:inline-block; line-height:0; vertical-align:super">To</div>
+                                <div style="display:inline-block;margin-right:10px">
+                                    <!--<gaig-datepicker ng-model="directiveModels.editFilter.effectiveDateTo" on-select="doValidateNewEffectiveDateRange()"></gaig-datepicker>-->
+                                    <gaig-datepicker id="addEffectiveTo" ng-model="directiveModels.editFilter.effectiveDateTo"></gaig-datepicker>
+                                </div>
+                                <div style="display:inline-block">
+                                    <label>Need By</label>
+                                    <!--<gaig-datepicker ng-model="directiveModels.editFilter.needByDateFrom" on-select="doValidateNewNeedByDateRange()"></gaig-datepicker>-->
+                                    <gaig-datepicker id="addNeedByDateFrom" ng-model="directiveModels.editFilter.needByDateFrom"></gaig-datepicker>
+                                </div>
+                                <div style="display:inline-block; line-height:0; vertical-align:super">To</div>
+                                <div style="display:inline-block">
+                                    <!--<gaig-datepicker ng-model="directiveModels.editFilter.needByDateTo" on-select="doValidateNewNeedByDateRange()"></gaig-datepicker>-->
+                                    <gaig-datepicker id="addNeedByDateTo" ng-model="directiveModels.editFilter.needByDateTo"></gaig-datepicker>
+                                </div>
+                            </div>
+                            <div class="span3">
+                                <label>Default Sort Column</label>
+                                <select id="defaultSortColumn"
+                                        class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        data-placeholder="Select a column..."
+                                        ng-model="directiveModels.editFilter.defaultSortField">
+                                    <option value=""></option>
+                                    <option ng-repeat="column in sortOrderSelectList" value="{{column.name}}">{{column.label}}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Default Sort Order</label>
+                                <gaig-switch class="has-switch-extraLarge"
+                                             ng-model="directiveModels.editFilter.defaultSortOrder"
+                                             data-on-label="Ascending"
+                                             data-off-label="Descending"
+                                             ng-disabled="viewOnlyMode"
+                                             id="defaultSortOrder"
+                                             size="small">
+                                </gaig-switch>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+
+                <div class="row-fluid">
+                  <div class="span12">
+                    <div class="hr"></div>
+                  </div>
+                </div>
+
+                <div class="row-fluid">
+                    <div class="row-form">
+                        <!-- ASSIGN TO -->
+                        <div class="form-cell">
+                            <div class="padding5-bottom">
+                                <label>Assign To</label>
+                                <select id="new-filter-assigneeSelect" class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doAddAssigneeOption()"
+                                        ng-model="directiveModels.assignedToPersonFromSelection">
+                                    <option value=""></option>
+                                    <option ng-repeat="person in assigneeList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                </select>
+                            </div>
+
+
+                            <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                <div class="underwriterAssigneeLabel">Selected Assignees</div>
+                                <div ng-repeat="assignee in selectedAssigneeList">
+                                    <div class="underwriterAssigneeItem">
+                                        <div class="underwriterAssigneeName">{{assignee.lastName}},&nbsp;{{assignee.firstName}}</div>
+                                        <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveAssigneeOption(assignee.hid)" >X&nbsp;&nbsp;</button></div>
+                                    </div>
+                                </div>
+                            </div><br>
+                        </div>
+
+                        <!-- UNDERWRITER -->
+                        <div class="form-cell">
+                            <div class="padding5-bottom">
+                                <label>Underwriter</label>
+                                <select id="new-filter-underwriterSelect" class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doAddUnderwriterOption()"
+                                        ng-model="directiveModels.underwriterFromSelection">
+                                    <option value=""></option>
+                                    <option ng-repeat="person in underwriterSelectList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                </select>
+                            </div>
+                            <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                <div class="underwriterAssigneeLabel">Selected Underwriters</div>
+                                <div ng-repeat="underwriter in selectedUnderwriterList">
+                                    <div class="underwriterAssigneeItem">
+                                        <div class="underwriterAssigneeName">{{underwriter.lastName}},&nbsp;{{underwriter.firstName}}</div>
+                                        <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveUnderwriterOption(underwriter.hid)" >X&nbsp;&nbsp;</button></div>
+                                    </div>
+                                </div>
+                            </div><br>
+                        </div>
+
+                        <!-- RENEWAL UNDERWRITER -->
+                        <div class="form-cell" ng-hide="hiddenFields.renewalUnderwriter">
+                            <div class="padding5-bottom">
+                                <label>Renewal Underwriter</label>
+                                <select id="new-filter-renewal-underwriterSelect" class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doAddRenewalUnderwriterOption()"
+                                        ng-model="directiveModels.renewalUnderwriterFromSelection">
+                                    <option value=""></option>
+                                    <option ng-repeat="person in renewalUnderwriterSelectList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                </select>
+                            </div>
+                            <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                <div class="underwriterAssigneeLabel">Selected Renewal Underwriters</div>
+                                <div ng-repeat="renewalUnderwriter in selectedRenewalUnderwriterList">
+                                    <div class="underwriterAssigneeItem">
+                                        <div class="underwriterAssigneeName">{{renewalUnderwriter.lastName}},&nbsp;{{renewalUnderwriter.firstName}}</div>
+                                        <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveRenewalUnderwriterOption(renewalUnderwriter.hid)" >X&nbsp;&nbsp;</button></div>
+                                    </div>
+                                </div>
+                            </div><br>
+                        </div>
+
+                        <!-- CSR -->
+                        <div class="form-cell" ng-hide="hiddenFields.csr">
+                            <div class="padding5-bottom">
+                                <label for="new-filter-csrSelect">CSR</label>
+                                <select id="new-filter-csrSelect" class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doAddCSROption()"
+                                        ng-model="directiveModels.csrFromSelection">
+                                    <option value=""></option>
+                                    <option ng-repeat="person in csrList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                </select>
+                            </div>
+                            <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                <div class="underwriterAssigneeLabel">Selected CSR</div>
+                                <div ng-repeat="csr in selectedCSRList">
+                                    <div class="underwriterAssigneeItem">
+                                        <div class="underwriterAssigneeName">{{csr.lastName}},&nbsp;{{csr.firstName}}</div>
+                                        <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveCSROption(csr.hid)" >X&nbsp;&nbsp;</button></div>
+                                    </div>
+                                </div>
+                            </div><br>
+                        </div>
+
+
+                        <!-- MARKETING -->
+                        <div class="form-cell" ng-hide="hiddenFields.businessDeveloper">
+                            <div class="padding5-bottom">
+                                <label for="new-filter-assigneeSelect">Marketing</label>
+                                <select id="new-filter-marketingSelect" class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doAddMarketingOption()"
+                                        ng-model="directiveModels.marketingFromSelection">
+                                    <option value=""></option>
+                                    <option ng-repeat="person in businessDeveloperList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                </select>
+                            </div>
+                            <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                <div class="underwriterAssigneeLabel">Selected Marketing</div>
+                                <div ng-repeat="marketing in selectedMarketingList">
+                                    <div class="underwriterAssigneeItem">
+                                        <div class="underwriterAssigneeName">{{marketing.lastName}},&nbsp;{{marketing.firstName}}</div>
+                                        <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveMarketingOption(marketing.hid)" >X&nbsp;&nbsp;</button></div>
+                                    </div>
+                                </div>
+                            </div><br>
+                        </div>
+
+                        <!-- DELEGATE -->
+                        <div class="form-cell" ng-hide="hiddenFields.delegate">
+                            <div class="padding5-bottom">
+                                <label>Delegate/UA</label>
+                                <select id="new-filter-delegateSelect" class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doAddDelegateOption()"
+                                        ng-model="directiveModels.delegateFromSelection">
+                                    <option value=""></option>
+                                    <option ng-repeat="person in delegateList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                    <div class="underwriterAssigneeLabel">Selected Delegate/UA</div>
+                                    <div ng-repeat="delegate in selectedDelegateList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{delegate.lastName}},&nbsp;{{delegate.firstName}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveDelegateOption(delegate.hid)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div><br>
+                            </div>
+                        </div>
+
+                        <!-- LOSS PREVENTION -->
+                        <div class="form-cell" ng-hide="hiddenFields.lossPrevention">
+                            <div class="padding5-bottom">
+                                <label for="new-filter-lossPreventionSelect">Loss Prevention</label>
+                                <select id="new-filter-lossPreventionSelect" class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doAddLossPreventionOption()"
+                                        ng-model="directiveModels.lossPreventionFromSelection">
+                                    <option value=""></option>
+                                    <option ng-repeat="person in lossPreventionList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                </select>
+                            </div>
+                            <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                <div class="underwriterAssigneeLabel">Selected Loss Prevention</div>
+                                <div ng-repeat="lossPrevention in selectedLossPreventionList">
+                                    <div class="underwriterAssigneeItem">
+                                        <div class="underwriterAssigneeName">{{lossPrevention.lastName}},&nbsp;{{lossPrevention.firstName}}</div>
+                                        <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveLossPreventionOption(lossPrevention.hid)" >X&nbsp;&nbsp;</button></div>
+                                    </div>
+                                </div>
+                            </div><br>
+                        </div>
+
+                        <!-- ACCOUNT MANAGER -->
+                        <div class="form-cell" ng-hide="hiddenFields.accountManager">
+                            <div class="padding5-bottom">
+                                <label>Account Manager</label>
+                                <select id="new-filter-accountManagerSelect" class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doAddAccountManagerOption()"
+                                        ng-model="directiveModels.accountManagerFromSelection">
+                                    <option value=""></option>
+                                    <option ng-repeat="person in accountManagerList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                    <div class="underwriterAssigneeLabel">Selected Account Manager</div>
+                                    <div ng-repeat="accountManager in selectedAccountManagerList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{accountManager.lastName}},&nbsp;{{accountManager.firstName}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveAccountManagerOption(accountManager.hid)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div><br>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="hr"></div>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="row-form">
+                            <!-- PRODUCER SEARCH -->
+                            <div class="form-cell">
+                                    <label for="businessUnitAddFilterProducerLookup">Business Unit</label>
+                                    <select id="businessUnitAddFilterProducerLookup" class="input-medium"
+                                            gaig-select="{'allowClear':false}"
+                                            ng-model="producerLookUpBuForFilter.value" >
+                                        <option value=""></option>
+                                        <option ng-repeat="item in businessUnitListForProducerLookUp" value="{{item.value}}">{{item.label}}</option>
+                                    </select>
+                                <div class="padding5-bottom">
+                                    <label>Producer Search</label>
+                                    <input id="add-filter-producerSearch" type="text" class="input-large" ng-model="producerSearchValue.value" placeholder="Enter name or producer code...."  maxlength="30"/>
+                                    <button id="addFilterProducerSearchButton" type="submit" class="btn btn-small" ng-click="findProducers()" title="Appointed producers only" ><i class="icon-search"></i></button>
+                                </div>
+                                <div class="gaig-shuttle-boxes" >
+                                    <div class="gaig-shuttle-boxes-left-container" >
+                                        <span class="gaig-shuttle-boxes-label">Available Producers</span>
+                                        <select id="new-filter-availableProducerOptions" style="width:100%;min-width:225px;" multiple="multiple"
+                                           class="gaig-shuttle-boxes-left">
+                                        </select>
+                                        <a href="javascript:void(0)" ng-click="doMoveAllProducersRight()" ng-show="!ngDisabled">Select All</a>
+                                    </div>
+                                    <div class="gaig-shuttle-boxes-btns">
+                                        <button id="addFilterAvailableProducersToSelectedProducers" class="btn gaig-shuttle-boxes-btn" type="button" ng-click="doMoveSelectedProducersRight()">
+                                            <i class="icon icon-arrow-right"></i></button>
+                                        <button id="addFilterSelectedProducersToAvailableProducers" class="btn gaig-shuttle-boxes-btn" type="button" ng-click="doMoveSelectedProducersLeft()">
+                                            <i class="icon icon-arrow-left"></i></button>
+                                    </div>
+                                    <div class="gaig-shuttle-boxes-right-container">
+                                        <span class="gaig-shuttle-boxes-label">Selected Producers</span>
+                                        <select id="new-filter-selectedProducerOptions" style="width:100%;min-width:225px;" multiple="multiple"
+                                               class="gaig-shuttle-boxes-right">
+                                        </select>
+                                        <a href="javascript:void(0)" ng-click="doMoveAllProducersLeft()" ng-show="!ngDisabled">Clear All</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="row-form">
+                            <div class="form-cell">
+                                <label>Profit Center</label>
+                                <select id="profitCenterAdd" size="5" class="select-profitCenter" multiple
+                                        ng-model="directiveModels.editFilter.profitCenterList"
+                                        ng-change="updateTerritoryList()"
+                                        ng-disabled="viewOnlyMode">
+                                    <option ng-repeat="profitCenter in profitCenterList" value="{{profitCenter}}">{{profitCenter}}</option>
+                                </select>
+                            </div>
+                            <div class="form-cell">
+                                <label>Territory</label>
+                                <select id="territoryAdd" size="5" class="select-territory"  multiple
+                                        ng-model="directiveModels.editFilter.territoryList"
+                                        ng-change="updateFieldList()">
+                                    <option ng-repeat="territory in territoryList" value="{{territory}}">{{territory}}</option>
+                                </select>
+                            </div>
+                            <div class="form-cell">
+                                <label>Field</label>
+                                <select id="fieldAdd" size="5" class="select-field"  multiple
+                                        ng-model="directiveModels.editFilter.fieldList">
+                                    <option ng-repeat="field in fieldList" value="{{field}}">{{field}}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="hr"></div>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="row-form">
+                            <div class="form-cell">
+                                <div>
+                                    <label>Policy Symbol</label>
+                                    <select id="new-filter-policySymbolSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddPolicySymbolOption()"
+                                            ng-model="directiveModels.policySymbolFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="policySymbol in policySymbolSelectList" value="{{policySymbol}}">{{policySymbol}}</option>
+                                    </select>
+                                </div>
+
+                                <div class="filterSelectedUnderwriterAssignee">
+                                    <div class="underwriterAssigneeLabel">Selected Policy Symbols</div>
+                                    <div ng-repeat="policySymbol in selectedPolicySymbolList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{policySymbol}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemovePolicySymbolOption(policySymbol)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-cell">
+                                <div>
+                                    <label>State</label>
+                                    <select id="new-filter-stateSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddStateOption()"
+                                            ng-model="directiveModels.stateFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="state in stateSelectList" value="{{state}}">{{state.itemDescriptionShort}}</option>
+                                    </select>
+                                </div>
+
+                                <div class="filterSelectedUnderwriterAssignee">
+                                    <div class="underwriterAssigneeLabel">Selected States</div>
+                                    <div ng-repeat="state in selectedStateList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{state.itemDescriptionShort}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveStateOption(state.itemCode)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-cell">
+                                <div>
+                                    <label>Assignment Reason</label>
+                                    <select id="new-filter-assignmentReasonSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddAssignmentReasonOption()"
+                                            ng-model="directiveModels.assignmentReasonFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="assignmentReason in assignmentReasonList" value="{{assignmentReason}}">{{assignmentReason.itemDescriptionShort}}</option>
+                                    </select>
+                                </div>
+                                <div class="filterSelectedUnderwriterAssignee">
+                                    <div class="underwriterAssigneeLabel">Selected Assignment Reasons</div>
+                                    <div ng-repeat="assignmentReason in selectedAssignmentReasonList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{assignmentReason.itemDescriptionShort}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveAssignmentReasonOption(assignmentReason.itemCode)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Region -->
+                            <div class="form-cell" ng-hide="hiddenFields.servicingRegion">
+                                <div>
+                                    <label>Region</label>
+                                    <select id="new-filter-regionSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddRegionOption()"
+                                            ng-model="directiveModels.regionFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="region in regionList" value="{{region}}">{{region.label}}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <div class="filterSelectedUnderwriterAssignee">
+                                        <div class="underwriterAssigneeLabel">Selected Regions</div>
+                                        <div ng-repeat="region in selectedRegionList">
+                                            <div class="underwriterAssigneeItem">
+                                                <div class="underwriterAssigneeName">{{region.label}}</div>
+                                                <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveRegionOption(region.value)" >X&nbsp;&nbsp;</button></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </ra-modal>
+	</div>
+
+
+    <!-- MANAGE FILTER MODAL -->
+        <ra-modal modal-class="btn" modal-size="xxxlarge"
+                  display-title="Manage Filter" ng-cloak
+                  toggle="isManageFilterOpen"
+                  func="doToggleManageFilterModal()"
+                  close-btn-label="Cancel"
+                  buttons="saveManageModalButtons"
+                  cancel-function="doManageFilterCancel()">
+
+
+	    	<div class="container-fluid">
+          	    <div class="row-fluid">
+	    		    <messages-modal validation="validationMessages"></messages-modal>
+	    		    <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+                    <div error-catcher></div>
+          		    <div class="span12">
+                        <br>
+                        <label style="font-size:1.1em;margin-left:-10px;"><strong>Change the name or other details to modify an existing filter.</strong></label>
+            	    	<div class="row-fluid bottomPad16">
+              	    		<div class="span2">
+                    			<div>
+                      				<label>Filter</label>
+                                    <select id="manageFilterSelect" class="input-medium"
+                                       data-placeholder="Select a filter..."
+                                       ng-change="doSetEditFilter()"
+                                       ng-options="filter as filter.filterName for filter in filterList"
+                                       ng-model="directiveModels.editFilter"  >
+                                    </select>
+                                </div>
+              	    		</div>
+                            <div class="span2andAHalf">
+                                <div>
+                                    <label for="filterNameInput" class="required">Filter Name</label>
+                                    <input id="filterNameInput1" type="text" class="input-medium" ng-model="directiveModels.editFilter.newFilterName"
+                                           maxlength="20"/>
+                                    <input id="orginalFilterNameInput" type="hidden" class="input-medium" ng-model="originalFilterName" maxlength="20"/>
+                                </div>
+                            </div>
+              	    		<div class="span4 marginLeft-2 topMargin20">
+                    			<div>
+                      				<span>View By</span>
+                      				<gaig-radio-buttons options="chartViewTypeList" ng-model="directiveModels.editFilter.viewByOption">
+                      				</gaig-radio-buttons>
+                    			</div>
+              	    		</div>
+              	    		<div class="span4 marginLeft-2 topMargin20">
+                    			<div>
+                      				<span>Pended</span>
+                      				<gaig-radio-buttons options="pendedOptionList" ng-model="directiveModels.editFilter.pendedOption">
+                      				</gaig-radio-buttons>
+                    			</div>
+              	    		</div>
+            	    	</div>
+          		    </div>
+                    <div class="span12">
+                        <div class="row-fluid">
+                            <div class="span6andAHalf" style="padding: 0">
+                                <div style="display:inline-block">
+                                    <label>Effective</label>
+                                    <gaig-datepicker id="manageEffectiveFrom" ng-model="directiveModels.editFilter.effectiveDateFrom" on-select="doValidateManageEffectiveDateRange()"></gaig-datepicker>
+                                </div>
+                                <div style="display:inline-block; line-height:0; vertical-align:super">To</div>
+                                <div style="display:inline-block;margin-right:10px">
+                                    <gaig-datepicker id="manageEffectiveTo" ng-model="directiveModels.editFilter.effectiveDateTo" on-select="doValidateManageEffectiveDateRange()"></gaig-datepicker>
+                                </div>
+                                <div style="display:inline-block">
+                                    <label>Need By</label>
+                                    <gaig-datepicker id="manageNeedByFrom" ng-model="directiveModels.editFilter.needByDateFrom" on-select="doValidateManageNeedByDateRange()"></gaig-datepicker>
+                                </div>
+                                <div style="display:inline-block; line-height:0; vertical-align:super">To</div>
+                                <div style="display:inline-block">
+                                    <gaig-datepicker id="manageNeedByTo" ng-model="directiveModels.editFilter.needByDateTo" on-select="doValidateManageNeedByDateRange()"></gaig-datepicker>
+                                </div>
+                            </div>
+                            <div class="span3">
+                                <label>Default Sort Column</label>
+                                <select class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        data-placeholder="Select a column..."
+                                        ng-model="directiveModels.editFilter.defaultSortField">
+                                    <option value=""></option>
+                                    <option ng-repeat="column in sortOrderSelectList" value="{{column.name}}">{{column.label}}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Default Sort Order</label>
+                                <gaig-switch id="defaultSortOrder_Manage"
+                                             class="has-switch-extraLarge"
+                                             ng-model="directiveModels.editFilter.defaultSortOrder"
+                                             data-on-label="Ascending"
+                                             data-off-label="Descending"
+                                             ng-disabled="viewOnlyMode"
+                                             size="small">
+                                </gaig-switch>
+                            </div>
+                        </div>
+                    </div>
+        	    </div>
+                <br>
+        	    <div class="row-fluid">
+          	    	<div class="span12">
+                		<div class="hr"></div>
+          	    	</div>
+        	    </div>
+
+        	    <div class="row-fluid">
+                    <div class="span12">
+                		<div class="row-form">
+                  			<!-- ASSIGN TO -->
+                  			<div class="form-cell" ng-hide="directiveModels.editFilter.filterName=='My Inbox'">
+                    			<div class="padding5-bottom">
+                      				<label for="new-filter-assigneeSelect">Assign To</label>
+                                    <select id="edit-filter-assigneeSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddAssigneeOption()"
+                                            ng-model="directiveModels.assignedToPersonFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="person in assigneeList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                    </select>
+                    			</div>
+                                <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                	<div class="underwriterAssigneeLabel">Selected Assignees</div>
+                                    <div ng-repeat="assignee in selectedAssigneeList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{assignee.lastName}},&nbsp;{{assignee.firstName}}</div>
+                                            <div class="underwriterAssigneeRemove"><button id="underwriterAssigneeRemoveX" type="button" class="redClose" ng-click="doRemoveAssigneeOption(assignee.hid)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                  			</div>
+
+                  			<!-- UNDERWRITER -->
+                  			<div class="form-cell"  ng-class="{true:'marginLeft0', false: ''}[directiveModels.editFilter.filterName=='My Inbox']">
+                    			<div class="padding5-bottom">
+                      				<label>Underwriter</label>
+                                    <select id="edit-filter-underwriterSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddUnderwriterOption()"
+                                            ng-model="directiveModels.underwriterFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="person in underwriterSelectList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                    </select>
+                    			</div>
+                    			<div>
+                                    <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                        <div class="underwriterAssigneeLabel">Selected Underwriters</div>
+                                        <div ng-repeat="underwriter in selectedUnderwriterList">
+                                            <div class="underwriterAssigneeItem">
+                                                <div class="underwriterAssigneeName">{{underwriter.lastName}},&nbsp;{{underwriter.firstName}}</div>
+                                                <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveUnderwriterOption(underwriter.hid)" >X&nbsp;&nbsp;</button></div>
+                                            </div>
+                                        </div>
+                                    </div>
+	    	    				</div>
+                  			</div>
+
+                            <!-- RENEWAL UNDERWRITER -->
+                            <div class="form-cell" ng-hide="hiddenFields.renewalUnderwriter">
+                                <div class="padding5-bottom">
+                                    <label>Renewal Underwriter</label>
+                                    <select id="edit-filter-renewal-underwriterSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddRenewalUnderwriterOption()"
+                                            ng-model="directiveModels.renewalUnderwriterFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="person in renewalUnderwriterSelectList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                    </select>
+                                </div>
+                                <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                    <div class="underwriterAssigneeLabel">Selected Renewal Underwriters</div>
+                                    <div ng-repeat="renewalUnderwriter in selectedRenewalUnderwriterList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{renewalUnderwriter.lastName}},&nbsp;{{renewalUnderwriter.firstName}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveRenewalUnderwriterOption(renewalUnderwriter.hid)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CSR -->
+                            <div class="form-cell" ng-hide="hiddenFields.csr">
+                                <div class="padding5-bottom">
+                                    <label for="new-filter-assigneeSelect">CSR</label>
+                                    <select id="edit-filter-csrSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddCSROption()"
+                                            ng-model="directiveModels.csrFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="person in csrList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                    </select>
+                                </div>
+                                <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                    <div class="underwriterAssigneeLabel">Selected CSR</div>
+                                    <div ng-repeat="csr in selectedCSRList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{csr.lastName}},&nbsp;{{csr.firstName}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveCSROption(csr.hid)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div><br>
+                            </div>
+
+                            <!-- MARKETING -->
+                            <div class="form-cell"  ng-hide="hiddenFields.businessDeveloper">
+                                <div class="padding5-bottom">
+                                    <label for="edit-filter-assigneeSelect">Marketing</label>
+                                    <select id="edit-filter-marketingSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddMarketingOption()"
+                                            ng-model="directiveModels.marketingFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="person in businessDeveloperList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                    </select>
+                                </div>
+                                <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                    <div class="underwriterAssigneeLabel">Selected Marketing</div>
+                                    <div ng-repeat="marketing in selectedMarketingList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{marketing.lastName}},&nbsp;{{marketing.firstName}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveMarketingOption(marketing.hid)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div><br>
+                            </div>
+
+                            <!-- DELEGATE -->
+                            <div class="form-cell"  ng-hide="hiddenFields.delegate">
+                                <div class="padding5-bottom">
+                                    <label>Delegate/UA</label>
+                                    <select id="edit-filter-delegateSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddDelegateOption()"
+                                            ng-model="directiveModels.delegateFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="person in delegateList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                        <div class="underwriterAssigneeLabel">Selected Delegate/UA</div>
+                                        <div ng-repeat="delegate in selectedDelegateList">
+                                            <div class="underwriterAssigneeItem">
+                                                <div class="underwriterAssigneeName">{{delegate.lastName}},&nbsp;{{delegate.firstName}}</div>
+                                                <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveDelegateOption(delegate.hid)" >X&nbsp;&nbsp;</button></div>
+                                            </div>
+                                        </div>
+                                    </div><br>
+                                </div>
+                            </div>
+
+                            <!-- LOSS PREVENTION -->
+                            <div class="form-cell" ng-hide="hiddenFields.lossPrevention" >
+                                <div class="padding5-bottom">
+                                    <label for="edit-filter-lossPreventionSelect">Loss Prevention</label>
+                                    <select id="edit-filter-lossPreventionSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddLossPreventionOption()"
+                                            ng-model="directiveModels.lossPreventionFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="person in lossPreventionList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                    </select>
+                                </div>
+                                <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                    <div class="underwriterAssigneeLabel">Selected Loss Prevention</div>
+                                    <div ng-repeat="lossPrevention in selectedLossPreventionList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{lossPrevention.lastName}},&nbsp;{{lossPrevention.firstName}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveLossPreventionOption(lossPrevention.hid)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div><br>
+                            </div>
+
+                            <!-- ACCOUNT MANAGER -->
+                            <div class="form-cell" ng-hide="hiddenFields.accountManager">
+                                <div class="padding5-bottom">
+                                    <label>Account Manager</label>
+                                    <select id="edit-filter-accountManagerSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddAccountManagerOption()"
+                                            ng-model="directiveModels.accountManagerFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="person in accountManagerList" value="{{person}}">{{person.lastName}}, {{person.firstName}}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                        <div class="underwriterAssigneeLabel">Selected Account Manager</div>
+                                        <div ng-repeat="accountManager in selectedAccountManagerList">
+                                            <div class="underwriterAssigneeItem">
+                                                <div class="underwriterAssigneeName">{{accountManager.lastName}},&nbsp;{{accountManager.firstName}}</div>
+                                                <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveAccountManagerOption(accountManager.hid)" >X&nbsp;&nbsp;</button></div>
+                                            </div>
+                                        </div>
+                                    </div><br>
+                                </div>
+                            </div>
+                		</div>
+                    </div>
+        	    </div>
+
+        	    <div class="row-fluid">
+          	    	<div class="span12">
+                		<div class="hr"></div>
+          	    	</div>
+        	    </div>
+
+        	    <div class="row-fluid">
+          	    	<div class="span12">
+                		<div class="row-form">
+                            <!-- PRODUCER SEARCH -->
+                            <div class="form-cell">
+                                <label for="businessUnitManageFilterProducerLookup">Business Unit</label>
+                                <select id="businessUnitManageFilterProducerLookup" class="input-medium"
+                                        gaig-select="{'allowClear':false}"
+                                        ng-model="producerLookUpBuForFilter.value" >
+                                    <option value=""></option>
+                                    <option ng-repeat="item in businessUnitListForProducerLookUp" value="{{item.value}}">{{item.label}}</option>
+                                </select>
+                                <div class="padding5-bottom">
+                                    <label>Producer Search</label>
+                                    <input id="edit-filter-producerSearch" type="text" class="input-large" ng-model="producerSearchValue.value" placeholder="Enter name or producer code...." />
+                                    <button id="manageFilterProducerSearchButton" type="submit" class="btn btn-small" ng-click="findProducers()" title="Appointed producers only"><i class="icon-search"></i></button>
+                                </div>
+                                <div class="gaig-shuttle-boxes">
+                                    <div class="gaig-shuttle-boxes-left-container">
+                                        <span class="gaig-shuttle-boxes-label">Available Producers</span>
+                                        <select id="edit-filter-availableProducerOptions" style="width:100%;min-width:225px;" multiple="multiple" class="gaig-shuttle-boxes-left"></select>
+                                        <a href="javascript:void(0)" ng-click="doMoveAllProducersRight()" ng-show="!ngDisabled">Select All</a>
+                                    </div>
+                                    <div class="gaig-shuttle-boxes-btns">
+                                        <button id="manageFilterAvailableProducersToSelectedProducers" class="btn gaig-shuttle-boxes-btn" type="button" ng-click="doMoveSelectedProducersRight()">
+                                            <i class="icon icon-arrow-right"></i></button>
+                                        <button id="manageFilterSelectedProducersToAvailableProducers" class="btn gaig-shuttle-boxes-btn" type="button" ng-click="doMoveSelectedProducersLeft()">
+                                            <i class="icon icon-arrow-left"></i></button>
+                                    </div>
+                                    <div class="gaig-shuttle-boxes-right-container">
+                                        <span class="gaig-shuttle-boxes-label">Selected Producers</span>
+                                        <select id="edit-filter-selectedProducerOptions" style="width:100%;min-width:225px;" multiple="multiple" class="gaig-shuttle-boxes-right"></select>
+                                        <a href="javascript:void(0)" ng-click="doMoveAllProducersLeft()" ng-show="!ngDisabled">Clear All</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="row-form">
+                            <div class="form-cell">
+                                <label>Profit Center </label>
+                                <select id="profitCenterManage" multiple size="5" class="select-profitCenter"
+                                        ng-model="directiveModels.editFilter.profitCenterList"
+                                        ng-change="onManageProfitCenterListChange()"
+                                        ng-disabled="viewOnlyMode">
+                                    <option ng-repeat="profitCenter in profitCenterList" value="{{profitCenter}}">{{profitCenter}}</option>
+                                </select>
+                            </div>
+                            <div class="form-cell">
+                                <label>Territory</label>
+                                <select id="territoryManage" multiple size="5" class="select-territory"
+                                        ng-model="directiveModels.editFilter.territoryList"
+                                        ng-change="onTerritoryListChange()"
+                                        ng-options="territory as territory for territory in territoryList">
+                                </select>
+                            </div>
+                            <div class="form-cell">
+                                <label>Field</label>
+                                <select id="fieldManage" multiple size="5" class="select-field"
+                                        ng-model="directiveModels.editFilter.fieldList"
+                                        ng-options="field as field for field in fieldList" >
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="hr"></div>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span12">
+                        <div class="row-form">
+                            <div class="form-cell">
+                                <div>
+                                    <label>Policy Symbol</label>
+                                    <select id="edit-filter-policySymbol" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddPolicySymbolOption()"
+                                            ng-model="directiveModels.policySymbolFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="policySymbol in policySymbolSelectList" value="{{policySymbol}}">{{policySymbol}}</option>
+                                    </select>
+                                </div>
+                                <div class="filterSelectedUnderwriterAssignee">
+                                    <div class="underwriterAssigneeLabel">Selected Policy Symbols</div>
+                                    <div ng-repeat="policySymbol in selectedPolicySymbolList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{policySymbol }}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemovePolicySymbolOption(policySymbol)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-cell">
+                                <div>
+                                    <label>State</label>
+                                    <select id="edit-filter-stateSelect" class="input-large"
+                                        gaig-select="{ 'allowClear': true }"
+                                        on-change="doAddStateOption()"
+                                        ng-model="directiveModels.stateFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="state in stateSelectList" value="{{state}}">{{state.itemDescriptionShort}}</option>
+                                    </select>
+                                </div>
+                                <div class="filterSelectedUnderwriterAssignee">
+                                    <div class="underwriterAssigneeLabel">Selected States</div>
+                                    <div ng-repeat="state in selectedStateList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{state.itemDescriptionShort }}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveStateOption(state.itemCode)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-cell">
+                                <div>
+                                    <label>Assignment Reason</label>
+                                    <select id="manage-filter-assignmentReasonSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddAssignmentReasonOption()"
+                                            ng-model="directiveModels.assignmentReasonFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="assignmentReason in assignmentReasonList" value="{{assignmentReason}}">{{assignmentReason.itemDescriptionShort}}</option>
+                                    </select>
+                                </div>
+                                <div class="filterSelectedUnderwriterAssignee">
+                                    <div class="underwriterAssigneeLabel">Selected Assignment Reasons</div>
+                                    <div ng-repeat="assignmentReason in selectedAssignmentReasonList">
+                                        <div class="underwriterAssigneeItem">
+                                            <div class="underwriterAssigneeName">{{assignmentReason.itemDescriptionShort}}</div>
+                                            <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveAssignmentReasonOption(assignmentReason.itemCode)" >X&nbsp;&nbsp;</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Region -->
+                            <div class="form-cell" ng-hide="hiddenFields.servicingRegion">
+                                <div>
+                                    <label>Region</label>
+                                    <select id="edit-filter-regionSelect" class="input-large"
+                                            gaig-select="{ 'allowClear': true }"
+                                            on-change="doAddRegionOption()"
+                                            ng-model="directiveModels.regionFromSelection">
+                                        <option value=""></option>
+                                        <option ng-repeat="region in regionList" value="{{region}}">{{region.label}}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <div class="filterSelectedUnderwriterAssignee padding5-bottom">
+                                        <div class="underwriterAssigneeLabel">Selected Regions</div>
+                                        <div ng-repeat="region in selectedRegionList">
+                                            <div class="underwriterAssigneeItem">
+                                                <div class="underwriterAssigneeName">{{region.label}}</div>
+                                                <div class="underwriterAssigneeRemove"><button type="button" class="redClose" ng-click="doRemoveRegionOption(region.value)" >X&nbsp;&nbsp;</button></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </ra-modal>
+
+        <!-- TRANSACTION STATUS MODAL -->
+        <div id="setStatusModal" status-modal submissions="table"
+             on-close="setTrnStatusReturn"
+             is-open="isTRNStatusOpen"
+             disposition-status-list="dispositionStatusList"
+             view-only-mode="viewOnlyMode"
+             disposition="disposition"
+             is-admin="adminAuth"
+             error-messages="errorMessages"
+             success-messages="successMessages"
+             validation-messages="validationMessages"
+             info-messages="infoMessages"
+        >
+
+        </div>
+	</div>
+
+    <!-- CHANGE DETAILS MODAL -->
+    <div id="changeActivityModal">
+    <gaig-modal
+            modal-id="dashboardChangeDetails"
+            title="Change Activity Details"
+            ng-model="isActivityDetailsOpen"
+            modal-css="gaig-modal-full"
+            on-cancel="doChangeDetailsCancel"
+            on-save="saveActivityDetails"
+            save-button-id="detailSave"
+            cancel-button-id="detailCancel"
+            close-button-id="detailClose"
+            close-btn-label="Cancel"
+            footer-buttons="detailsButtons"
+            dynatrace="true"
+            save-button-dt-name="changeDetailsSaveDashboard"
+            cancel-button-dt-name="changeDetailsCancelDashboard"
+    >
+
+    <div class="container-fixed">
+    <div class="row-form">
+        <div class="row-fluid">
+            <messages-modal validation="validationMessages"></messages-modal>
+            <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+            <div error-catcher></div>
+            The changes you make below will affect the activities in this table. Fields left blank will not change data in the selected activities.
+            <table class="table gaig-table table-striped">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Policy</th>
+                        <th>Policy Term</th>
+                        <th>Activity Category</th>
+                        <th>Explanation</th>
+                        <th>TRN Effective Date</th>
+                        <th>TRN Status</th>
+                        <th>TRN Premium</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="rows in table">
+                    <td><img ng-src="{{rows.valid}}" ng-cloak/></td>
+                    <td>{{rows.policy}}</td>
+                    <td>{{rows.polTrnEffDt}} - {{rows.trnExpirationDate}}</td>
+                    <td>{{rows.type}}</td>
+					<td><div class="singleLineEllipsis" title="{{rows.reason}}">{{rows.reason}}</div></td>
+                    <td>{{rows.date}}</td>
+                    <td>{{rows.status}}</td>
+                    <td>{{rows.premium}}</td>
+                    <td class="centerColumn"><button type="button" class="redClose" ng-click="removeRow($index, doToggleActivityDetailsModal, 'dashboardItemsTable');checkActivityTypes();">X</button></td>
+                <tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row-form">
+        <div class="row-fluid">
+            <div class="spanDetailsCol1">
+                <label for="assignTo">Assign To</label>
+                <select id="assignTo" class="input-large"
+                        ng-model="activityDetails.assignToHid"
+                        gaig-select="{'allowClear':true}"
+                        ng-disabled="viewOnlyMode || disableUpdate">
+                    <option value=""></option>
+                    <option ng-repeat="person in assignToList" value="{{person.hid}}">{{person.lastName}},  {{person.firstName}}</option>
+                </select>
+            </div>
+            <div class="spanDetailsCol2">
+                <label for="assignmentReason">Assignment Reason</label>
+                <div ng-hide="isSingleInActivityDetails">
+                    <label class="clearCheckbox" >
+                        <input type="checkbox" ng-model="clearFields.assignmentReason"> Clear
+                    </label>
+                </div>
+                <select id="assignmentReason" class="input-large"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.assignmentReasonCode"
+                        ng-disabled="viewOnlyMode || disableUpdate || clearFields.assignmentReason">
+                    <option value=""></option>
+                    <option ng-repeat="item in assignmentReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+            <div class="spanDetailsCol3">
+                <label for="referralStatus">Referral Status</label>
+
+                <select id="referralStatus" class="input-medium"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.referralStatusRefCode"
+                        ng-disabled="viewOnlyMode || activityDetails.assignmentReasonCode != 'REFERRAL' || disableUpdate">
+                    <option value=""></option>
+                    <option ng-repeat="item in referralStatusList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+            <div class="form-cell">
+                <label for="pendingDate">Pending Date</label>
+                <!--[if !IE]><!-->
+                <div class="dateTopMargin">
+                    <!--<![endif]-->
+                    <div class="pull-left topMargin4">
+                        <gaig-datepicker id="pendingDate"
+                                         ng-model="activityDetails.pendingDate"
+                                         ng-disabled="viewOnlyMode || disableUpdate"
+                                         on-select="validatePendingDate()">
+                        </gaig-datepicker>
+                    </div>
+                    <div class="pull-right">
+                        &nbsp;<button ng-click="unpend()" class="btn" ng-disabled="disablePendingDate || disableUpdate">Unpend</button>
+                    </div>
+                    <!--[if !IE]><!-->
+                </div>
+                <!--<![endif]-->
+            </div>
+        </div>
+        <br />
+        <div class="row-fluid">
+            <div class="spanDetailsCol1">
+                <label for="premiumTier">Premium Tier</label>
+                <div ng-hide="isSingleInActivityDetails">
+                    <label class="clearCheckboxMedium" >
+                        <input type="checkbox" ng-model="clearFields.premiumTier"> Clear
+                    </label>
+                </div>
+                <select id="premiumTier" class="input-medium"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.premiumTierRefCode"
+                        ng-disabled="viewOnlyMode || disableUpdate || clearFields.premiumTier">
+                    <option value=""></option>
+                    <option ng-repeat="item in premiumTierList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+            <div class="spanDetailsCol1">
+                <label for="priority">Priority</label>
+                <div ng-hide="isSingleInActivityDetails">
+                    <label class="clearCheckboxMedium" >
+                        <input type="checkbox" ng-model="clearFields.priority"> Clear
+                    </label>
+                </div>
+                <select id="priority" class="input-medium"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.priorityRefCode"
+                        ng-disabled="viewOnlyMode || disableUpdate || clearFields.priority">
+                    <option value=""></option>
+                    <option ng-repeat="item in priorityList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+            <div class="spanDetailsCol3">
+                <label for="needByDate">Need By Date</label>
+                <div ng-hide="isSingleInActivityDetails">
+                    <label class="clearCheckboxMedium" >
+                        <input type="checkbox" ng-model="clearFields.needByDate"> Clear
+                    </label>
+                </div>
+                <!--[if !IE]><!-->
+                <div class="dateTopMargin">
+                    <!--<![endif]-->
+                    <div class="topMargin5">
+                        <gaig-datepicker id="needByDate"
+                                         ng-model="activityDetails.needByDate"
+                                         ng-disabled="viewOnlyMode || disableUpdate || clearFields.needByDate">
+                        </gaig-datepicker>
+                    </div>
+                    <!--[if !IE]><!-->
+                </div>
+                <!--<![endif]-->
+            </div>
+            <div class="form-cell" ng-show="table.length == 1">
+                <label for="transEffDate">TRN Effective Date</label>
+                <!--[if !IE]><!-->
+                <div class="dateTopMargin">
+                    <!--<![endif]-->
+                    <div class="topMargin5">
+                        <gaig-datepicker id="transEffDate"
+                                         ng-model="activityDetails.transactionEffectiveDate"
+                                         on-select="validateTRNDate()"
+                                         ng-disabled="viewOnlyMode || disableUpdate || disableTrnUpdate || disableTrnEffDateFieldOnly"><!--Need requirements for this-->
+                        </gaig-datepicker>
+                    </div>
+                    <!--[if !IE]><!-->
+                </div>
+                <!--<![endif]-->
+            </div>
+        </div>
+    </div>
+
+     <div class="row-form">
+         <div class="form-cell">
+             <label id="underwriterMessage">Changing the Underwriter for a transaction will affect the activities listed above and it will be copied to future transactions for these policies if they are issued.</label>
+         </div>
+     </div>
+     <div class="row-form">
+         <div class="row-fluid">
+             <div class="spanDetailsCol1">
+                 <label for="underwriter">Underwriter</label>
+                 <select id="underwriter" class="input-large"
+                         gaig-select="{'allowClear': false}"
+                         ng-model="activityDetails.underwriterHid"
+                         ng-disabled="viewOnlyMode || disableUpdate || disabledFields.underwriter">
+                     <option value=""></option>
+                     <option ng-repeat="person in underwriterSelectList" value="{{person.hid}}">{{person.lastName}}, {{person.firstName}}</option>
+                 </select>
+             </div>
+         </div>
+     </div>
+
+    <div class="row-form">
+        <div class="row-fluid">
+            <div class="span11">
+                <div ng-show="!reminderOnly && !hasReminders">
+                    <div class="add-info">
+                    <label for="explanation">Explanation / Description</label>
+                    </div>
+                    <div class="add-info">
+                        <img src="dyn/images/info.jpeg" alt="Information"/>
+                        <div class="infoDesc">
+                            <p>Text entered in this field is editable within the Change Activity Details window and may be deleted prior to Issuance. This text is displayed on the Dashboard and Manage Activities screen.</p>
+                        </div>
+                    </div>
+                    <textarea rows="4" id="explanation" class="span12"
+                              ng-model="activityDetails.activityReasonComments" maxlength="4000" ng-disabled="viewOnlyMode || disableUpdate"
+                              gaig-maxlength="4000"></textarea>
+                </div>
+                <div ng-show="reminderOnly">
+                    <div class="add-info">
+                        <label for="description">Explanation / Description</label>
+                    </div>
+                    <div class="add-info">
+                        <img src="dyn/images/info.jpeg" alt="Information"/>
+                        <div class="infoDesc">
+                            <p>Text entered in this field is editable within the Change Activity Details window and may be deleted prior to Issuance. This text is displayed on the Dashboard and Manage Activities screen.</p>
+                        </div>
+                    </div>
+                    <textarea rows="4" id="description" class="span12"
+                              ng-model="activityDetails.activityReasonComments" maxlength="4000" ng-disabled="viewOnlyMode || disableUpdate"
+                              gaig-maxlength="4000"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row-form">
+        <div class="row-fluid">
+            <div class="span11">
+                <div class="add-info">
+                <label for="commentsRemarks" ng-hide="viewOnlyMode || disableUpdate">Comments</label>
+                </div>
+                <div class="add-info">
+                    <img src="dyn/images/info.jpeg" alt="Information"/>
+                    <div class="infoDesc">
+                        <p>Text entered in this field is permanent within the Change Activity Details window and will display in the "Show All Comments" section.</p>
+                    </div>
+                </div>
+                <textarea rows="4" id="commentsRemarks" class="span12"
+                          ng-model="activityDetails.userComments" maxlength="4000" ng-disabled="viewOnlyMode || disableUpdate"
+                          ng-hide="viewOnlyMode || disableUpdate"
+                          gaig-maxlength="4000"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="row-form" ng-show="endorsementOnly">
+        <div class="row-fluid">
+            <div class="form-cell">
+                <label for="type">Type</label>
+
+                <select id="type" class="input-xlarge2"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.endorsementTypeRefCode"
+                        ng-disabled="disableUpdate">
+                    <option value=""></option>
+                    <option ng-repeat="item in endorsementTypeList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+            <div class="form-cell">
+                <label for="subType">Sub-Type</label>
+
+                <select id="subType" class="input-large"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.endorsementSubTypeRefCode"
+                        ng-disabled="disableUpdate">
+                    <option value=""></option>
+                    <option ng-repeat="item in endorsementSubTypeList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="row-form" ng-show="cancellationOnly">
+        <div class="row-fluid">
+            <div class="form-cell">
+                <label for="type">Reason</label>
+
+                <select id="type" class="input-xlarge2"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.reasonRefCode"
+                        ng-disabled="disableUpdate || isRewrite">
+                    <option value=""></option>
+                    <option ng-repeat="item in cancellationReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+            <div class="form-cell" ng-hide="hasBothCancelTypes">
+                <label for="subType">Type</label>
+
+                <select id="cancellationSubType" class="input-xlarge"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.reasonTypeCode"
+                        ng-disabled="disableUpdate || disableCancel">
+                    <option value=""></option>
+                    <option ng-repeat="item in cancellationTypeList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="row-form" ng-show="reinstatementOnly">
+        <div class="row-fluid">
+            <div class="form-cell">
+                <label for="type">Reason</label>
+
+                <select id="type" class="input-xlarge2"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.reasonRefCode"
+                        ng-disabled="disableUpdate">
+                    <option value=""></option>
+                    <option ng-repeat="item in reinstatementReasonList" value="{{item.itemCode}}">{{item.itemDescriptionLong}}</option>
+                </select>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="row-form" ng-show="cancelRewriteOnly">
+        <div class="row-fluid">
+            <div class="form-cell">
+                <label for="type">Reason</label>
+
+                <select id="type" class="input-xlarge2"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.reasonRefCode"
+                        ng-disabled="disableUpdate">
+                    <option value=""></option>
+                    <option ng-repeat="item in rewriteReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="row-form" ng-show="nonRenewalOnly || nonRenewalReasonChangeOnly">
+        <div class="row-fluid">
+            <div class="form-cell">
+                <label for="type">Reason</label>
+
+                <select id="type" class="input-xlarge2"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.reasonRefCode"
+                        ng-disabled="disableUpdate">
+                    <option value=""></option>
+                    <option ng-repeat="item in nonRenewalReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="row-form" ng-show="cancelReasonChangeOnly">
+        <div class="row-fluid">
+            <div class="form-cell">
+                <label for="type">Reason</label>
+
+                <select id="type" class="input-xlarge2"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.reasonRefCode"
+                        ng-disabled="disableUpdate">
+                    <option value=""></option>
+                    <option ng-repeat="item in cancellationReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="row-form" ng-show="renewalOnly">
+        <div class="row-fluid">
+            <div class="form-cell">
+                <label for="type">Type</label>
+
+                <select id="type" class="input-xlarge2"
+                        gaig-select="{'allowClear': true}"
+                        ng-model="activityDetails.reasonRefCode"
+                        ng-disabled="disableUpdate">
+                    <option value=""></option>
+                    <option ng-repeat="item in renewalProcessingTypeList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+
+            </div>
+        </div>
+    </div>
+
+    <a ng-click="doToggleShowComments()" ng-show="showCommentsLink">{{showCommentsLabel}}&nbsp;({{commentCount}})</a><br/>
+    <div id="commentSection" ontentEditable="false" ng-show="showComments"><br/>
+        <div ng-repeat="comment in activityComments" ng-show="comment.commentCategoryRefCode == 'USERCOMMNT'">
+            {{comment.createName}}&nbsp;{{comment.createDate | date:'MM/dd/yyyy HH:mm:ss'}}
+            <br/>
+            {{comment.activityCommentText}}<br/><br/>
+        </div>
+    </div>
+    </div>
+    </gaig-modal>
+    </div>
+
+
+    <!--  TIMEOUT MODAL -->
+    <ra-modal modal-class="btn" modal-size="confirm"
+              display-title="Timeout Message" ng-cloak
+              toggle="isTimeoutOpen"
+              func="doToggleTimeoutModal()"
+              close-btn-label="OK"
+              cancel-function="doToggleTimeoutModal()"
+            >
+        <br />
+        Your request has exceeded the time allowed.
+    </ra-modal>
+    <ra-modal modal-class="btn" modal-size="confirm"
+              display-title="Confirmation" ng-cloak
+              toggle="isConfirmWorkDash"
+              func="toggleConfirmWorkModalDash()"
+              close-btn-label="Cancel"
+              buttons="confirmButtonsWorkDash"
+              header-style="font-family:Arial;font-size:14px;font-weight:normal;font-style:normal;text-decoration:none;color:#990000;"
+              cancel-function="toggleConfirmWorkModalDash()">
+        <br />
+        There is an active submission on the previous policy.  Working this submission will not reflect any changes pending on the previous policy.  Would you like to continue or cancel?
+    </ra-modal>
+    <div ng-include src="'dyn/html/confirmTransaction'"></div>
+    <ra-modal modal-class="btn"
+              modal-size="xxlarge"
+              display-title="Activity History" ng-cloak
+              toggle="isViewHistoryOpen"
+              func="closeViewHistoryModal()"
+              header-style="font-family:Arial;font-size:14px;font-weight:normal;font-style:normal;text-decoration:none;color:#990000;"
+              cancel-function="closeViewHistoryModal()">
+
+        <div class="container-fixed">
+            <div class="row-form">
+                <div class="row-fluid">
+                    <div class="span12">
+                        <b>History for</b>
+                        <br>
+                        {{historyType}} for {{policyInfo}}
+                    </div>
+                </div>
+
+                <div class="row-fluid">
+                    <div class="span12">
+                        <table  class="table table-striped gaig-table-ra" id="accountHistoryTable">
+                            <thead>
+                            <tr>
+                                <th>Date - Time</th>
+                                <th>User</th>
+                                <th>Description</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="comment in auditComments">
+                                <td>{{comment.createDate | date:'MM/dd/yyyy HH:mm:ss'}}</td>
+                                <td>{{comment.createName}}</td>
+                                <td>{{comment.activityCommentText}}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ra-modal>
+
+    <div class="dataArea" ng-if="!showMainContent">
+        <div dynamic-ui main-display="mainDisplay"
+             charms="charms" bindings="bindings"
+             notify-container="returnFromBindDetail"
+             error-messages="errorMessages"
+             success-messages="successMessages"
+             validation-messages="validationMessages"
+             info-messages="infoMessages"/>
+    </div>
+    <script type="text/javascript" src="dyn/js/dashboard"></script>
+    </div>
+</div>
+</html>

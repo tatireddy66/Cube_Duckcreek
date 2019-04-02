@@ -1,0 +1,142 @@
+Ext.define('override.DCT.InputNumberField', {
+	override: 'DCT.InputNumberField',
+	
+	/* BEGIN modification for BIS - KMB in numeric fields */
+	maskChars: '[0-9kmb{0}]', // Accept input of KMB chars
+	/* END modification for BIS */
+	
+	setListeners: function(config){
+		// First, call the base setListeners function.
+		this.callParent(arguments);
+		
+		// Then, do custom BIS code. Copy & modify the base "blur" listener.
+		config.listeners.blur = {
+			fn: function(field) {
+				var me = this;
+				/* BEGIN modification for BIS - KMB in numeric fields */
+				field.setValue(me.replaceKMB(field.getRawValue())); // Format KMB to proper values
+				/* END modification for BIS */
+				me.fieldValidation();
+				me.formatField();
+			},
+			scope:this
+		};
+	},
+	
+	checkFloat: function(fieldValue){
+		var me = this;
+		if (!Ext.isEmpty(fieldValue)){
+		
+			if (me.formatting.isMultiCurrency(me.dctNumberFormat, me.dctCurrencyCode)) {
+				return true;
+			}
+			/* BEGIN modification for BIS - KMB in numeric fields */
+			fieldValue = me.replaceKMB(fieldValue); // Format local in-memory value for proper validation here. Actual field value won't be changed until blur.
+			/* END modification for BIS */
+			var numDecMask = 0;
+			fieldValue = me.formatting.formatNumberToUS(fieldValue);
+			if (!Ext.isEmpty(me.formatting.centsSymbol) && me.formatting.numberMask.indexOf(me.formatting.centsSymbol) > -1) {
+					if (me.formatting.numberMask.indexOf(me.formatting.centsSymbol) < me.formatting.numberMask.length - 1) {
+							for (var i = me.formatting.numberMask.indexOf(me.formatting.centsSymbol) + 1; i < me.formatting.numberMask.length; i++) {
+									if ((me.formatting.numberMask.charAt(i) == "#") || (me.formatting.numberMask.charAt(i) == "0") || (me.formatting.numberMask.charAt(i) == "?"))
+											numDecMask++;
+							}
+					}
+			} else
+					numDecMask = 0;
+			var numberFormat = me.formatting.numberMask.replace(/0/g, "?");
+			var internalCentsSymbol = '';
+			if (!Ext.isEmpty(me.formatting.centsSymbol) && (me.formatting.centsSymbol != '.')) {
+				internalCentsSymbol = '.';
+			}
+			else {
+				internalCentsSymbol = me.formatting.centsSymbol;
+			}
+			matchExp = new RegExp(me.buildNumberExp(me.formatting.internalFormat, me.dctType, me.dctNumberMax, me.dctNumberMin));
+			var matchArr = fieldValue.match(matchExp);
+			var highVal = (Ext.isEmpty(me.dctNumberMax)) ? me.highFloat : parseFloat(me.dctNumberMax);
+			var lowVal = (Ext.isEmpty(me.dctNumberMin)) ? me.lowFloat : parseFloat(me.dctNumberMin);
+			if (numDecMask > 0) {
+					if (fieldValue.indexOf(internalCentsSymbol) > -1) {
+							var numDecUser = fieldValue.length - fieldValue.indexOf(internalCentsSymbol) - 1;
+							if (numDecMask < numDecUser)
+									return DCT.T("FloatInvalidFormat", { format: numberFormat });
+					}
+			}
+			fieldValue = fieldValue.replace(/,/g,'');
+			var objFloat = (fieldValue == "") ? parseFloat(Number("0").toFixed(numDecMask)) : parseFloat(Number(fieldValue).toFixed(numDecMask));
+	
+			if (matchArr == null || isNaN(objFloat)) {
+					return DCT.T("FloatInvalidFormat", { format: numberFormat });
+			}
+			if (objFloat > highVal || objFloat < lowVal) {
+					var lowObj = new Number(lowVal).toFixed(2);
+					var highObj = new Number(highVal).toFixed(2);
+					return DCT.T("ValueInvalidRange", { min: lowObj, max: highObj });
+			}
+		}
+		return true;
+	},
+	/**
+	* 
+	*/
+	checkInt: function(fieldValue){
+		var me = this;
+		if (!Ext.isEmpty(fieldValue)){
+			/* BEGIN modification for BIS - KMB in numeric fields */
+			fieldValue = me.replaceKMB(fieldValue); // Format local in-memory value for proper validation here. Actual field value won't be changed until blur.
+			/* END modification for BIS */
+			fieldValue = me.formatting.formatNumberToUS(fieldValue);
+			if (!Ext.isEmpty(me.formatting.centsSymbol)){
+				var dpPosition = fieldValue.lastIndexOf(me.formatting.centsSymbol);
+				if (dpPosition > -1) {
+					return DCT.T("IntegerNoDecimalPlaces", { format: me.formatting.numberMask });
+				}
+			}
+			while ((fieldValue.charAt(0) == "0") && (fieldValue.length > 1)) {
+				fieldValue = fieldValue.substring(1, fieldValue.length);
+			}
+			if (isNaN(fieldValue)){
+				return DCT.T("IntegerInvalidValue", { format: me.formatting.numberMask });
+			}
+			var matchExp = new RegExp(me.buildNumberExp(me.formatting.internalFormat, me.dctType, me.dctNumberMax, me.dctNumberMin));
+			var matchArr = fieldValue.match(matchExp);
+			var highVal = (Ext.isEmpty(me.dctNumberMax)) ? me.highInteger : parseInt(me.dctNumberMax);
+			var lowVal = (Ext.isEmpty(me.dctNumberMin)) ? me.lowInteger : parseInt(me.dctNumberMin);
+			if (matchArr == null) {
+				return DCT.T("IntegerInvalidValue", { format: me.formatting.numberMask });
+			}
+			var objInt = parseInt(fieldValue);
+			if (objInt > highVal || objInt < lowVal) {
+				return DCT.T("ValueInvalidRange", { min: lowVal, max: highVal });
+			}
+			if (objInt == 0 && matchArr[1] == '-') {
+				return DCT.T("IntegerNegativeZero");
+			}
+		}
+		return true;
+	},
+	
+	/* BEGIN addition for BIS - KMB in numeric fields */
+	replaceKMB: function(fieldValue) {
+		var parts = fieldValue.split(/[kmb]/i);
+		var num;
+		if(parts.length == 2 && parts[0] == parseFloat(parts[0])) {
+			num = parseFloat(parts[0]);
+			switch(fieldValue.slice(-1)) {
+			case 'k':
+				fieldValue = num * 1000;
+				break;
+			case 'm':
+				fieldValue = num * 1000000;
+				break;
+			case 'b':
+				fieldValue = num * 1000000000;
+				break;
+			}
+		}
+		return fieldValue.toString();
+	}
+	/* END addition for BIS */
+
+});

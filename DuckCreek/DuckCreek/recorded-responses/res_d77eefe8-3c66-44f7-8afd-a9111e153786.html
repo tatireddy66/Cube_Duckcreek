@@ -1,0 +1,450 @@
+<style>
+    .row-form .form-cell {
+        margin-left: 15px !important
+    }
+
+    .billing-frame .row-form .form-cell:first-child {
+        margin-left: 0px !important
+    }
+
+    label.required {
+        margin-left: -6px;
+    }
+
+    .billing-frame {
+        float: left;
+    }
+
+    .row-form .btn {
+        margin-top: 0px !important;
+    }
+</style>
+
+<div id="controller" ng-controller="BillingController" class="with-bg">
+
+<!-- Stage - main content presentation area -->
+<div class="gaig-loading" ng-show="pageLoaded == null">
+</div>
+
+<form>
+<div class="container-fixed">
+
+<br />
+<gaig-validation-panel ng-model="validationMessages"></gaig-validation-panel>
+<messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+
+<div class="instructionText">
+    An account can only have direct or agency billing. The system will save whichever is selected.
+</div>
+
+<div class="row-form" ng-cloak>
+    <div class="row-fluid">
+        <div class="form-cell">
+            <label for="useAccountDefault">Use Default Billing Info</label>
+            <gaig-switch ng-model="billing.useAccountDefault" id="useAccountDefault"
+                         data-on-label="Yes"
+                         data-off-label="No"
+                         size="small" ng-disabled="viewOnlyMode || disabled.billingInformation" on-change="toggleDefault()"></gaig-switch>
+        </div>
+        <div class="form-cell">
+            <label class="required" ra-help help-text="Select Direct or Agency billing. Only the data you entered for the selected billing type will be saved">Billing Type</label>
+            <gaig-radio-buttons id="billingType" options="billingTypeList" ng-model="billing.billingTypeRefCode"
+                                ng-disabled="viewOnlyMode || disableDefault || disabled.billingInformation" ng-click="toggleBillingType()">
+            </gaig-radio-buttons>
+        </div>
+        <div class="form-cell">
+            <label class="required">Payment Plan</label>
+            <select gaig-select class="input-large" id="paymentPlan"
+                    ng-model="billing.paymentPlanCode"
+                    data-placeholder="--Select--" ng-disabled="viewOnlyMode || disableDefault || disabled.billingAddress">
+                <option value=""></option>
+                <option ng-repeat="item in paymentPlanList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+            </select>
+        </div>
+        <div class="form-cell">
+            <label>Endorsement Billing Method</label>
+            <gaig-radio-buttons id="billingMethod" options="billingMethodList"
+                                ng-model="billing.endorseBillMethodRefCode" ng-disabled="viewOnlyMode || disableDefault || disabled.billingAddress">
+            </gaig-radio-buttons>
+        </div>
+        <div ng-hide="isAgencyBill">
+            <div class="form-cell">
+                <label class="required" ng-hide="billing.billingAccountNumber" ra-help help-text="Select the day of the month the invoice will be mailed. Default date means the billing system will select the mailing date.">Invoice Date</label>
+                <select gaig-select class="input-small2" id="invoiceDate"
+                        ng-model="billing.invoiceDay"
+                        ng-disabled="viewOnlyMode || disabled.billingInformation || disabled.invoiceDate"
+                        ng-hide="billing.billingAccountNumber">
+                    <option ng-repeat="item in invoiceDates" value="{{item.value}}">{{item.label}}</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+<div ng-show="isAgencyBill">
+    <div class="row-form">
+        <div class="form-cell">
+            <label class="required">Waive Installment Charge?</label>
+            <gaig-switch ng-model="billing.waiveServiceIndicator" id="installmentChargeInd"
+                         data-on-label="Yes"
+                         data-off-label="No"
+                         size="small" ng-disabled="viewOnlyMode || billing.paymentPlanCode === 'PREPD' || disabled.billingInformation"></gaig-switch>
+        </div>
+        <div class="form-cell">
+            <label>Is the Policy's Premium Financed?</label>
+            <!--setting ng-disabled to true temporarily until downstream can deal with this field-->
+            <gaig-switch ng-model="billing.premiumFinanceIndicator" id="premiumFinanceInd"
+                         data-on-label="Yes"
+                         data-off-label="No"
+                         size="small"
+                         on-change="toggleFinance()" ng-disabled="true || viewOnlyMode || disabled.billingInformation || disabled.premiumFinance"></gaig-switch>
+        </div>
+    </div>
+    <div class="row-form">
+        <div class="form-cell">
+            <label>Financing Company</label>
+            <input id="financingCompany" ng-model="finance.fullName" type="text"
+                   ng-disabled="disableFinance || viewOnlyMode || disabled.billingInformation" maxlength="35"/>
+        </div>
+        <div class="form-cell">
+            <label>Financing Account#</label>
+            <input id="financingAccountNum"
+                   ng-model="finance.premiumFinanceCompanyAccountNumberCode" type="text"
+                   ng-disabled="disableFinance || viewOnlyMode || disabled.billingInformation" maxlength="35"/>
+        </div>
+    </div>
+    <div class="row-form">
+        <div class="form-cell">
+            <label>Address Line 1</label>
+            <input id="addressLine1" ng-model="location.AddressLine1" type="text"
+                   ng-disabled="disableFinance || viewOnlyMode || disabled.billingInformation" maxlength="64"/>
+        </div>
+        <div class="form-cell">
+            <label>Amount Financed</label>
+            <input id="amountFinanced" class="gaig-currency"
+                   ng-model="finance.premiumFinanceCompanyFinancedAmount" type="text"
+                   ng-disabled="disableFinance || viewOnlyMode || disabled.billingInformation" maxlength="13"/>
+        </div>
+    </div>
+    <div class="row-form">
+        <div class="form-cell">
+            <label>Address Line 2</label>
+            <input id="addressLine2" ng-model="location.AddressLine2" type="text"
+                   ng-disabled="disableFinance || viewOnlyMode || disabled.billingInformation" maxlength="64"/>
+        </div>
+    </div>
+    <div class="row-form">
+        <div class="form-cell">
+            <label>Country</label>
+            <select
+                    gaig-select class="input-medium" id="country"
+                    ng-model="location.CountryISOCode"
+                    data-placeholder="--Select--" ng-disabled="disableFinance || viewOnlyMode || disabled.billingInformation" ng-change="doChangeFinanceCountry()">
+                <option value=""></option>
+                <option ng-repeat="item in countryList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+            </select>
+        </div>
+    </div>
+    <div class="row-form">
+        <div class="row-fluid">
+            <div class="form-cell">
+                <label for="zipCode">ZIP Code</label>
+                <input class="input-small" id="zipCode" ng-model="location.PostalCode" type="text"
+                       gaig-zip-postal-code="{{postalZipType(location.CountryISOCode)}}"
+                       ng-model-onblur ng-change="updateZipCode()" ng-disabled="disableFinance || viewOnlyMode || disabled.billingInformation"
+                       maxlength="10"/>
+            </div>
+            <div class="form-cell">
+                <label>City</label>
+                <select id="city"
+                        gaig-select class="input-medium"
+                        ng-model="location.City"
+                        data-placeholder="--Select--" ng-disabled="disableFinance || viewOnlyMode || disabled.billingInformation">
+                    <option value=""></option>
+                    <option ng-repeat="item in cityList" value="{{item.value}}">{{item.label}}</option>
+                </select>
+            </div>
+            <div class="form-cell">
+                <label>{{stateLabel(location.CountryISOCode)}}</label>
+                <select id="state"
+                        gaig-select class="input-medium"
+                        ng-model="location.StateOrProvinceFIPSCode"
+                        data-placeholder="--Select--" ng-disabled="disableFinance || viewOnlyMode || disabled.billingInformation">
+                    <option value=""></option>
+                    <option ng-repeat="item in stateDisplayList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}
+                    </option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+<div ng-hide="isAgencyBill">
+<br/>
+
+<div class="row-form">
+    <div class="form-cell">
+        <label class="required">Billing Account #</label>
+        <input class="input-small" id="billingAccountNumber" ng-model="billing.billingAccountNumber" type="text"
+               ng-disabled="viewOnlyMode || disableDefault || disabled.billingInformation" maxlength="10" ng-model-onblur ng-change="doBillingLookupTab()"
+               onkeypress="RA.UI.allowOnlyNumerics(event)"/><br/>
+    </div>
+    <label>&nbsp;</label>
+
+    <div class="row-fluid">
+        <ra-modal modal-class="btn" modal-size="xxlarge" ng-disabled="viewOnlyMode || disableDefault || disabled.billingInformation"
+                  modal-id="billingLookupModal"
+                  open-btn-label="  "
+                  icon-class="icon-search"
+                  display-title="Search for Billing Account #" ng-cloak
+                  toggle="isBillingLookupOpen"
+                  func="toggleBillingLookupOpen()"
+                  cancel-function="toggleBillingLookupOpen()">
+            <gaig-validation-panel ng-model="validationMessages"></gaig-validation-panel>
+            <div class="container-fixed">
+                <div class="spanModalLhn modalLHN">
+                    <center>
+                        <button id="searchButton" class="btn" ng-click="doBillingLookup()"
+                                ng-disabled="isSearchDisabled || disabled.billingInformation">Search
+                        </button>
+                    </center>
+                    <p></p>
+
+                    <label for="accountNumberSearch">Account #</label>
+                    <input id="accountNumberSearch" type="text" class="input-mini2" ng-model="search.accountNumber"
+                           ng-keyup="doEnableSearch()" onkeypress="RA.UI.allowOnlyNumerics(event)"/>
+
+                    <p></p>
+
+                    <label for="billingNameSearch">Insured or Billing Acct Name</label>
+                    <input id="billingNameSearch" type="text" class="input-small2" ng-model="search.billingName"
+                           ng-keyup="doEnableSearch()"/>
+
+                    <p></p>
+                    <label for="policySearch"  ra-help help-text="A search on this field is an exact match search, i.e. the entire policy number must be entered for results to be returned.">Policy</label>
+                    <input id="policySearch" type="text" class="input-mini2" ng-model="search.policy"
+                           ng-keyup="doEnableSearch()"/>
+
+                    <p></p>
+                    <label for="policyDateSearch">Policy Effective Date</label>
+                    <gaig-datepicker id="policyDateSearch"
+                                     ng-model="search.policyEffectiveDate"
+                                     ng-disabled="viewOnlyMode || !search.policy || disabled.billingInformation">
+                    </gaig-datepicker>
+                </div>
+                <div class="spanModalContentBilling">
+                    <div class="gaig-table-topper">
+                        <div class="pull-left">
+                            <h3 class="table-title">Search Results</h3>
+                        </div>
+                    </div>
+                    <div class="dataTables_wrapper" role="grid">
+                        <div class="rowsFound">
+                            <div class="dataTables_info">{{searchCount}}</div>
+                        </div>
+                    </div>
+                    <table id="searchResultsTable" class="table gaig-table"
+                           billing-account-lookup-table
+                           data="billingAccountList"
+                           headings="billingAccountLookupColumnHeadings"
+                           use-twisty="YES">
+                    </table>
+                </div>
+            </div>
+        </ra-modal>
+    </div>
+</div>
+<div gaig-fieldset>
+    <legend>Billing Center Information</legend>
+    <div class="billing-frame">
+        <div gaig-fieldset>
+            <legend>Billing Address</legend>
+            <div class="row-form">
+                <div class="form-cell">
+                    <label for="useInsuredInfo">Billing info same as insured info</label>
+                    <gaig-switch ng-model="view.usePrimary" id="useInsuredInfo"
+                                 data-on-label="Yes"
+                                 data-off-label="No"
+                                 size="small" ng-disabled="viewOnlyMode || disabled.billingAddress" on-click="togglePrimaryInsured()">
+                    </gaig-switch>
+                </div>
+                <div class="form-cell" ng-show="view.showOverride">
+                    <label for="addressOverride">Override address validation</label>
+                    <gaig-switch ng-model="billing.billingDetails[0].addressOverride" id="addressOverride"
+                                 data-on-label="Yes"
+                                 data-off-label="No"
+                                 size="small" ng-disabled="viewOnlyMode || disabled.billingAddress">
+                    </gaig-switch>
+                </div>
+            </div>
+            <div class="row-form">
+                <div class="form-cell">
+                    <label class="required">Billing Account Name</label>
+                    <input id="accountName" class="input-xlarge2" ng-model="billing.billingDetails[0].billingName"
+                           type="text" ng-disabled="viewOnlyMode || view.usePrimary || disabled.billingAddress" maxlength="40"/><br/>
+                </div>
+            </div>
+
+            <div class="row-form">
+                <div class="form-cell">
+                    <label class="required">Address Line 1</label>
+                    <input id="billingAddressLine1" class="input-xlarge"
+                           ng-model="billing.billingDetails[0].billingAddressLine1" type="text"
+                           ng-disabled="viewOnlyMode || view.usePrimary || disabled.billingAddress" maxlength="35"/><br/>
+                </div>
+            </div>
+
+            <div class="row-form">
+                <div class="form-cell">
+                    <label>Address Line 2</label>
+                    <input id="billingAddressLine2" class="input-xlarge"
+                           ng-model="billing.billingDetails[0].billingAddressLine2" type="text"
+                           ng-disabled="viewOnlyMode || view.usePrimary || disabled.billingAddress" maxlength="35"/><br/>
+                </div>
+            </div>
+
+            <div class="row-form">
+                <div class="form-cell">
+                    <label class="required">Country</label>
+                    <select gaig-select class="input-large" id="billingCountry"
+                            ng-model="billing.billingDetails[0].country"
+                            data-placeholder="--Select--" ng-disabled="false || disabled.billingAddress" ng-change="doChangeFinanceCountry()" >
+                        <option value=""></option>
+                        <option ng-repeat="item in countryList" value="{{item.itemCode}}">
+                            {{item.itemDescriptionShort}}
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <br/>
+
+            <div class="row-form">
+                <div class="form-cell">
+                    <label class="required" for="billingZip">ZIP Code</label>
+                    <input class="input-small" id="billingZip" ng-model="billing.billingDetails[0].zipCode" type="text"
+                           gaig-zip-postal-code="{{postalZipType(billing.billingDetails[0].country)}}"
+                           ng-model-onblur ng-change="updateZipCode()" ng-disabled="viewOnlyMode || view.usePrimary || disabled.billingAddress"
+                           maxlength="10"/>
+                </div>
+                <div class="form-cell">
+                    <label class="required">City</label>
+                    <select id="billingCity"
+                            gaig-select class="input-medium"
+                            ng-model="billing.billingDetails[0].city"
+                            data-placeholder="--Select--" ng-disabled="viewOnlyMode || view.usePrimary || disabled.billingAddress">
+                        <option value=""></option>
+                        <option ng-repeat="item in billingCityList" value="{{item.value}}">{{item.label}}</option>
+                    </select>
+                </div>
+                <div class="form-cell">
+                    <label class="required">{{stateLabel(billing.billingDetails[0].country)}}</label>
+                    <select id="billingState"
+                            gaig-select class="input-medium"
+                            ng-model="billing.billingDetails[0].state"
+                            data-placeholder="--Select--" ng-disabled="viewOnlyMode || view.usePrimary || disabled.billingAddress">
+                        <option value=""></option>
+                        <option ng-repeat="item in stateDisplayList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}
+                        </option>
+                    </select>
+                </div>
+            </div>
+            <div class="row-form">
+                <div class="form-cell">
+                    <label>Phone</label>
+                    <input class="input-small" id="billingPhone" ng-model="billing.billingDetails[0].billingPhone"
+                           type="text"
+                           ng-disabled="viewOnlyMode || view.usePrimary || disabled.billingAddress" maxlength="14"
+                           gaig-masked-input="(999) 999-9999"/>
+                </div>
+                <div class="form-cell">
+                    <label>Email Address</label>
+                    <input class="input-xlarge" id="billingEmail" ng-model="billing.billingDetails[0].billingEmail"
+                           type="text"
+                           ng-disabled="viewOnlyMode || view.usePrimary || disabled.billingAddress" maxlength="60"/>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="billing-frame">
+        <div class="row-form">
+            <div class="form-cell">
+                <label>Amount Due</label>
+                <label>{{billing.billingDetails[0].amountDue.value || '- -'}}</label>
+            </div>
+
+            <div class="form-cell">
+                <label>Last Invoice Date</label>
+                <label>{{(billing.billingDetails[0].lastInvoiceDate || '- -') | date:'MM/dd/yyyy'}}</label>
+            </div>
+
+            <div class="form-cell">
+                <label>Last Payment</label>
+                <label>{{billing.billingDetails[0].lastPaymentAmount.value || '- -'}}</label>
+            </div>
+
+            <div class="form-cell">
+                <label>Last Payment Due</label>
+                <label>{{(billing.billingDetails[0].lastPaymentDate || '- -') | date:'MM/dd/yyyy'}}</label>
+            </div>
+        </div>
+        <div class="row-form">
+            <div class="form-cell">
+                <label>Billing Policy Status</label>
+                <label>{{billing.billingDetails[0].accountStatus || '- -'}}</label>
+            </div>
+
+            <div class="form-cell">
+                <label>Billing Account Legal Collection</label>
+                <label>{{billing.billingDetails[0].collectionStatus || '- -'}}</label>
+            </div>
+        </div>
+    </div>
+    <div class="row-form">
+        <button
+                class="btn"
+                ng-click="saveBillingAccount()"
+                ng-disabled="viewOnlyMode || billing.billingAccountNumber || disabled.billingInformation">
+            Generate Account #
+        </button>
+    </div>
+</div>
+</div>
+<div class="row-form" ng-cloak>
+    <div class="form-cell">
+        <label for="defaultBillingInd" ra-help help-text="If you select yes, the billing data saved will be saved as the customer default and will be available to apply to all future submissions for this customer.">Set as default billing data?</label>
+        <gaig-switch ng-model="billing.accountDefault" id="defaultBillingInd"
+                     data-on-label="Yes"
+                     data-off-label="No"
+                     size="small" ng-disabled="viewOnlyMode || disableDefault || disabled.billingInformation">
+        </gaig-switch>
+    </div>
+</div>
+
+<div class="form-actions">
+    <div class="row-form">
+        <div class="form-cell">
+            <button id="saveButton" class="btn btn-primary" ng-click="updateBilling()" ng-hide="viewOnlyMode || submission.disabledFields.saveCancelButton">Save</button>
+        </div>
+        <div class="form-cell">
+            <button type="submit" id="cancelButton" class="btn" ng-disabled="viewOnlyMode" ng-click="cancelFunction('billing', billing, preCallback, postCallback)">Cancel</button>
+        </div>
+    </div>
+</div>
+
+</div>
+
+</form>
+
+<!--  TIMEOUT MODAL -->
+<ra-modal modal-class="btn" modal-size="confirm"
+          display-title="Timeout Message" ng-cloak
+          toggle="isTimeoutOpen"
+          func="toggleTimeoutModal()"
+          close-btn-label="OK"
+          cancel-function="toggleTimeoutModal()"
+        >
+    <br/>
+    Your request has exceeded the time allowed.
+</ra-modal>
+
+<script type="text/javascript" src="dyn/js/billing"></script>
+</div>

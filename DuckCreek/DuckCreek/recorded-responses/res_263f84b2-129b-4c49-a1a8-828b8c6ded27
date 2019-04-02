@@ -1,0 +1,183 @@
+//# sourceURL=dyn/js/dynamic
+
+function DynamicController($rootScope, $scope, $compile, $sce, $timeout, Presentation, Search, Submission, OOS, Product, DomManip)
+{
+    var childScope;
+    var childScopeMain;
+    var dynamicInfo =
+    {
+        rootBindingObject: $rootScope,
+        bindingObject: $scope,
+        allServices: {Presentation: Presentation, Search: Search, Submission: Submission, OOS: OOS, Product: Product},
+        pageService: Presentation,
+        domManipService: DomManip,
+        selector: $,
+        eventFunctions: {},
+        getChildMain: function getChildMain()
+            {
+                if(childScopeMain)
+            {
+                childScopeMain.$destroy();
+            }
+            childScopeMain = $scope.$new();
+            return childScopeMain;
+        },
+        newBinding: function newBinding()
+        {
+            if(childScope){
+                childScope.$destroy();
+            }
+            childScope = $scope.$new();
+            return childScope;
+        },
+        compile: function compile(content, bindingObject)
+        {
+            return $compile(content)(bindingObject || childScope || $scope);
+        },
+        cleanseHtml: function cleanseHtml(html)
+        {
+            return $sce.trustAsHtml(html);
+        },
+        refresh: function refresh(func)
+        {
+            $timeout(func || angular.noop);
+        },
+        rootRefresh: function rootRefresh()
+        {
+            if (!$rootScope.$root.$$phase) $rootScope.$apply();
+        },
+        toElement: function toElement(elem)
+        {
+            return angular.element(elem);
+        },
+        broadcast: function broadcast(eventScope, eventName)
+        {
+            (eventScope || $rootScope).$broadcast(eventName);
+        },
+        eval: function eval(value)
+        {
+            return $scope.$eval(value);
+        },
+        watch: function watch(watchText, value)
+        {
+            return $scope.$watch(watchText, value);
+        },
+        appendIds: function appendIds(obj)
+        {
+            obj.submissionId = parseInt(RA.Session.getSubmissionId());
+            obj.quoteId = parseInt(RA.Session.getSelectedQuoteId());
+            obj.productId = getSessionItem('productId');
+        },
+        appendData: function appendData(obj)
+        {
+            obj.productName = RA.Session.getProductName();
+        },
+        clearMessages: function clearMessages(bindingObject)
+        {
+            RA.UI.doClearMessages(bindingObject);
+        },
+        handleServiceResult: function handleServiceResult(result, bindingObject)
+        {
+            return RA.Service.handleServiceResult(result, bindingObject);
+        },
+        isViewOnlyMode: function isViewOnlyMode(screen, callback)
+        {
+            $scope.getViewOnlyMode(screen, callback)
+        },
+        restrictChars: function restrictChars(event)
+        {
+            RA.UI.allowOnlyAlphaNumericsStrict(event);
+        },
+        getScreenName: function getScreenName()
+        {
+            return $scope.mainDisplay.productSection;
+        },
+        changeScreen: function changeScreen(newScreen)
+        {
+            var mainDisplay = $scope.mainDisplay;
+            mainDisplay.productSection = newScreen;
+            mainDisplay.show.left = false;
+            mainDisplay.show.leftOther = false;
+            $('.gaig-stage').attr('style', 'width: 1400px');
+        },
+        deepClone: function deepClone(object)
+        {
+            return jQuery.extend(true, {}, object);
+        },
+        pipeline: function pipeline(action, args, session, handler)
+        {
+            var request = new RA.PipelineRequest(action, args, session, handler);
+            request.execute();
+        }
+    };
+
+    $scope.createCharms = function createCharms(charmsData) {
+        var charmsList, charmLabel, policyInfo, policyNumber, lockedBy;
+
+        if (!charmsData)
+            charmsData = {};
+
+        charmsList = [];
+        policyInfo = charmsData.policyInfo;
+        lockedBy = charmsData.lockedByName;
+
+        if (policyInfo && policyInfo.policySymbol) {
+            policyNumber = (policyInfo.policyNumber === null) ? '' : policyInfo.policyNumber;
+            charmLabel = 'Policy #: ' + policyInfo.policySymbol + ' ' + policyNumber + ' ' + policyInfo.policyMod + ' ' + policyInfo.policyVersion;
+            charmsList.push({'label': charmLabel, 'static': true});
+        }
+
+        if (lockedBy) {
+            charmLabel = 'Locked By: ' + lockedBy;
+            charmsList.push({label: charmLabel, static: true});
+        }
+
+        $scope.charms.charmsList = charmsList;
+        RA.UI.charmsSuck();
+    };
+
+    $scope.getViewOnlyMode = function getViewOnlyMode(screen, callback) {
+        var sourceSystemRefCode = RA.Session.getSourceSystemRefCode();
+        var transactionTypeRefCode = RA.Session.getTransactionTypeRefCode();
+        if (sourceSystemRefCode && transactionTypeRefCode) {
+            var params = {
+                'resource': 'submission',
+                'action': 'edit',
+                'attributes': {
+                    'screen': screen,
+                    'pipelineAction': 'uiDynamic',
+                    'trnDataList': [{
+                        'sourceSystemRefCode': sourceSystemRefCode,
+                        'transactionTypeRefCode': transactionTypeRefCode
+                    }]
+                }
+            };
+            Presentation.hasPermission(params, function (results) {
+                var hasPermission = RA.Service.handleServiceResult(results, $scope);
+                callback((RA.Session.getViewOnlyMode() === YES) || !hasPermission);
+            });
+        } else {
+            callback(RA.Session.getViewOnlyMode() === YES);
+        }
+    };
+
+    $scope.scrollToTop = function scrollToTop(){
+        scroll(0, 0);
+    };
+
+    $scope.exportXml = function(xmlType) {
+        var args =
+            {
+                screen: $scope.mainDisplay.productSection,
+                navBarObject: $scope.navBar,
+                submissionId:RA.Session.getSubmissionId(),
+                quoteId:RA.Session.getSelectedQuoteId(),
+                xmlType:xmlType
+            };
+        var form;
+        form = DomManip.buildForm('dispatch/xls/AdminController:doAdminGenerateXmlBytes', 'newWindow', args);
+        form.submit();
+    };
+
+    initDynamicUI(dynamicInfo);
+}

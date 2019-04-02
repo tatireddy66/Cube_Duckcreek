@@ -1,0 +1,484 @@
+Ext.ns("DCT.Custom", "DCT.Custom.QuickRq");
+
+DCT.Custom = {
+	
+	topNav: {
+	
+		// semaphore in case this gets called several times in rapid succession, such as in some resizing cases.
+		inProgress: false,
+		
+		makeDropdown: function() {
+			if(DCT.Custom.topNav.inProgress) {
+				return;
+			}
+			DCT.Custom.topNav.inProgress = true;
+			/* If top nav is used, and the tabs spill over onto multiple rows, move them into
+				a dropdown. We won't know which tabs don't fit until render (since it's affected
+				by CSS rules such as font size, etc.) so JS is the tool to use.
+				
+				Known bug: If the space left for the "More..." link is quite a bit shorter than one
+				of the captions in the dropdown, the display may look bad. This could be overcome
+				with more complicated width calculations and checks in the JS.
+				
+			*/
+			var ul,
+				 pageNavRightEdge = 0, 
+				 liNoFit = -1, 
+				 lis,
+				 moreNavs,
+				 liHtml,
+				 liClasses;
+			try {
+				/* There are many steps that could fail here, but probably won't, so just
+					wrap in try/catch.
+					However, one common failure scenario is if top nav is not in use, so this
+					also works as a handy exit point.
+				*/
+				ul = Ext.DomQuery.select('.ruleset_topNav #pageNav ul')[0];
+				pageNavRightEdge = Ext.get(ul).getRight();
+			} catch(e) {
+				DCT.Custom.topNav.inProgress = false;
+				return;
+			}
+			
+			// Check again
+			if(pageNavRightEdge == 0) {
+				DCT.Custom.topNav.inProgress = false;
+				return;
+			}
+			
+			lis = Ext.DomQuery.select('.ruleset_topNav #pageNav li');
+			// I was going to use forEach, but you can't break early - per 
+			//    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
+			for(i=0; i<lis.length; i++) {
+				var li = Ext.get(lis[i]);
+				if(li && li.getRight() > pageNavRightEdge) {
+					// this li doesn't fit entirely on the top row
+					liNoFit = i;
+					break;
+				}
+			}
+			
+			if(liNoFit == -1) {
+				DCT.Custom.topNav.inProgress = false;
+				return;
+			}
+			
+			/* Create the "more" list */
+			moreNavs = Ext.DomHelper.insertAfter(ul, {
+				id: 'moreNavs',
+				tag: 'ul'
+			}, true);
+			Ext.DomHelper.append(moreNavs, {
+				tag: 'li',
+				html: '<a>' + DCT.T('More') + '</a>',
+				id: 'moreNavLi'
+			});
+			for(i=liNoFit-1; i<lis.length; i++) {
+				liHtml = lis[i].innerHTML; // I don't need any of the attrs of the <li> itself except class
+				liClasses = Ext.get(lis[i]).getAttribute("class");
+				
+				// If the active tab is one of the ones in the dropdown, highlight "More..."
+				if(liClasses.indexOf("inactiveTab") == -1) {
+					// I was going to check for "activeTab", but then they all came back "true" because that's found in "inactiveTab"
+					Ext.get('moreNavLi').addCls("activeTab");
+				}
+				
+				ul.removeChild(lis[i]);
+				Ext.DomHelper.append(moreNavs, {
+					tag: 'li',
+					html: liHtml,
+					cls: liClasses
+				});
+			}
+			
+			/* Move it where it goes */
+			moreNavs.alignTo(lis[liNoFit-2], 'tl-tr');
+			
+			DCT.Custom.dropdownMenuHelper.openOnFocusIn('moreNavs');
+			
+			DCT.Custom.topNav.inProgress = false;
+		},
+		
+		undoDropdown: function() {
+			var c, lis = Ext.DomQuery.select('.ruleset_topNav #moreNavs li');
+			var pageNav = Ext.get('pageNav') ? Ext.get('pageNav').child('ul') : null;
+			
+			// Skip the first one ("More...")
+			for(c=1; c<lis.length; c++) {
+				li = lis[c];
+				Ext.DomHelper.append(pageNav, {
+					tag: 'li',
+					html: li.innerHTML,
+					cls: Ext.get(li).getAttribute("class")
+				});
+			}
+			if(Ext.get('moreNavs')) {
+				Ext.get('moreNavs').destroy();
+			}
+		}
+	},
+	
+	addThemeClasses: function() {
+		/* Add classes needed for BIS. This is in order to avoid hundreds of
+			lines of XSL overrides, so that the theme can be as modular as possible. If this
+			were a standalone implementation, XSL overrides might be the better way to go.
+		*/
+		
+		Ext.DomQuery.select('#moduleDisplayTable td').forEachEl(function(n) {
+			if(n.query("*").length > 0) {
+				n.addCls("hasChild");
+				if(n.query('a').length > 0) {
+					n.addCls("hasLink");
+				}
+			}
+		});
+		
+		if(Ext.getCmp("quickSearchTextId")) {
+			Ext.getCmp("quickSearchTextId").on('blur', function() {
+				Ext.get("quickSearchTextIdCmp").removeCls("focus");
+			});
+			
+			Ext.getCmp("quickSearchTextId").on('focus', function() {
+				Ext.get("quickSearchTextIdCmp").addCls("focus");
+			});
+		}
+		
+		/* I originally added this class this via XSL override in dctInterviewControls.xsl, but it didn't cover
+		   the many hard-coded instances such as those in dctCommonTasks.xsl. */
+		Ext.DomQuery.select('.acrossAboveFormLabel, .downAboveFormLabel').forEachEl(function(n) {
+			n.parent().addCls("aboveCaption");
+		});
+		Ext.DomQuery.select('.acrossBeforeFormLabel, .downBeforeFormLabel').forEachEl(function(n) {
+			n.parent().addCls("beforeCaption");
+		});
+		
+		/* prevent empty labels from taking up space */
+		Ext.DomQuery.select('div[class*=FormLabel]>label').forEachEl(function(n) {
+			if(n.getTextWidth() == 0) {
+				n.addCls("x_hideDisplay");
+			}
+			else {
+				n.removeCls("x_hideDisplay");
+			}
+		});
+
+	},
+	
+	dropdownMenuHelper: {
+		
+		setUpLeftNav: function() {
+			var related = Ext.get("relatedActions");
+			var qtNum   = Ext.get("activeAccountReferenceId");
+			var body = Ext.get("htmlBody");
+			if(body) {
+				// Bugfix for: When navigating thru a NEW top nav quote, body.hasCls("ruleset_leftNav") still returns [true] even though body.dom.className doesn't contain "ruleset_leftNav"
+				body.synchronize();
+			}
+			else return;
+			if(body.hasCls("ruleset_leftNav") && related && qtNum) { // don't do this for top nav
+				qtNum.addCls("hasRelated");
+				qtNum.on("mouseover", function() {
+					this.showRelated();
+				}, this);
+				related.on("mouseover", function() {
+					this.showRelated();
+				}, this);
+				qtNum.on("mouseout", function() {
+					this.hideRelated();
+				}, this);
+				related.on("mouseout", function() {
+					this.hideRelated();
+				}, this);
+			}
+		},
+		
+		// Set up a delay and a semaphore so that mousing out of "qtNum" on your way to "related" doesn't hide "related"
+		isHidePending: false,
+		
+		showRelated: function() {
+			this.isHidePending = false;
+			if(Ext.get("relatedActions")) {
+				Ext.get("relatedActions").show();
+			}
+			if(Ext.get("activeAccountReferenceId")) {
+				Ext.get("activeAccountReferenceId").addCls("hovered");
+			}
+		},
+		
+		hideRelated: function() {
+			this.isHidePending = true;
+			Ext.Function.defer(function(){
+				if(this.isHidePending && Ext.get("relatedActions")) {
+					Ext.get("relatedActions").hide();
+					if(Ext.get("activeAccountReferenceId")) {
+						Ext.get("activeAccountReferenceId").removeCls("hovered");
+					}
+				}
+			}, 100, this);
+		},
+		
+		/* FYI: Calling openOnFocusIn on something that doesn't need it shouldn't hurt anything,
+		so long as the CSS selector with .open is set up correctly. */
+		openOnFocusIn: function(id) {
+			var el = document.getElementById(id);
+			var callback1 = function() { DCT.Custom.dropdownMenuHelper.handleDropdownFocus(id, true) };
+			var callback2 = function() { DCT.Custom.dropdownMenuHelper.handleDropdownFocus(id, false) };
+			if(el) {
+				/* If the user tabs into a link within this div, "open" the div.
+					This technique is from http://www.quirksmode.org/blog/archives/2008/04/delegating_the.html */
+				el.onfocusin =  callback1; // IE
+				el.onfocusout = callback2; // IE
+				el.addEventListener('focus', callback1, true); // Chrome, Firefox
+				el.addEventListener('blur',  callback2, true); // Chrome, Firefox
+			}
+		},
+		
+		// When the user tabs into one of the CSS-driven dropdowns, it should open. Otherwise, the behavior is quite odd.
+		setUpMenuFocus: function() {
+			DCT.Custom.dropdownMenuHelper.setUpLeftNav();
+			DCT.Custom.dropdownMenuHelper.openOnFocusIn('moreNavs');
+			DCT.Custom.dropdownMenuHelper.openOnFocusIn('leftPanelArea');
+			DCT.Custom.dropdownMenuHelper.openOnFocusIn('relatedActions');
+		},
+		
+		handleDropdownPending: {},
+		
+		handleDropdownFocus: function(id, add) {
+			if(Ext.get(id)) {
+				if(add) {
+					Ext.get(id).addCls('open');
+					this.handleDropdownPending[id] = false;
+				}
+				else {
+					this.handleDropdownPending[id] = true;
+					Ext.Function.defer(function(){
+						if(this.handleDropdownPending[id] && Ext.get(id)) {
+							Ext.get(id).removeCls('open');
+						}
+					}, 50, this);
+				}
+			}
+		}
+		
+	},
+	
+	// Button on the errors page can be pressed to send an email (if config files are set up properly - see doc)
+	emailError: function(ev, from, to, subject, body) {
+		var rq, btn;
+		rq = Ext.String.format('<customSend.emailWithMachineNameRq from="{0}" recipients="{1}" subject="{2}">{3}</customSend.emailWithMachineNameRq>',
+									  from, to, subject, body);
+		/* dateTimeStamp gets a new value only on full page load. So if they click the button to
+		   send an error report multiple times, all the resulting emails will have the same stamp.
+		   This is good, as it allows the recipient to easily identify duplicates. It serves as 
+		   an ID# of sorts. */
+		rq = rq.replace("{when}", DCT.Custom.dateTimeStamp);
+		rq = rq.replace("{machine}", "{0}");
+		btn = Ext.get(ev.target);
+		if(btn) {
+			btn = btn.up(".g-btn"); // we actually want the parent
+			if(btn.hasCls("btnDisabled")) return;
+			// Disabling the button is mostly so that they can tell something is happening, but it also helps prevent multiple reports being sent.
+			btn.addCls("btnDisabled");
+		}
+		DCT.Custom.QuickRq.doRq(rq, function(response){
+										btn.removeCls("btnDisabled");
+										btn.addCls("btnCompleted");
+										}, true);
+	},
+	
+	dateTimeStamp: (new Date()).toLocaleString(), // new value on every page load, but not until then
+	
+	/* :empty CSS pseudo-class doesn't do what I want, so simulate it */
+	markEmptyLeftNav: function() {
+		var left = document.getElementById("leftPanelAreaBody");
+		if(left) {
+			if(!left.textContent || left.textContent == "") {
+				left.className += " empty";
+			}
+			else if(left.className) {
+				left.className = left.className.replace(/ empty/g, "");
+			}
+		}
+	},
+	
+	onPageLoad: function() {
+		Ext.DomQuery.select('.dashboardChart').forEach(function(div) {
+			var dataConfig = div.getAttribute("data-config"),
+				 dataConfigObj;
+			if(dataConfig == "") return;
+			dataConfigObj = Ext.JSON.decode(dataConfig);
+			Ext.create(dataConfigObj);
+		});
+		DCT.Custom.topNav.makeDropdown();
+		DCT.Custom.addThemeClasses();
+		DCT.Custom.dropdownMenuHelper.setUpMenuFocus();
+		DCT.Custom.markEmptyLeftNav();
+	},
+
+	//Customization for help window for deductible 
+	doDeductiblePopupAllStates: function (field, cacheId, actionId, currentPageId) {
+		//alert("OK");
+				
+		win = Ext.create('Ext.window.Window', {
+		title : "Duck Creek Policy",
+		width : 800,
+		height: 300,
+		minimizable: true,
+		maximizable: true,
+		draggable: true,
+		resizable: true,
+		layout : 'fit',
+		items : [{
+        xtype : "component",
+        autoEl : {
+            tag : "iframe",
+            src : "https://uncd65.duckcreekondemand.com/Policy/Skins/GAIC/html/Deductible Info All States.htm"
+        }
+		}],
+		buttons: [{
+                  text: 'Close',
+                  handler: function(){ win.close();}
+               }],
+	   buttonAlign: 'right'
+	});
+	win.center();
+	win.show();	
+			
+	},
+	
+	doDeductiblePopupFL: function (field, cacheId, actionId, currentPageId) {
+		//alert("OK");
+				
+		win = Ext.create('Ext.window.Window', {
+		title : "Duck Creek Policy",
+		width : 600,
+		height: 300,
+		minimizable: true,
+		maximizable: true,
+		draggable: true,
+		resizable: true,
+		layout : 'fit',
+		items : [{
+        xtype : "component",
+        autoEl : {
+            tag : "iframe",
+            src : "https://uncd65.duckcreekondemand.com/Policy/Skins/GAIC/html/Deductible Info FL.htm"
+        }
+		}],
+		buttons: [{
+                  text: 'Close',
+                  handler: function(){ win.close();}
+               }],
+	   buttonAlign: 'right'
+	});
+	win.center();
+	win.show();	
+			
+	},
+	
+	doDeductiblePopupHI: function (field, cacheId, actionId, currentPageId) {
+		//alert("OK");
+				
+		win = Ext.create('Ext.window.Window', {
+		title : "Duck Creek Policy",
+		width : 600,
+		height: 300,
+		minimizable: true,
+		maximizable: true,
+		draggable: true,
+		resizable: true,
+		layout : 'fit',
+		items : [{
+        xtype : "component",
+        autoEl : {
+            tag : "iframe",
+            src : "https://uncd65.duckcreekondemand.com/Policy/Skins/GAIC/html/Deductible Info HI.htm"
+        }
+		}],
+		buttons: [{
+                  text: 'Close',
+                  handler: function(){ win.close();}
+               }],
+	   buttonAlign: 'right'
+	});
+	win.center();
+	win.show();	
+			
+	}
+};
+
+// utility/shorthand function
+function c(msg) {
+	console.log(msg);
+}
+
+// Utility module for making API calls from JS
+DCT.Custom.QuickRq = {
+	buildRq: function (reqString) { return '<server><requests><Session.resumeRq sessionID="' + DCT.sessionID + '"/>' + reqString + '</requests></server>'; },
+	doRq: function (reqString, callback, invisible) { DCT.ajaxProcess.postServerMessage(this.buildRq(reqString), "text/xml", callback, invisible); },
+	getArray: function (reqString, xpath, whatToDo, invisible) { this.doRq(reqString, function (response) { whatToDo(Ext.DomQuery.select("server/responses/*", response)); }, invisible) },
+	getNode: function (reqString, xpath, whatToDo, invisible) { this.doRq(reqString, function (response) { whatToDo(getSingleNode(response, xpath)); }, invisible) }
+};
+
+Ext.onReady(function() {
+	DCT.Custom.onPageLoad();
+});
+DCT.hubEvents.addListener('ajaxcomplete', function(){
+	DCT.Custom.onPageLoad();
+});
+
+Ext.on('resize', function() {
+	DCT.Custom.topNav.undoDropdown();
+	DCT.Custom.topNav.makeDropdown();
+}, this, {delay: 100} );
+
+
+/* 
+   BEGIN: Fix for tab panels not working in Firefox, from
+   https://www.sencha.com/forum/showthread.php?336762-Examples-don-t-work-in-Firefox-52-touchscreen/page2
+   When case DCT-00016543 is resolved, this should be in base and can be removed from custom.js.
+*/
+
+Ext.define('EXTJS_23846.Element', {
+	override: 'Ext.dom.Element'
+}, function(Element) {
+	var supports = Ext.supports,
+	proto = Element.prototype,
+	eventMap = proto.eventMap,
+	additiveEvents = proto.additiveEvents;
+	
+	if (Ext.os.is.Desktop && supports.TouchEvents && !supports.PointerEvents) {
+		eventMap.touchstart = 'mousedown';
+		eventMap.touchmove = 'mousemove';
+		eventMap.touchend = 'mouseup';
+		eventMap.touchcancel = 'mouseup';
+		
+		additiveEvents.mousedown = 'mousedown';
+		additiveEvents.mousemove = 'mousemove';
+		additiveEvents.mouseup = 'mouseup';
+		additiveEvents.touchstart = 'touchstart';
+		additiveEvents.touchmove = 'touchmove';
+		additiveEvents.touchend = 'touchend';
+		additiveEvents.touchcancel = 'touchcancel';
+		
+		additiveEvents.pointerdown = 'mousedown';
+		additiveEvents.pointermove = 'mousemove';
+		additiveEvents.pointerup = 'mouseup';
+		additiveEvents.pointercancel = 'mouseup';
+	}
+});
+Ext.define('EXTJS_23846.Gesture', {
+	override: 'Ext.event.publisher.Gesture'
+}, function(Gesture) {
+	var me = Gesture.instance;
+	
+	if (Ext.supports.TouchEvents && !Ext.isWebKit && Ext.os.is.Desktop) {
+		me.handledDomEvents.push('mousedown', 'mousemove', 'mouseup');
+		me.registerEvents();
+	}
+});
+
+
+
+/* END fix for tab panels */

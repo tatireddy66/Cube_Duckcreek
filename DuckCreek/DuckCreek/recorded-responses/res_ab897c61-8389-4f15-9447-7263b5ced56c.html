@@ -1,0 +1,104 @@
+<div class="container-fixed">
+	<div class="row-form">
+		<table class="table gaig-table">
+			<thead>
+			    <th>Valid</th>
+				<th>Policy</th>
+				<th>Policy Term</th>
+				<th>Status</th>
+				<th></th>
+			</thead>
+			<tbody>
+				<tr ng-repeat="rows in table" ng-class="{true:'row-alt'}[$index%2!=0]">
+				    <td class="centerColumn"><img ng-src="{{rows.valid}}" ng-cloak/></td>
+					<td>{{rows.policy}}</td>
+					<td>{{rows.term}}</td>
+					<td>{{rows.type}}</td>
+					<td class="centerColumn"><button type="button" class="redClose" ng-click="removeRow($index, toggleCreateActivityModal, 'policyTermTable');">X</button></td>
+				<tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="row-form">
+		<div class="row-fluid">	
+			<label for="activitySelector">Activity</label>
+				<select id="activitySelector" class="input-large"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="selectedTypeHolder.selectedType"
+                        ng-disabled="viewOnlyMode"
+                        on-change="toggleActivityForm('activitySelector')"
+						data-placeholder="--Select--">
+                     	<option ng-repeat="item in activityTypes" value="{{item.value}}">{{item.label}}</option>
+                </select>					
+		</div>
+	</div>
+		
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="form-cell span4">
+				<label for="receivedDate" class="required">Received Date</label>
+				<gaig-datepicker id="receivedDate" ng-model="activity.receivedDate"
+					ng-disabled="viewOnlyMode"> 
+				</gaig-datepicker>
+			</div>
+			<div class="form-cell span4">
+				<label for="needByDate">Need By Date</label>
+				<gaig-datepicker id="needByDate" ng-model="activity.needByDate"
+					ng-disabled="viewOnlyMode"> 
+				</gaig-datepicker>
+			</div>
+		</div>
+	</div>
+	
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="form-cell">
+				<label for="reason" class="required">Reason</label>
+				<select id="reason" class="input-xlarge2"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.reasonRefCode"
+						data-placeholder="--Select--">
+						<option></option>
+                     	<option ng-repeat="item in reinstatementReasonList" value="{{item.itemCode}}">{{item.itemDescriptionLong}}</option>
+                </select>
+			</div>
+		</div>
+	</div>
+	
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="form-cell">
+				<label for="assignToReinstate" class="required">Assign To</label>
+				<select id="assignToReinstate" class="input-large"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.assignToHid"
+						data-placeholder="">
+						<option value=""></option>
+                     	<option ng-repeat="item in assignToList" value="{{item.hid}}">{{item.lastName}}, {{item.firstName}}</option>
+                </select>					
+			</div>
+			<div class="form-cell">
+				<label for="assignmentReasonReinstate">Assignment Reason</label>
+				<select id="assignmentReasonReinstate" class="input-xlarge"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.assignmentReasonCode"
+						data-placeholder="">
+						<option value=""></option>
+                     	<option ng-repeat="item in assignmentReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+			</div>
+		</div>
+	</div>		
+
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="span12">
+				<label for="commentsRemarks">Comments</label>
+				<textarea rows="4" id="commentsRemarks" class="span12"
+					ng-model="activity.userComments" maxlength="4000" ng-disabled="viewOnlyMode"
+					gaig-maxlength="4000"></textarea>
+			</div>
+		</div>
+	</div>								
+</div>	

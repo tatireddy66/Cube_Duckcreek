@@ -1,0 +1,1 @@
+{"@type":"hMap","data":{"@type":"hMap","PresentationController.findPolicySymbolList":{"@type":"hMap","data":{"@type":"arLst","@items":["AFP","CAP","COM","CPP","CRP","EXC","EXT","GLP","GRP","IMP","MAC","NET","PAC","SPP","UMB","WC"]},"messages":{"@type":"[Lcom.gaic.bue.uwd.ra.common.resource.Message;","@items":[]},"status":true}},"messages":{"@type":"hSet"},"status":true}

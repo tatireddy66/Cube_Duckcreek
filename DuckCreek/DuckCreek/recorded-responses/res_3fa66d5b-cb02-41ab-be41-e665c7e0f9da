@@ -1,0 +1,106 @@
+Ext.apply(DCT.Util, {
+	/**
+	* validateFields checks all ExtJs controls on the current page for problems, returns true if all controls validate.
+	*/
+	validateFields: function (skipRequiredFields) {
+		skipRequiredFields = skipRequiredFields === true || skipRequiredFields === "1";
+		var me = this;
+		var valid = true;
+		var inValidItem = null;
+		var invalidFieldsMessage = "<br/><br/>" + DCT.T("TheseFieldsMustBeCorrected") + ":<ul>";
+		var invalidFieldsList = new Array();
+		if (!me.skipValidation) {
+			Ext.ComponentMgr.each(function (key, item, itself) {
+				if (Ext.isDefined(!item.isDestroyed && item.getXType()) && !Ext.isEmpty(item.dctControl)) {
+					var priorError = false;
+					if (item.invalidClass) {
+						priorError = item.el.hasCls(item.invalidClass)
+					}
+					if (Ext.isDefined(item.validate) && (item.el && item.el.dom) && !item.validate()) {
+						var itemIsEmpty = Ext.Array.contains(item.getActiveErrors(), item.blankText);
+						if (!(skipRequiredFields && itemIsEmpty)) {
+							valid = false;
+							inValidItem = item;
+							invalidFieldsList.push({
+								cmp:     item,
+								// BEGIN code for BIS: List all invalid fields in the error popup
+								caption: item.dctCaption || "Field",
+								// END code for BIS
+								x:       item.getPosition()[0],
+								y:       item.getPosition()[1]
+							});
+						}
+						else if (DCT.skipRequiredHighlightOnBlur && skipRequiredFields && (!priorError) && itemIsEmpty) {
+							item.clearInvalid();
+						}
+					}
+				}
+			}, me);
+			
+			invalidFieldsList.sort(DCT.Util.sortYX);
+			for(var c = 0; c < invalidFieldsList.length; c++) {
+				invalidFieldsMessage += ("<li>" + invalidFieldsList[c].caption + "</li>");
+			}
+			invalidFieldsMessage += "</ul>";
+			
+			if (!valid) {
+				DCT.Sections.expandForInvalidFields();
+				var isTabs = (inValidItem) ? inValidItem.el.findParent('.x-tab') : null;
+				var message = DCT.T("InvalidDataOnPage");
+				if (isTabs) {
+					message = DCT.T("InvalidDataOnTabs");
+				}
+				var buttons = { ok: DCT.T("ShowMe") };
+				
+				message += invalidFieldsMessage;
+				Ext.create('DCT.AlertMessage', {
+					title: DCT.T('Alert'),
+					msg: message,
+					buttonText: buttons,
+					fn: function (result) {
+						if (result == 'ok') {
+							var first = invalidFieldsList[0];
+							DCT.Util.scrollTo(document.body, first.y-15, 250, function() {
+								/* BEGIN BIS: In a few weird, specific cases, the screen was jumping back to where it started, right
+									about at this point. It only seems to happen if "first" is a dropdown. Putting a bit
+									of a delay on the focus() command seems to fix it. I'm not sure why that works, but this
+									bug is sporadic enough that it isn't worth digging into further.
+									130 is arbitrary - in testing, about 110 was the lowest I could go. Around 100 is the
+									threshhold for perception of "instantaneous" so that's fine.
+									Possibly relevant: https://stackoverflow.com/questions/16504141/jquery-scrolltop-function-goes-to-correct-position-but-then-jumps-back-to-top-of
+								*/
+								setTimeout(function(){first.cmp.focus()},130);
+							});
+						}
+						// END code for BIS
+					}
+				}).show();
+			}
+		}
+		return valid;
+	},
+	
+	scrollTo: function(element, to, duration, callback) {
+		if (duration <= 0){
+			return;
+		}
+		var difference = to - element.scrollTop;
+		var perTick = difference / duration * 10;
+		
+		setTimeout(function() {
+			var oldScroll = element.scrollTop;
+			element.scrollTop = element.scrollTop + perTick;
+			/* BEGIN BIS code */
+			// If we scrolled all the way, or aren't going to be able to, call it done.
+			if (element.scrollTop === to || element.scrollTop === oldScroll || duration == 10) {
+			/* END BIS code */
+				if(callback) {
+					callback();
+				}
+				return;
+			}
+			DCT.Util.scrollTo(element, to, duration - 10, callback);
+		}, 10);
+	}
+	
+});

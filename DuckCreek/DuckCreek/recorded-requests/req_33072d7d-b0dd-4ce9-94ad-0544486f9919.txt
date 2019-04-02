@@ -1,0 +1,15 @@
+POST https://cubealtmarketsdev.td.afg:443/UwdRefApp/dispatch/AccountController.findAccountPolicies HTTP/1.1
+Host: cubealtmarketsdev.td.afg
+Connection: keep-alive
+Content-Length: 185
+Accept: application/json, text/javascript, */*; q=0.01
+Origin: https://cubealtmarketsdev.td.afg
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Content-Type: application/json
+Referer: https://cubealtmarketsdev.td.afg/UwdRefApp/dyn/html/main
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: BIGipServerudratcdev.td.afg-http-pool=3101962762.20480.0000; SMSESSION=wnzodjcxBI0Xeam3vDgf4p2TJs2foZTYHlC2O2hKefZSciRNFzx5MpTmTYpXsciHYpYQI9j0IsF2FQbiCFzV7ycC456n7/HvdFerAUByUEddrpwdq19uKmSHtSjHh1jQ4yxXrmhTjih2CdSz6kbLjQs3i0gTJ6Apx2o+xhSydUE8E37+BcCLPvzoBOESng8xfnFbfHRIe9vAftn1AXj/J0RctMUEOkqfmRGBQrB8xuR3CH4c0SVgwMYxDN+4yxZGp+qDm5nqNk6ItA/3jmeP5c77dXcXled4vURtBqDKqU9c3UW9FAWLmVMGbEa7Vdi5hCUhL0eFOMJUdTkEwFcNr7eRoY1KutLCEIOdyXPye/jkZtCjjrkD8D9cLUsxn/PN55a3MCoce2mk/uW4N06Z1XrB7NMIdPIkN0rKY4NlSEnmCLsyzl086mGlYxm0vzLQ59Em1dhFzIg23PDE4PSdJ8LZBQEnRBJk5rK+uoncE2eYrh9xgriZxACqaJAw6lbPJxHaWgMX6D+4wU4NcT0IULxhYIfImZcQkqcMkAkhvRi+arnY40YE9vR3hVxlg7fJ22aH3EleuSPph9rfVJr7nVSmiGpNvn4HUB1zO4tEJ9YL4k83rWYfoThrwIIsBOEIn6z/+EXH8Di7PLoAgwF2ufToLTVAa+9ONPJ+8aBhdWjQPVB6bnG0bBqc0qfOfbQ3+51PWcCBac+OlXcBDtTKj7lj2KCIFOUQ9wL6AhVOhmKmVQNO11lrfv+I791jI6Q5bIJs1bSGIhsh+HBGuz0bRfziubAf+F49T3Y87B8BFnI3nHXfvJTLvh3ofOq1Jz+oTEbFXODbLE6WnuzKHJjOEj0h3GKYEbJPZYb3bU46BDN/aLi37ZSmYhHBv2rN0DT+jUis+CB0RcAiGvmheyyTI8+FdILkVrKFjrzdWZIF/i7v74nISDmndX4X0aV1Vavsv2yiDaw/TOmyrtEjSHLr5GIhSIUZfYEgtKfCYTNhUPaoYJFWBeICzb8/9FC/j6thA+eojvS4iBwxkY9LDeRQ+f0kV61nKYtJzDICQ44523bY3XOVxVstuMJ1AIlrYVUfGdQNwdGOrNl7exTl1ldDGxMMLxS8/9DrDdvYWF2cO95FwVsP1Nqicgn7z/nLmnmmUE5a7IbHmb1riw7mRsW4ppbnPY343yfScXmZfVW/4H7aGaJe6G4KFIRrGMEZg/0Hccdy5VrZXlAhSLp6D9U+Ln0oQxmvuiyo; businessUnit=; SMUSER=trefapp2; BuildingAndLocation=; Type=Contractor; JSESSIONID=07B0FCE3B4D4C89915A8B2E953D11BF8; cookiemonster=!oxiOpDYJoMKIap3LribCdTwr0MqXU1m9gyPKOVNPLGpLrw2VvNFQfMb5fcVnG4JDG1xPnRo2cV8+aWqh4qo8gAz65x1FcwtXxnb0EenOfFkIqEhF2s4xTi5YcSPwBNSD5p4RSuPAXrgvU7E4oEmPxKRPvwdpw4dPxhWAgWrW0hLQ/4sw17lq55Vt1PH2Mr1uAjUoE2qnhriqrS+jTNgGQ3LKtC0dvMNc9JdDWKqQlQ++WcBZ58sEi5iXFsn+RACfgeK/UfrRwA==
+
+{"AccountController.findAccountPolicies":{"customerNumber":"0005748471","~loggingArgs~":{"policyNumber":"AG73653","submissionId":"13504779","quoteId":"20003286","screen":"submission"}}}

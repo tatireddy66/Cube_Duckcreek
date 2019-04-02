@@ -1,0 +1,15 @@
+POST https://secureauthdev.td.afg:443/siteminderagent/forms/branded_login.fcc?TYPE=33619969&REALMOID=06-00038ad9-6c6b-1925-a0e0-e8270a3240b7&GUID=&SMAUTHREASON=0&METHOD=GET&SMAGENTNAME=-SM-xhU9YfIiUidgyAraduAcmKijA%2bCgnyp7qzzAnBOFGxFVgONxDBxMfV%2fHHZrdN2mqFEHS2dAISvhs9gWfjpmDRKU%2fw20X1NTd&TARGET=-SM-http%3a%2f%2fcubealtmarketsdev%2etd%2eafg%2fUwdRefApp%2f HTTP/1.1
+Host: secureauthdev.td.afg
+Connection: keep-alive
+Content-Length: 298
+Cache-Control: max-age=0
+Origin: https://secureauthdev.td.afg
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: https://secureauthdev.td.afg/siteminderagent/forms/branded_login.fcc?TYPE=33619969&REALMOID=06-00038ad9-6c6b-1925-a0e0-e8270a3240b7&GUID=&SMAUTHREASON=0&METHOD=GET&SMAGENTNAME=-SM-xhU9YfIiUidgyAraduAcmKijA%2bCgnyp7qzzAnBOFGxFVgONxDBxMfV%2fHHZrdN2mqFEHS2dAISvhs9gWfjpmDRKU%2fw20X1NTd&TARGET=-SM-http%3a%2f%2fcubealtmarketsdev%2etd%2eafg%2fUwdRefApp%2f
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+
+USER=trefapp2&PASSWORD=refapptest&SMENC=ISO-8859-1&SMLOCALE=US-EN&target=http%3A%2F%2Fcubealtmarketsdev.td.afg%2FUwdRefApp%2F&smquerydata=&smauthreason=0&smagentname=xhU9YfIiUidgyAraduAcmKijA%2BCgnyp7qzzAnBOFGxFVgONxDBxMfV%2FHHZrdN2mqFEHS2dAISvhs9gWfjpmDRKU%2Fw20X1NTd&postpreservationdata=&submit=

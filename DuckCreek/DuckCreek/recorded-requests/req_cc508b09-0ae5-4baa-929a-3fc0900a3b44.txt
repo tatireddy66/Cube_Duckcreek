@@ -1,0 +1,15 @@
+POST https://secureauthdev.td.afg:443/siteminderagent/forms/branded_login.fcc?TYPE=33619969&REALMOID=06-000ef54e-b3bb-16bb-a929-e8270a324027&GUID=&SMAUTHREASON=0&METHOD=GET&SMAGENTNAME=-SM-osUb62PWBjPNzTaUAeEMCcXMMvoyy7MXgpF9pWs9szQn5M4g1syvVt7mx1vkQ4M%2bKi8PFqoXJleHSSUIA1XA5TyTzbhszmwr&TARGET=-SM-http%3a%2f%2fcubeshsdev%2etd%2eafg%2fUwdRefApp%2f HTTP/1.1
+Host: secureauthdev.td.afg
+Connection: keep-alive
+Content-Length: 277
+Cache-Control: max-age=0
+Origin: https://secureauthdev.td.afg
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: https://secureauthdev.td.afg/siteminderagent/forms/branded_login.fcc?TYPE=33619969&REALMOID=06-000ef54e-b3bb-16bb-a929-e8270a324027&GUID=&SMAUTHREASON=0&METHOD=GET&SMAGENTNAME=-SM-osUb62PWBjPNzTaUAeEMCcXMMvoyy7MXgpF9pWs9szQn5M4g1syvVt7mx1vkQ4M%2bKi8PFqoXJleHSSUIA1XA5TyTzbhszmwr&TARGET=-SM-http%3a%2f%2fcubeshsdev%2etd%2eafg%2fUwdRefApp%2f
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+
+USER=trefapp2&PASSWORD=&SMENC=ISO-8859-1&SMLOCALE=US-EN&target=http%3A%2F%2Fcubeshsdev.td.afg%2FUwdRefApp%2F&smquerydata=&smauthreason=0&smagentname=osUb62PWBjPNzTaUAeEMCcXMMvoyy7MXgpF9pWs9szQn5M4g1syvVt7mx1vkQ4M%2BKi8PFqoXJleHSSUIA1XA5TyTzbhszmwr&postpreservationdata=&submit=

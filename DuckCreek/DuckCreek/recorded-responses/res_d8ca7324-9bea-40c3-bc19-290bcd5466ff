@@ -1,0 +1,1638 @@
+/**********************************
+ * RA.UI
+ **********************************/
+RA.UI.consoleTime = function(timerName) {
+    if (navigator.appName != IE_BROWSER_TYPE)
+    {
+        console.time(timerName);
+    }
+
+};
+RA.UI.consoleTimeEnd = function(timerName) {
+    if (navigator.appName != IE_BROWSER_TYPE)
+    {
+        console.timeEnd(timerName);
+    }
+
+};
+RA.UI.getBigDecimalValue = function(bigDecimalObject) {
+    if (!bigDecimalObject)
+    {
+        return Number(0);
+    }
+    if (bigDecimalObject instanceof Object)
+    {
+        return Number(bigDecimalObject.value);
+    }
+    else
+    {
+        return Number(bigDecimalObject);
+    }
+};
+
+RA.UI.displayGenericErrorMessage = function(rootScope, scope, msg, logFunction) {
+    try
+    {
+        // display a generic message on the screen.
+        scope.errorMessages = [{"context":"Unexpected Error","type":MESSAGE_ERROR,"text": GENERIC_ERROR_MESSAGE}];
+        scope.displayErrorMessages = true;
+        var currentUserHid = scope.currentUser ? scope.currentUser.createHid : RA.Session.getCurrentUserHid();
+
+        // THIS CONSOLE.LOG is intentionally added here.  Since we are now catching the javascript messages, we
+        // still want them to display in the console.  This DOES work in chrome and IE 10
+        console.log(msg);
+
+        logFunction;
+
+        // scroll up to see the message.
+        if (scope.scrollTop)
+        {
+            scope.scrollTop();
+        }
+
+        // remove the layover page
+        rootScope.hidePageLoading();
+        scope.pageLoaded = 'YES';
+    }
+    catch(exception)
+    {
+        alert (GENERIC_ERROR_MESSAGE);
+    }
+};
+
+RA.UI.addNoneOption = function(itemList) {
+    var newItemList = [];
+    newItemList.push({"itemCode": EMPTY_STRING, "itemDescriptionShort":NONE_OPTION});
+    angular.forEach(itemList, function(item) {
+        newItemList.push(item);
+    });
+    return newItemList;
+};
+
+RA.UI.addNoPersonOption = function(itemList) {
+    var newItemList = [];
+    newItemList.push({"hid": EMPTY_STRING, "lastName":NONE_OPTION, "firstName":EMPTY_STRING, "commaString":""});
+    angular.forEach(itemList, function(item) {
+        newItemList.push({"hid":item.hid, "lastName":item.lastName, "firstName":item.firstName, "commaString":", "});
+    });
+    return newItemList;
+};
+
+RA.UI.addNoProductOption = function(itemList) {
+    var newItemList = [];
+    newItemList.push({"productCode": EMPTY_STRING, "productDescription":NONE_OPTION});
+    angular.forEach(itemList, function(item) {
+        newItemList.push(item);
+    });
+    return newItemList;
+};
+
+RA.UI.addNoSymbolOption = function(itemList) {
+    var newItemList = [];
+    newItemList.push({"policySymbol":NONE_OPTION});
+    angular.forEach(itemList, function(item) {
+        newItemList.push(item);
+    });
+    return newItemList;
+};
+
+
+RA.UI.allowOnlyNumerics = function(event) {
+    // Allow: backspace, delete, tab, escape, and enter
+    var code = event.keyCode;
+    if ( code == 46 || code == 8 || code == 9 || code == 27 || code == 13 ) {
+        // let it happen, don't do anything
+        return;
+    }
+    else {
+        // Ensure that it is a number and stop the keypress
+        if (code < 48 || code > 57) {
+            event.preventDefault();
+        }
+    }
+};
+
+RA.UI.allowOnlyNumericsStrict = function(event) {
+    // Allow: backspace, delete, tab, escape, and enter - without decimal allowance
+    var code = event.keyCode;
+    if (code == 8 || code == 9 || code == 27 || code == 13 ) {
+        // let it happen, don't do anything
+        return;
+    }
+    else {
+        // Ensure that it is a number and stop the keypress
+        if (code < 48 || code > 57) {
+            event.preventDefault();
+        }
+    }
+};
+
+RA.UI.allowOnlyAlphaNumericsStrict = function(event) {
+    // Allow: backspace, delete, tab, escape, and enter - without decimal allowance
+    var code = event.keyCode;
+    if (code == 8 || code == 9 || code == 27 || code == 13 ) {
+        // let it happen, don't do anything
+        return;
+    }
+    else {
+        // Ensure that it is a number and stop the keypress
+        var isNumber = code > 47 && code < 58;
+        var isUpperCaseChar = code >64 && code < 91;
+        var isLowerCaseChar = code >96 && code < 123;
+        var  isAlphaNumeric = isNumber || isUpperCaseChar || isLowerCaseChar;
+        if (!isAlphaNumeric) {
+            event.preventDefault();
+        }
+    }
+};
+
+RA.UI.allowOnlyNumericsAndDash = function(event) {
+    // Allow: backspace, delete, tab, escape, and enter & dash for negative numbers
+    var code = event.keyCode;
+    if ( code == 46 || code == 45 || code == 8 || code == 9 || code == 27 || code == 13 ) {
+        // let it happen, don't do anything
+        return;
+    }
+    else {
+        // Ensure that it is a number and stop the keypress
+        if (code < 48 || code > 57) {
+            event.preventDefault();
+        }
+    }
+};
+
+RA.UI.allowOnlyNumericsAndComma = function(event) {
+    // Allow: delete, backspace, tab, escape, and comma
+    var code = event.keyCode;
+    if ( code === 46 || code === 8 || code === 9 || code === 27 || code === 44 ) {
+        // let it happen, don't do anything
+        return;
+    }
+    else {
+        // Ensure that it is a number and stop the keypress
+        if (code < 48 || code > 57) {
+            event.preventDefault();
+        }
+    }
+};
+
+RA.UI.allowOnlyNumberBoxFields = function(event) {
+
+    var code = event.keyCode;
+
+    if (code == 190 || code == 110 || code == 109 || code == 189) {
+
+        RA.UI.doPreventDuplicateDecimalsAndDashes(event);
+
+        // Allow: backspace, delete, tab, escape, and enter & dash for negative numbers, . characters for decimals, and numpad
+    } else if (code == 13  || code == 9 || code == 8 || code == 27 || code == 46 || code == 45 || code == 190 || code == 189
+        || code == 96 || code == 97 || code == 98 || code == 99 || code == 100 || code == 101 || code == 102
+        || code == 103 || code ==  104 || code ==  105 || code == 109 || code ==  110) {
+
+    } else {
+        // Ensure that it is a number and stop the keypress
+
+        if (code < 48 || code > 57) {
+
+            event.preventDefault ? event.preventDefault() : event.returnValue = false;
+        }
+    }
+};
+
+RA.UI.doPreventDuplicateDecimalsAndDashes = function (event) {
+
+    var charMap = {110 : '.', 109 :'-', 189 : '-', 190 : '.'};
+    var character = charMap[event.keyCode];
+    var valueArray = event.srcElement.value.split('');
+
+    //prevent '-' from being entered if field already has a value
+    if (character == '-' && valueArray.length > 0) {
+        event.preventDefault ? event.preventDefault() : event.returnValue = false;
+    }
+    //prevent duplicate entries for allowed special characters
+    for (var x = 0; x < valueArray.length; x++) {
+
+        if (character == valueArray[x]) {
+            event.preventDefault ? event.preventDefault() : event.returnValue = false;
+        }
+    }
+    return;
+};
+
+RA.UI.doClearMessages = function($scope)
+{
+    $scope.infoMessages = [];
+    $scope.errorMessages = [];
+    $scope.successMessages = [];
+    $scope.validationMessages = [];
+    $scope.validationMessageHolder = [];
+    $scope.displayInfoMessages = false;
+    $scope.displayErrorMessages = false;
+    $scope.displaySuccessMessages = false;
+    $scope.displayValidationMessages = false;
+    $scope.effectiveDateWarnings = "";
+    $scope.effectiveDateErrors = "";
+
+    // find all the elements that have the class and remove it
+    $('.' + ERROR_CLASS).each(function() {
+        $(this).removeClass(ERROR_CLASS);
+    }) ;
+};
+
+RA.UI.doClearSomeMessages = function(listOfMessages, messagesToClear)
+{
+    for (var index in messagesToClear) {
+        for (var totalListIndex in listOfMessages) {
+            if (messagesToClear[index].context == listOfMessages[totalListIndex].context &&
+                messagesToClear[index].text == listOfMessages[totalListIndex].text) {
+                listOfMessages.splice(totalListIndex);
+                $('#'+messagesToClear[index].context).each(function() {
+                    $(this).removeClass(ERROR_CLASS);
+                }) ;
+            }
+        }
+    }
+
+    return listOfMessages;
+};
+
+RA.UI.doConvertUdRefItemsToString = function(itemCodeList, referenceDtoList) {
+    var refCodeItemString = "";
+    if (itemCodeList != null && referenceDtoList != null) {
+        angular.forEach(itemCodeList, function(itemCode) {
+            for (var index in referenceDtoList) {
+                if (itemCode != EMPTY_STRING) {
+                    if (itemCode === referenceDtoList[index].itemCode) {
+                        if (refCodeItemString.length == 0) {
+                            refCodeItemString = referenceDtoList[index].itemDescriptionShort;
+                        } else {
+                            refCodeItemString += ", " + referenceDtoList[index].itemDescriptionShort;
+                        }
+                    }
+                }
+            }
+        });
+    }
+    return refCodeItemString;
+};
+
+RA.UI.doConvertValuesToString = function(itemCodeList, referenceDtoList) {
+    var refCodeItemString = "";
+
+    if (itemCodeList != null && referenceDtoList != null) {
+        angular.forEach(itemCodeList, function(value) {
+            for (var index in referenceDtoList) {
+                if (value != EMPTY_STRING) {
+                    if (value === referenceDtoList[index].value) {
+                        if (refCodeItemString.length == 0) {
+                            refCodeItemString = referenceDtoList[index].label;
+                        } else {
+                            refCodeItemString += ", " + referenceDtoList[index].label;
+                        }
+                    }
+                }
+            }
+        });
+    }
+    return refCodeItemString;
+};
+
+RA.UI.doConvertUdRefItemsToValueLabelPairs = function(referenceDtoList) {
+    var convertedArray = [];
+    if (referenceDtoList != null) {
+        for (var index in referenceDtoList)
+        {
+            var newItem = {"value": referenceDtoList[index].itemCode, "label": referenceDtoList[index].itemDescriptionShort};
+            convertedArray.push(newItem);
+        }
+    }
+    return convertedArray;
+};
+
+RA.UI.doConvertToLabelValue = function (array, labelField, valueField)
+{
+    if(!array) return [];
+
+    var pairs = [];
+    var isNameFunc = typeof labelField === 'function';
+    var isValueFunc = typeof valueField === 'function';
+    for(var i = 0; i < array.length; i++)
+    {
+        pairs.push({label: isNameFunc ? labelField(array[i]) : array[i][labelField] || array[i], value: isValueFunc ? valueField(array[i]) : array[i][valueField] || array[i]});
+    }
+    return pairs;
+}
+
+RA.UI.doConvertPersonItemsToString = function(hidList, referenceDtoList) {
+    var personListString = "";
+    if (hidList != null && referenceDtoList != null) {
+        angular.forEach(hidList, function(hid) {
+            for (var index in referenceDtoList) {
+                if (hid !== EMPTY_STRING) {
+                    if (hid === referenceDtoList[index].hid) {
+                        var name = referenceDtoList[index].lastName + ', ' + referenceDtoList[index].firstName;
+                        if (personListString.length == 0) {
+                            personListString = name;
+                        } else {
+                            personListString += ", " + name;
+                        }
+                    }
+                }
+            }
+        });
+    }
+    return personListString;
+};
+
+RA.UI.doConvertProductItemsToString = function(productList, referenceDtoList) {
+    var productListString = "";
+    if (productList != null && referenceDtoList != null) {
+        angular.forEach(productList, function(productCode) {
+            for (var index in referenceDtoList) {
+                if (productCode != EMPTY_STRING) {
+                    if (productCode === referenceDtoList[index].productCode) {
+                        if (productListString.length == 0) {
+                            productListString = referenceDtoList[index].productDescription;
+                        } else {
+                            productListString += ", " + referenceDtoList[index].productDescription;
+                        }
+                    }
+                }
+            }
+        });
+    }
+    return productListString;
+};
+
+RA.UI.doDisplayUIFatalMessages = function (message, $scope)
+{
+    //TODO - re-factor scope out of this function? maybe
+    var errorMessages = [];
+    $scope.displayInfoMessages = false;
+    $scope.displayErrorMessages = false;
+    $scope.displaySuccessMessages = false;
+    $scope.displayValidationMessages = false;
+
+    errorMessages.push({"text": message});
+    $scope.displayErrorMessages = true;
+    $scope.errorMessages = errorMessages;
+};
+
+RA.UI.doDisplayUIMessages = function (messageArray, $scope)
+{
+    if (messageArray)
+    {
+        angular.forEach(messageArray, function(message)
+        {
+            if (message.type === MESSAGE_INFO || message.type.value === MESSAGE_INFO) {
+                if (!$scope.infoMessages)
+                    $scope.infoMessages = [];
+
+                var duplicate = false;
+                for (var i = 0; i < $scope.infoMessages.length; i++) {
+                    if ($scope.infoMessages[i].text === message.text) {
+                        duplicate = true;
+                    }
+                }
+                if (duplicate === false){
+                    $scope.displayInfoMessages = true;
+                    $scope.infoMessages.push(message);
+                }
+            }
+            else if (message.type === MESSAGE_ERROR || message.type.value === MESSAGE_ERROR)
+            {
+                if ($scope.errorMessages == 'undefined' || $scope.errorMessages == null)
+                    $scope.errorMessages = [];
+
+                $scope.errorMessages.push(message);
+                $scope.displayErrorMessages = true;
+            }
+            else if (message.type === MESSAGE_VALIDATION || message.type.value === MESSAGE_VALIDATION)
+            {
+                if ($scope.validationMessageHolder == 'undefined' || $scope.validationMessageHolder == null)
+                    $scope.validationMessageHolder = [];
+
+                $scope.validationMessageHolder.push(message);
+                $scope.validationMessages = $scope.validationMessageHolder;
+                $scope.displayValidationMessages = true;
+            }
+            else if (message.type === MESSAGE_SUCCESS || message.type.value === MESSAGE_SUCCESS)
+            {
+                if ($scope.successMessages == 'undefined' || $scope.successMessages == null)
+                    $scope.successMessages = [];
+
+                $scope.successMessages.push(message);
+                $scope.displaySuccessMessages = true;
+            }
+        });
+    }
+};
+
+RA.UI.doFindDisplayLabelFromArray = function(field, value, arrayToSearch)
+{
+    var returnString = value;
+    var foundIt = false;
+    if (arrayToSearch != null) {
+        angular.forEach(arrayToSearch, function(item) {
+            if (!foundIt) {
+                if(item.value == field){
+                    foundIt = true;
+                    var arrayValues = item.arrayValues;
+                    if (arrayValues == null) {
+                        // do nothing, it's not an array, just return value passed in
+                    } else {
+                        returnString = RA.UI.doFindLabelFromValue(value, arrayValues);
+                    }
+                }
+            }
+        });
+    }
+    return returnString;
+}
+
+/***
+ RA.UI.doFindLabelFromMap = function(valueString, mapToSearch){
+    var mapObject = null;
+    var labelString = valueString;
+
+    for (var key in mapToSearch) {
+        mapObject = mapToSearch[key];
+        if (mapObject.endIncurredAmount != null && mapObject.startIncurredAmount != null) {
+            if (valueString.endIncurredAmount == mapObject.endIncurredAmount && valueString.startIncurredAmount == mapObject.startIncurredAmount) {
+                labelString = key;
+                break;
+            }
+        } else if (mapObject.endLossRation != null && mapObject.startLossRation != null) {
+            if (valueString.endLossRation == mapObject.endLossRation && valueString.startLossRation == mapObject.startLossRation) {
+                labelString = key;
+                break;
+            }
+        }
+    }
+    return labelString;
+}
+ ********/
+
+RA.UI.doFindLabelFromValue = function (valueString, arrayToSearch)
+{
+    var labelString = EMPTY_STRING;
+    var foundIt = false;
+    if (arrayToSearch != null) {
+        angular.forEach(arrayToSearch, function(item) {
+            if (!foundIt) {
+                if (item.value == null) {
+                    if (item.hid == null) {
+                        if (item.itemCode == null) {
+                            if (item.productCode == null) {
+                                if (item.policySymbol == null) {
+                                    if (item == valueString) {
+                                        labelString = item;
+                                        foundIt = true;
+                                    }
+                                } else {
+                                    if (item.policySymbol == valueString) {
+                                        labelString = item.policySymbol;
+                                        foundIt = true;
+                                    }
+                                }
+                            } else {
+                                if (item.productCode == valueString) {
+                                    labelString = item.productDescription;
+                                    foundIt = true;
+                                }
+                            }
+                        } else {
+                            if (item.itemCode == valueString) {
+                                labelString = item.itemDescriptionShort;
+                                foundIt = true;
+                            }
+                        }
+                    } else {
+                        if (item.hid == valueString) {
+                            labelString = item.lastName + ", " + item.firstName;
+                            foundIt = true;
+                        }
+                    }
+                } else if(item.value == valueString){
+                    labelString = item.label;
+                    foundIt = true;
+                }
+            }
+        });
+    }
+
+    return labelString;
+}
+
+/******
+ RA.UI.doLoadDirtyElements = function(classToSearchBy) {
+    var elements = ['input', 'select'];
+
+    var onLoad = {};
+
+    for(var e in elements)
+    {
+        var elem = elements[e];
+        $("." + classToSearchBy).find(elem).each(function()
+        {
+            var id = $(this).attr('id');
+            onLoad[id] = $(this).val();
+        });
+    }
+
+    return onLoad;
+}
+ *********/
+
+RA.UI.doRemoveFieldFromDto = function (originalDto, fieldToRemove, fieldValue) {
+    for (var field in originalDto) {
+        if (field == fieldToRemove) {
+            if (originalDto[field] instanceof Array) {
+                // it's an array, so remove only the one associated, if fieldValue is populated
+                if (fieldValue == null) {
+                    originalDto[field] = [];
+                } else {
+                    var dtoFieldArray = originalDto[field];
+                    if (dtoFieldArray != null) {
+                        if (dtoFieldArray.length == 1) {
+                            originalDto[field] = [];
+                        } else {
+                            for (var index in dtoFieldArray) {
+                                if (dtoFieldArray[index] == fieldValue) {
+                                    dtoFieldArray.splice(index,1);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // certain fields (such as true/false checkbox/radio values) are not allowed to be null
+                if (field === 'facRe' || field === 'claimsExist') {
+                    originalDto[field] = !originalDto[field];
+                }
+                else
+                    originalDto[field] = null;
+            }
+        }
+    }
+    return originalDto;
+}
+
+RA.UI.doCheckIfAllFieldsEmpty = function (originalDto) {
+    var allFieldsEmpty = true;
+    for (var field in originalDto) {
+        if (!RA.UI.isNullOrEmptyString(originalDto[field])) {
+            allFieldsEmpty = false;
+        }
+    }
+    return allFieldsEmpty;
+}
+
+RA.UI.doCreateCharmObject = function(label, labelDtoField, valueDisplay, valueActual) {
+    // charms show up as label: value, but for the label we need 2 parts, the display label (such as "Insured Name", as
+    // well as the the dto field name of "insuredName",  for the value part, we also need 2 parts, the display label
+    // such as lastname, first name as well as the hid)
+    // labelDisplay, labelDtoField, valueDisplay, valueActual
+    return {"labelDisplay": label, "labelDtoField": labelDtoField, "valueDisplay": valueDisplay, "valueActual": valueActual};
+}
+
+RA.UI.doGetDisplayCharms = function(charmsArrayObj, removeFunction)
+{
+    var charmsArray = [];
+
+    if (charmsArrayObj != null) {
+        angular.forEach(charmsArrayObj, function(charm) {
+            if (charm.labelDisplay != null) {
+                var charmsItem = {"label": charm.labelDisplay, "onRemove": function() {return removeFunction(charm);}};
+                charmsArray.push(charmsItem);
+            }
+        });
+    }
+
+    return charmsArray;
+
+}
+
+RA.UI.doCreateCharmsList = function(originalDto, namesListArray) {
+    var charmList = [];
+    var charmItem = EMPTY_STRING;
+    var charmLabel = EMPTY_STRING;
+    var arrayCharmLabel = EMPTY_STRING;
+    var labelList = [];
+
+    for (var field in originalDto)
+    {
+        var value = originalDto[field];
+        // there are some fields which are check boxes on the renewal search.
+        // If they are not checked, they don't want to see them in the charms
+        if ((field === 'facRe' || field === 'claimsExist') && value === false) {
+            // do nothing
+        } else {
+            if (!RA.UI.isNullOrEmptyString(value))  {
+                charmLabel = RA.UI.doFindLabelFromValue(field, namesListArray);
+                if (!RA.UI.isNullOrEmptyString(charmLabel)) {
+
+                    labelList.push(charmLabel + ":" + field);
+                    if (value instanceof Array) {
+                        angular.forEach(value, function(valueItem) {
+                            var displayValue =  RA.UI.doFindDisplayLabelFromArray(field, valueItem, namesListArray);
+                            arrayCharmLabel = charmLabel +  ": " + displayValue;
+                            charmList.push(RA.UI.doCreateCharmObject(arrayCharmLabel, field, displayValue, valueItem ));
+                        });
+                    }   else {
+                        var displayValue =  RA.UI.doFindDisplayLabelFromArray(field, value, namesListArray);
+                        charmLabel += ": " + displayValue;
+                        charmList.push(RA.UI.doCreateCharmObject(charmLabel, field, displayValue, value));
+                    }
+                }
+            }
+        }
+    }
+    return charmList;
+};
+
+RA.UI.charmsSuck = function()
+{
+    $('.gaig-filter-charms').width('750');
+}
+
+RA.UI.doFormatNumbertoCurrency = function (numberString) {
+    var formattedNumber = '--';
+
+    if (numberString)
+    {
+        formattedNumber = numeral(numberString).format('($0,0.00)');
+    }
+
+    return formattedNumber;
+};
+
+RA.UI.doMakeDateMMDDYYYY = function(dateString, displayTime, displayLongMonth) {
+    /*  THIS METHOD SHOULD NEVER BE CALLED WITH THE CURRENT DATE.  If YOU ARE LOOKING FOR A
+        FORMATTED CURRENT DATE, PLEASE CALL THE doMakeCurrentDateMMDDYYYY
+        This is because different UTC logic must take place */
+    /* SET displayTime to true if you want to see the time at the end of the date stamp, such as on the footer
+        06/13/2014  11:40 AM
+     */
+    /* SET displayLongMonth to true if you want to see the month spelled out, such as December 16, 2014 */
+    var date = new Date(dateString);
+
+    if (date == null || isNaN(date))
+    {
+        //have to parse iso8601 since ie8 and below does not support iso dates
+        var dateParts = dateString.match(/\d+/g);
+        date = new Date(dateParts[0], (dateParts[1]-1), dateParts[2], dateParts[3], dateParts[4], dateParts[5]);
+        return date;
+    }
+    else {
+        var dd = date.getDate();
+        var mm = date.getMonth()+1;
+        var mmMonth = Date.monthNamesLong[date.getMonth()];
+        var yyyy = date.getFullYear();
+        var hh = date.getHours();
+        var min = date.getMinutes();
+
+        var ddUTC = date.getUTCDate();
+        var mmUTC = date.getUTCMonth()+1;
+        var mmMonthUTC = Date.monthNamesLong[date.getUTCMonth()];
+        var yyyyUTC = date.getUTCFullYear();
+        var hhUTC = date.getUTCHours();
+        var minUTC = date.getUTCMinutes();
+
+        var needDDZero = "";
+        var needMonthZero = "";
+        var ampm = "AM";
+        var timeString = "";
+
+        // if the date string is passed in is with the format of 07/07/2014  or you are using IE .. then always pass back the NON-UTC Date fields
+        if ((dateString && dateString.length == 10) || $.browser.msie)
+        {
+            needDDZero = (dd < 10) ? "0" : EMPTY_STRING;
+            needMonthZero = (mm < 10) ? "0" : EMPTY_STRING;
+            min = (min < 10) ? ("0" + min) : min;
+            ampm = (hh > 11) ? "PM" : "AM";
+            hh = (hh > 12) ? (hh - 12): hh;
+            timeString = (displayTime) ?  ("  " + hh + ":" + min + " " + ampm) : EMPTY_STRING;
+
+
+            return (displayLongMonth) ? (mmMonth + ' ' + dd + ', ' + yyyy) : (needMonthZero + mm + "/" + needDDZero + dd + "/" + yyyy + timeString);
+        }
+        else
+        {
+            // the date string is not 10 or you are using something other than the lovely IE
+            needDDZero = (ddUTC < 10) ? "0" : EMPTY_STRING;
+            needMonthZero = (mmUTC < 10) ? "0" : EMPTY_STRING;
+            minUTC = (minUTC < 10) ? ("0" + minUTC) : minUTC;
+            ampm = (hhUTC > 11) ? "PM" : "AM";
+            hhUTC = (hhUTC > 12) ? (hhUTC - 12): hhUTC;
+            timeString = (displayTime) ? ( "  " + hhUTC + ":" + minUTC + " " + ampm ) : EMPTY_STRING;
+
+            return (displayLongMonth) ? (mmMonthUTC + ' ' + ddUTC + ', ' + yyyyUTC) : (needMonthZero + mmUTC + "/" + needDDZero + ddUTC + "/" + yyyyUTC + timeString);
+
+        }
+    }
+};
+
+RA.UI.doMakeCurrentDateMMDDYYYY = function(dateString) {
+    /* THIS METHOD SHOULD ONLY BE CALLED WHEN ATTEMPTING TO CONVERT THE CURRENT DATE (ie. the dateString passed in is new Date())
+       This method passes back the date as UTC
+    */
+    var date = new Date(dateString);
+    if (date == null || isNaN(date))
+    {
+        //have to parse iso8601 since ie8 and below does not support iso dates
+        var dateParts = dateString.match(/\d+/g);
+        date = new Date(dateParts[0], (dateParts[1]-1), dateParts[2], dateParts[3], dateParts[4], dateParts[5]);
+    }
+    var dd = date.getUTCDate();
+    var mm = date.getUTCMonth()+1;
+    var yyyy = date.getUTCFullYear();
+    var needDDZero = "";
+    var needMonthZero = "";
+    if (dd < 10) {
+        needDDZero = "0";
+    }
+    if (mm < 10) {
+        needMonthZero = "0";
+    }
+    return needMonthZero + mm + "/" + needDDZero + dd + "/" + yyyy;
+};
+
+RA.UI.doNavigation = function(url, openNew)
+{
+    if(url)
+    {
+        if(openNew)
+        {
+            window.open(url);
+        }
+        else
+        {
+            window.location.href = url;
+        }
+    }
+};
+
+RA.UI.doRefresh = function(prepare)
+{
+    if(prepare)
+    {
+        prepare.apply();
+    }
+    window.location.href = window.location.pathname;
+};
+
+RA.UI.doSafeRefresh = function(rawResult, $scope)
+{
+    var data = RA.Service.handleServiceResult(rawResult, $scope);
+    if(rawResult.status)
+    {
+        RA.UI.doRefresh();
+    }
+    else
+    {
+        return data;
+    }
+};
+
+RA.UI.isDateGreaterThan12MonthsAgo = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var twelveMonthsAgo = new Date(systemDate);
+            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+            if (theDate <= twelveMonthsAgo) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+RA.UI.isDateGreaterThan3MonthsAgo = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var threeMonthsAgo = new Date(systemDate);
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+            if (theDate <= threeMonthsAgo) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+RA.UI.isDateGreaterThan4MonthsAgo = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var fourMonthsAgo = new Date(systemDate);
+            fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
+
+            if (theDate <= fourMonthsAgo) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+RA.UI.isDateGreaterThan18MonthsAgo = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var eighteenMonthsAgo = new Date(systemDate);
+            eighteenMonthsAgo.setMonth(eighteenMonthsAgo.getMonth() - 18);
+
+            if (theDate <= eighteenMonthsAgo) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+RA.UI.isDateGreaterThan3MonthsInTheFuture = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var threeMonthsInFuture = new Date(systemDate);
+            threeMonthsInFuture.setMonth(threeMonthsInFuture.getMonth() + 3);
+            if (theDate > threeMonthsInFuture){
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+RA.UI.isDateGreaterThan6MonthsInTheFuture = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var sixMonthsInFuture = new Date(systemDate);
+            sixMonthsInFuture.setMonth(sixMonthsInFuture.getMonth() + 6);
+            if (theDate > sixMonthsInFuture){
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+RA.UI.isDateGreaterThan3YearsInTheFuture = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var threeYearsInFuture = new Date(systemDate);
+            threeYearsInFuture.setYear(threeYearsInFuture.getFullYear() + 3);
+
+            if (theDate > threeYearsInFuture){
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+RA.UI.isDateGreaterThan30YearsInTheFuture = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var thirtyYearsInFuture = new Date(systemDate);
+            thirtyYearsInFuture.setYear(thirtyYearsInFuture.getFullYear() + 30);
+            if (theDate > thirtyYearsInFuture){
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+RA.UI.isDateGreaterThanToday = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var sysDate = new Date(systemDate);
+            if (theDate > sysDate){
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+RA.UI.isDateLessThanToday = function(dateString, systemDate) {
+    if (dateString != undefined && dateString != null) {
+        if (dateString.length == 10) {
+            var theDate = new Date(dateString);
+            var yesterdaysDate = new Date(systemDate);
+            yesterdaysDate.setDate(yesterdaysDate.getDate() - 1);
+
+            if (theDate < yesterdaysDate){
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+// TODO: this is only used in a test
+RA.UI.isDateDateLessThanToday = function (theDate, systemDate) {
+    if (theDate != undefined && theDate != null) {
+        var thisMorning = new Date(systemDate);
+        thisMorning.setHours(0);
+        thisMorning.setMinutes(0);
+        thisMorning.setSeconds(0);
+        thisMorning.setMilliseconds(0);
+        return theDate < thisMorning;
+    }
+};
+
+RA.UI.isDateBeforeDate = function(dateStringOne, dateStringTwo)
+{
+    if (dateStringOne  && dateStringTwo) {
+        if (dateStringOne.length == 10 && dateStringTwo.length == 10) {
+            var validateDate = new Date(dateStringOne);
+            var compareToDate = new Date(dateStringTwo);
+
+            if (validateDate < compareToDate){
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+};
+
+RA.UI.isDateValid = function(dateString, dateLabel)  {
+    var message = "";
+    if (dateString != null && dateString != "") {
+        var matchArray = dateString.match(/^(\d{1,2})(\/|-)(\d{1,2})\2(\d{4})$/);
+
+        if (matchArray == null) {
+            message = dateLabel + ": " + dateString + " " + " is not in a valid format.  It must be entered in MM/DD/YYYY format or selected from the calendar.\n";
+            return message;
+        }
+
+        var month = matchArray[1]; // parse date into variables
+        var day = matchArray[3];
+        var year = matchArray[4];
+        if (month < 1 || month > 12) { // check month range
+            message = dateLabel + ": " + dateString + " " + " is not a valid date.\n";
+            return message;
+        }
+        if (day < 1 || day > 31) {
+            message = dateLabel + ": " + dateString + " " + " is not a valid date.\n";
+            return message;
+        }
+        if ((month==4 || month==6 || month==9 || month==11) && day==31) {
+            message = dateLabel + ": " + dateString + " " + " is not a valid date.\n";
+            return message;
+        }
+        if (month == 2) { // check for february 29th
+            var isleap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+            if (day>29 || (day==29 && !isleap)) {
+                message = dateLabel + ": " + dateString + " " + " is not a valid date.\n";
+                return message;
+            }
+        }
+    }
+    return message;
+};
+
+RA.UI.doAdjustAnchor = function(listItemID, enableCondition, anchorHTML)
+{
+    var li = $('#' + listItemID)[0];
+    var a = $(li).children()[0];
+
+    if(enableCondition && !a && typeof a != 'undefined')
+    {
+        li.innerHTML = '';
+        $(li).removeClass('disabled');
+        $(li).append(anchorHTML);
+    }
+    else if(!enableCondition)
+    {
+        var innerHTML = $(a).html();
+        $(a).remove();
+        $(li).addClass('disabled');
+        $(li).append(innerHTML);
+    }
+};
+RA.UI.doOpenNotesWindow = function($scope)
+{
+    if($scope.childWindowHandle && !$scope.childWindowHandle.closed)
+    {
+        $scope.childWindowHandle.close();
+        // Replace Notes Pop-up in existing window
+        $scope.childWindowHandle = window.open(NOTES_LOCATION, 'RefAppNotesWindow', 'width=1000, height=600, top=50, left=50, dependent=yes, menubar=no, toolbar=no, resizable=yes, scrollbars=yes location=no');
+        $scope.childWindowHandle.focus();
+    }
+    else
+    {
+        // Open New Notes Window Notes Pop-up in child window
+        $scope.childWindowHandle = window.open('', 'RefAppNotesWindow', 'width=100, height=100, top=100, left=100, menubar=no, toolbar=no, resizable=no, scrollbars=no, titlebar=no, location=no, status=no');
+        // To handle IE/Chrome issue of occasionally not refreshing for child window, we close window and open window again.
+        // We do this since Ref App Session info is stored on client (not server).  When attempt is made to Serialize Window object (clientWindowHandle),
+        // using RA.Controller.stringify, circular reference error is returned-- workaround is to close and open window.
+        var t = setTimeout(function(){
+            if($scope.childWindowHandle && !$scope.childWindowHandle.closed)
+            {
+                $scope.childWindowHandle.close();
+                $scope.childWindowHandle = window.open(NOTES_LOCATION, 'RefAppNotesWindow', 'width=1000, height=600, top=50, left=50, dependent=yes, menubar=no, toolbar=no, resizable=yes, scrollbars=yes location=no');
+                $scope.childWindowHandle.focus();
+            }
+        },300);
+    }
+};
+
+RA.UI.doRenameAnchor = function(tableId, index, from, to)
+{
+    $($('#' + tableId + ' tbody')[index]).find('a:visible').each(function()
+    {
+        var text = $(this).text();
+        if(text == from)
+        {
+            $(this).text(to);
+            return false;
+        }
+        else if(text == to)
+        {
+            $(this).text(from)
+            return false;
+        }
+    });
+};
+
+RA.UI.isNullorEmpty = function(value)
+{
+    if(value == null || value == EMPTY_STRING)
+    {
+        return true;
+    }
+    return false;
+};
+
+RA.UI.removeNoneOption = function(itemList) {
+
+    angular.forEach(itemList, function(item) {
+        if(item != null && item instanceof Array && item.length > 0){
+            if(item[0] === EMPTY_STRING || item[0] === NONE_OPTION){
+                item.splice(0,1);
+            }
+        }
+    });
+};
+
+
+RA.UI.nvl = function(val, valIfNull)
+{
+    if(val == null || val == 'null')
+    {
+        return valIfNull;
+    }
+    return val;
+};
+
+RA.UI.isNullOrEmptyString = function(val)
+{
+    if(val == null) {
+        return true;
+    } if (val === EMPTY_STRING) {
+    return true;
+} else {
+    return false;
+}
+};
+
+RA.UI.isExtension = function(submission)
+{
+    return ((submission || {}).transactionTypeRefCode === 'ENDT' && (submission || {}).sourceSystemRefCode === 'UD') &&
+        ((submission || {}).endorsementTypeRefCode === 'EXT');
+};
+
+RA.UI.isRetroEndtOrNbsReversal = function(submission)
+{
+    return ((submission || {}).transactionTypeRefCode === 'ENDT' && (submission || {}).sourceSystemRefCode === 'UD') &&
+           ((submission || {}).transactionSubTypeRefCode === 'RETRO' || ['COMMCHG','CUSTNBR'].indexOf((submission || {}).endorsementTypeRefCode) !== -1);
+};
+
+RA.UI.isCustNo = function(submission)
+{
+    return (((submission || {}).transactionTypeRefCode === 'ENDT' && (submission || {}).endorsementTypeRefCode === 'CUSTNBR')) ||
+        (['NB','RW','CRW','REN','RLR'].indexOf((submission || {}).transactionSubTypeRefCode) !== -1) || ((submission || {}).sourceSystemRefCode !== 'UD');
+};
+
+RA.UI.toTitleCase = function(str)
+{
+    if (str)
+        return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+    else
+        return EMPTY_STRING;
+
+};
+
+RA.UI.toTitleCaseExtended = function(str)
+{
+    if (str)
+        return str.replace(/\b[\w^']+\b/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+    else
+        return EMPTY_STRING;
+};
+
+RA.UI.toHtmlBreaks = function(str)
+{
+    if (str)
+        return str.replace(/\n/g,'<br/>');
+    else
+        return EMPTY_STRING;
+};
+
+RA.UI.convertCityState = function(cityState)
+{
+    var convertedCityState = EMPTY_STRING;
+    if (cityState) {
+        var commaSpot = cityState.indexOf(",");
+        convertedCityState = RA.UI.toTitleCase(cityState.substr(0, commaSpot)) + cityState.substr(commaSpot);
+    }
+    return convertedCityState;
+};
+
+RA.UI.cancelFunctionFactory = function cancelFunctionFactory(snapshot)
+{
+    return function cancelFunction(key, value, preCallback, postCallback)
+    {
+        var current = RA.UI.takeSnapshot(value, preCallback);
+        var shouldCancel = snapshot[key] === current || confirm(UNSAVED_CHANGES_NAV_CONFIRM);
+
+        if (shouldCancel)
+        {
+            postCallback();
+        }
+
+        return shouldCancel;
+    };
+};
+
+RA.UI.reloadPageFactory = function reloadPageFactory()
+{
+    return function reloadPage()
+    {
+        location.reload();
+    };
+};
+
+RA.UI.takeSnapshot = function(value, preCallback) // TODO - add support for include/exclude
+{
+    return;
+    if(preCallback)
+    {
+        preCallback();
+    }
+
+    // this function is going to ultimately being called from the CDN which is why it looks this way
+    function md5cycle(x,k){var a=x[0],b=x[1],c=x[2],d=x[3];a=ff(a,b,c,d,k[0],7,-680876936);d=ff(d,a,b,c,k[1],12,-389564586);c=ff(c,d,a,b,k[2],17,606105819);b=ff(b,c,d,a,k[3],22,-1044525330);a=ff(a,b,c,d,k[4],7,-176418897);d=ff(d,a,b,c,k[5],12,1200080426);c=ff(c,d,a,b,k[6],17,-1473231341);b=ff(b,c,d,a,k[7],22,-45705983);a=ff(a,b,c,d,k[8],7,1770035416);d=ff(d,a,b,c,k[9],12,-1958414417);c=ff(c,d,a,b,k[10],17,-42063);b=ff(b,c,d,a,k[11],22,-1990404162);a=ff(a,b,c,d,k[12],7,1804603682);d=ff(d,a,b,c,k[13],12,-40341101);c=ff(c,d,a,b,k[14],17,-1502002290);b=ff(b,c,d,a,k[15],22,1236535329);a=gg(a,b,c,d,k[1],5,-165796510);d=gg(d,a,b,c,k[6],9,-1069501632);c=gg(c,d,a,b,k[11],14,643717713);b=gg(b,c,d,a,k[0],20,-373897302);a=gg(a,b,c,d,k[5],5,-701558691);d=gg(d,a,b,c,k[10],9,38016083);c=gg(c,d,a,b,k[15],14,-660478335);b=gg(b,c,d,a,k[4],20,-405537848);a=gg(a,b,c,d,k[9],5,568446438);d=gg(d,a,b,c,k[14],9,-1019803690);c=gg(c,d,a,b,k[3],14,-187363961);b=gg(b,c,d,a,k[8],20,1163531501);a=gg(a,b,c,d,k[13],5,-1444681467);d=gg(d,a,b,c,k[2],9,-51403784);c=gg(c,d,a,b,k[7],14,1735328473);b=gg(b,c,d,a,k[12],20,-1926607734);a=hh(a,b,c,d,k[5],4,-378558);d=hh(d,a,b,c,k[8],11,-2022574463);c=hh(c,d,a,b,k[11],16,1839030562);b=hh(b,c,d,a,k[14],23,-35309556);a=hh(a,b,c,d,k[1],4,-1530992060);d=hh(d,a,b,c,k[4],11,1272893353);c=hh(c,d,a,b,k[7],16,-155497632);b=hh(b,c,d,a,k[10],23,-1094730640);a=hh(a,b,c,d,k[13],4,681279174);d=hh(d,a,b,c,k[0],11,-358537222);c=hh(c,d,a,b,k[3],16,-722521979);b=hh(b,c,d,a,k[6],23,76029189);a=hh(a,b,c,d,k[9],4,-640364487);d=hh(d,a,b,c,k[12],11,-421815835);c=hh(c,d,a,b,k[15],16,530742520);b=hh(b,c,d,a,k[2],23,-995338651);a=ii(a,b,c,d,k[0],6,-198630844);d=ii(d,a,b,c,k[7],10,1126891415);c=ii(c,d,a,b,k[14],15,-1416354905);b=ii(b,c,d,a,k[5],21,-57434055);a=ii(a,b,c,d,k[12],6,1700485571);d=ii(d,a,b,c,k[3],10,-1894986606);c=ii(c,d,a,b,k[10],15,-1051523);b=ii(b,c,d,a,k[1],21,-2054922799);a=ii(a,b,c,d,k[8],6,1873313359);d=ii(d,a,b,c,k[15],10,-30611744);c=ii(c,d,a,b,k[6],15,-1560198380);b=ii(b,c,d,a,k[13],21,1309151649);a=ii(a,b,c,d,k[4],6,-145523070);d=ii(d,a,b,c,k[11],10,-1120210379);c=ii(c,d,a,b,k[2],15,718787259);b=ii(b,c,d,a,k[9],21,-343485551);x[0]=add32(a,x[0]);x[1]=add32(b,x[1]);x[2]=add32(c,x[2]);x[3]=add32(d,x[3])}function cmn(q,a,b,x,s,t){a=add32(add32(a,q),add32(x,t));return add32((a<<s)|(a>>>(32-s)),b)}function ff(a,b,c,d,x,s,t){return cmn((b&c)|((~b)&d),a,b,x,s,t)}function gg(a,b,c,d,x,s,t){return cmn((b&d)|(c&(~d)),a,b,x,s,t)}function hh(a,b,c,d,x,s,t){return cmn(b^c^d,a,b,x,s,t)}function ii(a,b,c,d,x,s,t){return cmn(c^(b|(~d)),a,b,x,s,t)}function md51(s){txt='';var n=s.length,state=[1732584193,-271733879,-1732584194,271733878],i;for(i=64;i<=s.length;i+=64){md5cycle(state,md5blk(s.substring(i-64,i)))}s=s.substring(i-64);var tail=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];for(i=0;i<s.length;i++)tail[i>>2]|=s.charCodeAt(i)<<((i%4)<<3);tail[i>>2]|=0x80<<((i%4)<<3);if(i>55){md5cycle(state,tail);for(i=0;i<16;i++)tail[i]=0}tail[14]=n*8;md5cycle(state,tail);return state}function md5blk(s){var md5blks=[],i;for(i=0;i<64;i+=4){md5blks[i>>2]=s.charCodeAt(i)+(s.charCodeAt(i+1)<<8)+(s.charCodeAt(i+2)<<16)+(s.charCodeAt(i+3)<<24)}return md5blks}var hex_chr='0123456789abcdef'.split('');function rhex(n){var s='',j=0;for(;j<4;j++)s+=hex_chr[(n>>(j*8+4))&0x0F]+hex_chr[(n>>(j*8))&0x0F];return s}function hex(x){for(var i=0;i<x.length;i++)x[i]=rhex(x[i]);return x.join('')}function md5(s){return hex(md51(s))}function add32(a,b){return(a+b)&0xFFFFFFFF}if(md5('hello')!='5d41402abc4b2a76b9719d911017c592'){function add32(x,y){var lsw=(x&0xFFFF)+(y&0xFFFF),msw=(x>>16)+(y>>16)+(lsw>>16);return(msw<<16)|(lsw&0xFFFF)}};
+    return md5(RA.Controller.stringify(RA.Controller.serialize(value)));
+};
+
+RA.UI.Snapshot = function Snapshot()
+{
+    if(RA.UI.Snapshot.prototype.singleton)
+    {
+        return RA.UI.Snapshot.prototype.singleton;
+    }
+    RA.UI.Snapshot.prototype.singleton = this;
+
+    var snapshots = {};
+
+    function takeSnapshot(value, preCallback)
+    {
+        if(preCallback)
+        {
+            preCallback();
+        }
+
+        function md5cycle(x,k){var a=x[0],b=x[1],c=x[2],d=x[3];a=ff(a,b,c,d,k[0],7,-680876936);d=ff(d,a,b,c,k[1],12,-389564586);c=ff(c,d,a,b,k[2],17,606105819);b=ff(b,c,d,a,k[3],22,-1044525330);a=ff(a,b,c,d,k[4],7,-176418897);d=ff(d,a,b,c,k[5],12,1200080426);c=ff(c,d,a,b,k[6],17,-1473231341);b=ff(b,c,d,a,k[7],22,-45705983);a=ff(a,b,c,d,k[8],7,1770035416);d=ff(d,a,b,c,k[9],12,-1958414417);c=ff(c,d,a,b,k[10],17,-42063);b=ff(b,c,d,a,k[11],22,-1990404162);a=ff(a,b,c,d,k[12],7,1804603682);d=ff(d,a,b,c,k[13],12,-40341101);c=ff(c,d,a,b,k[14],17,-1502002290);b=ff(b,c,d,a,k[15],22,1236535329);a=gg(a,b,c,d,k[1],5,-165796510);d=gg(d,a,b,c,k[6],9,-1069501632);c=gg(c,d,a,b,k[11],14,643717713);b=gg(b,c,d,a,k[0],20,-373897302);a=gg(a,b,c,d,k[5],5,-701558691);d=gg(d,a,b,c,k[10],9,38016083);c=gg(c,d,a,b,k[15],14,-660478335);b=gg(b,c,d,a,k[4],20,-405537848);a=gg(a,b,c,d,k[9],5,568446438);d=gg(d,a,b,c,k[14],9,-1019803690);c=gg(c,d,a,b,k[3],14,-187363961);b=gg(b,c,d,a,k[8],20,1163531501);a=gg(a,b,c,d,k[13],5,-1444681467);d=gg(d,a,b,c,k[2],9,-51403784);c=gg(c,d,a,b,k[7],14,1735328473);b=gg(b,c,d,a,k[12],20,-1926607734);a=hh(a,b,c,d,k[5],4,-378558);d=hh(d,a,b,c,k[8],11,-2022574463);c=hh(c,d,a,b,k[11],16,1839030562);b=hh(b,c,d,a,k[14],23,-35309556);a=hh(a,b,c,d,k[1],4,-1530992060);d=hh(d,a,b,c,k[4],11,1272893353);c=hh(c,d,a,b,k[7],16,-155497632);b=hh(b,c,d,a,k[10],23,-1094730640);a=hh(a,b,c,d,k[13],4,681279174);d=hh(d,a,b,c,k[0],11,-358537222);c=hh(c,d,a,b,k[3],16,-722521979);b=hh(b,c,d,a,k[6],23,76029189);a=hh(a,b,c,d,k[9],4,-640364487);d=hh(d,a,b,c,k[12],11,-421815835);c=hh(c,d,a,b,k[15],16,530742520);b=hh(b,c,d,a,k[2],23,-995338651);a=ii(a,b,c,d,k[0],6,-198630844);d=ii(d,a,b,c,k[7],10,1126891415);c=ii(c,d,a,b,k[14],15,-1416354905);b=ii(b,c,d,a,k[5],21,-57434055);a=ii(a,b,c,d,k[12],6,1700485571);d=ii(d,a,b,c,k[3],10,-1894986606);c=ii(c,d,a,b,k[10],15,-1051523);b=ii(b,c,d,a,k[1],21,-2054922799);a=ii(a,b,c,d,k[8],6,1873313359);d=ii(d,a,b,c,k[15],10,-30611744);c=ii(c,d,a,b,k[6],15,-1560198380);b=ii(b,c,d,a,k[13],21,1309151649);a=ii(a,b,c,d,k[4],6,-145523070);d=ii(d,a,b,c,k[11],10,-1120210379);c=ii(c,d,a,b,k[2],15,718787259);b=ii(b,c,d,a,k[9],21,-343485551);x[0]=add32(a,x[0]);x[1]=add32(b,x[1]);x[2]=add32(c,x[2]);x[3]=add32(d,x[3])}function cmn(q,a,b,x,s,t){a=add32(add32(a,q),add32(x,t));return add32((a<<s)|(a>>>(32-s)),b)}function ff(a,b,c,d,x,s,t){return cmn((b&c)|((~b)&d),a,b,x,s,t)}function gg(a,b,c,d,x,s,t){return cmn((b&d)|(c&(~d)),a,b,x,s,t)}function hh(a,b,c,d,x,s,t){return cmn(b^c^d,a,b,x,s,t)}function ii(a,b,c,d,x,s,t){return cmn(c^(b|(~d)),a,b,x,s,t)}function md51(s){txt='';var n=s.length,state=[1732584193,-271733879,-1732584194,271733878],i;for(i=64;i<=s.length;i+=64){md5cycle(state,md5blk(s.substring(i-64,i)))}s=s.substring(i-64);var tail=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];for(i=0;i<s.length;i++)tail[i>>2]|=s.charCodeAt(i)<<((i%4)<<3);tail[i>>2]|=0x80<<((i%4)<<3);if(i>55){md5cycle(state,tail);for(i=0;i<16;i++)tail[i]=0}tail[14]=n*8;md5cycle(state,tail);return state}function md5blk(s){var md5blks=[],i;for(i=0;i<64;i+=4){md5blks[i>>2]=s.charCodeAt(i)+(s.charCodeAt(i+1)<<8)+(s.charCodeAt(i+2)<<16)+(s.charCodeAt(i+3)<<24)}return md5blks}var hex_chr='0123456789abcdef'.split('');function rhex(n){var s='',j=0;for(;j<4;j++)s+=hex_chr[(n>>(j*8+4))&0x0F]+hex_chr[(n>>(j*8))&0x0F];return s}function hex(x){for(var i=0;i<x.length;i++)x[i]=rhex(x[i]);return x.join('')}function md5(s){return hex(md51(s))}function add32(a,b){return(a+b)&0xFFFFFFFF}if(md5('hello')!='5d41402abc4b2a76b9719d911017c592'){function add32(x,y){var lsw=(x&0xFFFF)+(y&0xFFFF),msw=(x>>16)+(y>>16)+(lsw>>16);return(msw<<16)|(lsw&0xFFFF)}};
+        return md5(RA.Controller.stringify(RA.Controller.serialize(value)));
+    }
+
+    this.storeSnapshot = function storeSnapshot(key, value, preCallback)
+    {
+        snapshots[key] = takeSnapshot(value, preCallback);
+    };
+
+    this.compareSnapshot = function compareSnapshot(key, value, preCallback)
+    {
+        return snapshots[key] !== takeSnapshot(value, preCallback);
+    };
+};
+
+function clean(jObj) {
+    var field;
+
+    if (jObj instanceof Array) {
+        for (field in jObj) {
+            if(field === 'rpmSession')
+            {
+                continue;
+            }
+            //if the input array contains another array
+            if (jObj[field] instanceof Array) {
+                clean(jObj[field]);
+            }
+
+            //add any fields that need to be removed from array objects
+            //delete will remove the attribute and value is present
+            if (jObj[field] && typeof(jObj[field]) == 'object') {
+                delete jObj[field]['$$hashKey'];
+                for(var field2 in jObj[field])
+                {
+                    clean(jObj[field][field2]);
+                }
+            }
+
+            if(jObj[field] instanceof Date)
+            {
+                jObj[field] = RA.UI.doMakeDateMMDDYYYY(jObj[field]);
+            }
+        }
+    } else if (typeof(jObj) == "object") {
+        //send the next field in the input object to the array cleaner
+        for (field in jObj) {
+            if(field === 'rpmSession')
+            {
+                continue;
+            }
+            if(jObj[field] != null && typeof jObj[field] == 'string' && jObj[field].match(/\d{4}[\/\-](0?[1-9]|1[012])[\/\-](0?[1-9]|[12][0-9]|3[01])[T]\d{2}[\/\:]\d{2}[\/\:]\d{2}[\/\-]\d{0,4}/))
+            {
+                var date = jObj[field].match(/\d{4}[\/\-](0?[1-9]|1[012])[\/\-](0?[1-9]|[12][0-9]|3[01])[T]\d{2}[\/\:]\d{2}[\/\:]\d{2}[\/\-]\d{0,4}/)[0];
+                jObj[field] = RA.UI.doMakeDateMMDDYYYY(date);
+                continue;
+            }
+            clean(jObj[field]);
+        }
+    }
+    return jObj;
+}
+
+RA.UI.TableReader = function(tableId, classCk, columns)
+{
+    var myTableId = tableId;
+    var myClassCk = classCk;
+    var myColumns = columns;
+
+    var getTableRow = function(object)
+    {
+        if(object.tagName === 'TR')
+        {
+            return object
+        }
+        else
+        {
+            var tr = $(object).closest('tr');
+            if(tr[0].tagName === 'TR')
+            {
+                return tr[0];
+            }
+        }
+    };
+
+    var create = function(index, array)
+    {
+        return function(row)
+        {
+            return array[index] == 'checkbox' ? $($($(getTableRow(row)).children('td')).children('input')).val() :
+                $($(getTableRow(row)).children('td')[index]).text();
+        }
+    };
+
+    this.toDataTable = function()
+    {
+        return $('#' + myTableId).dataTable({"bRetrieve":true});
+    }
+
+    this.isReader = function(tableId)
+    {
+        return myTableId == tableId;
+    };
+
+    this.findIndex = function(object)
+    {
+        var dataTable = $('#' + myTableId).dataTable({"bRetrieve":true});
+        return dataTable.fnGetPosition($(object).closest('tr')[0]);
+    };
+
+    this.selectAll = function(selectAllId)
+    {
+        $('.' + myClassCk + ':checkbox[style!="visibility:hidden"]').prop('checked', $('#' + selectAllId + ':checkbox:checked').length > 0);
+    };
+
+    this.getCheckedRows = function()
+    {
+        var checked = [];
+        var rows = this.getRows();
+        for(var r in rows)
+        {
+            var row = rows[r];
+            if(row.checked)
+            {
+                checked.push(row)
+            }
+        }
+        return checked;
+    };
+
+    this.getRows = function()
+    {
+        var createCall = function(func, row)
+        {
+            return function()
+            {
+                return func(row);
+            };
+        };
+
+        var index = 0;
+        var checks = [];
+        $('.' + myClassCk).each(function()
+        {
+            var style = $(this).attr('style');
+            if(style && ( (style.indexOf('visibility:hidden') > -1) || (style.indexOf('visibility: hidden') > -1)))  // updated for IE
+            {
+                return true;
+            }
+
+            var obj = {};
+            var reader = new RA.UI.TableReader(myTableId, myClassCk, myColumns);
+            for(var f in reader)
+            {
+                if(f == 'getCheckedRows' || f == 'getRows')
+                {
+                    continue;
+                }
+                obj[f] = createCall(reader[f], $(this).closest('tr')[0]);
+            }
+
+            obj.table = $(this).closest('table').attr('id');
+            obj.html = $(this).html();
+            obj.val = $(this).val();
+            obj.checked = $(this).prop('checked');
+            obj.handle = $(this);
+            obj.index = index++;
+            checks.push(obj);
+        });
+        return checks;
+    };
+
+    for(var c in columns)
+    {
+        this[columns[c]] = create(c, columns);
+    }
+}
+
+RA.UI.isNotBlank = function(prop, depth)
+{
+    if(!prop) return false;
+    else if(!depth) return prop != null && prop != '' && prop != undefined;
+
+    var split = depth.split('.');
+    var next = prop;
+    for(var i = 0; i < split.length; i++)
+    {
+        if(!(next = next[split[i]])) return false;
+    }
+    return true;
+};
+
+RA.UI.RpmBinder = function RpmBinder()
+{
+    this.bind = function bind(map, rpmObject)
+    {
+        if(!map || !rpmObject) return;
+
+        for(var key in map)
+        {
+            rpmObject.getField(key).traits['r:value'] = map[key];
+        }
+    };
+
+    this.unbind = function unbind(rpmObject)
+    {
+        if(!rpmObject) return {};
+
+        var fields = rpmObject.getFields();
+        if(!fields || fields.length === 0) return {};
+
+        var map = {};
+        for(var id in fields)
+        {
+            var field = fields[id];
+            if(field.isPrimitive())
+            {
+                map[field.getName()] = field.getValue();
+            }
+        }
+        return map;
+    };
+};
+
+RA.UI.rpmEnumToList = function rpmEnumToList(rpmEnum)
+{
+    var list = [], myEnum = rpmEnum;
+    if(rpmEnum)
+    {
+        if(!(myEnum instanceof Dynamis.RpmEnum))
+        {
+            myEnum = new Dynamis.RpmEnum(myEnum);
+        }
+
+        var fields = myEnum.getFields();
+        for(var f in fields)
+        {
+            var field = fields[f];
+            list.push({label: field.traits['r:desc'], value: f});
+        }
+    }
+    return list;
+};
+
+
+RA.UI.updateRecaptureReviewDate = function($scope){
+    $scope.dispositionReviewDate = $scope.disposition.recaptureReviewDate;
+}
+
+//Taken from CrmServiceImpl
+//Formats Profit Center, Territory, and Field as strings for the UI
+RA.UI.determineProducerDisplayString = function(displayCode, displayName)
+{
+    var displayString = "";
+
+    if (displayCode) {
+        if (displayName) {
+            displayString = displayCode + " - " + displayName;
+        } else {
+            displayString = displayCode + " - N/A";
+        }
+    } else {
+        if (displayName) {
+            displayString = "N/A - " + displayName;
+        } else {
+            displayString = "--";
+        }
+    }
+
+    return displayString;
+
+};
+// Copied from: http://stackoverflow.com/questions/1219860/html-encoding-in-javascript-jquery#answer-7124052
+RA.UI.htmlEscape = function htmlEscape(str, includeAmp) {
+
+    if(includeAmp)
+        str = str.replace(/&/g, '&amp;');
+
+    return str
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/›/g, '&rsaquo;');
+
+};
+
+RA.UI.validateUSZipCode = function doValidateUSZipCode(countryCode, postalCode){
+
+    return RA.UI.validateUSZipCodeWithOptionalMessage(countryCode, postalCode, true )
+}
+
+
+RA.UI.validateUSZipCodeWithOptionalMessage = function doValidateUSZipCodeWithOptionalMessage(countryCode, postalCode, displayAlert)
+{
+    if(postalCode) {
+
+        if (UNITED_STATES === countryCode) {
+
+            return validateUSZipCode(postalCode, displayAlert);
+        }
+
+        return validNoUsZipCode(postalCode, displayAlert);
+    }
+
+    return false;
+};
+
+function validNoUsZipCode(postalCode, displayAlert ){
+    if (postalCode.length !== 7) {
+        if (displayAlert) {
+            alert(NON_US_POSTAL_CODE_MUST_BE_7);
+        }
+        return  false;
+    }
+
+    return true;
+
+}
+
+function validateUSZipCode( postalCode, displayAlert){
+    if( postalCode.length === 0 )
+    {
+        return true;
+    }
+
+    if( checkForInvalidZipCode(postalCode)) {
+        if (displayAlert) {
+            alert(US_ZIP_CODE_MUST_BE_5_OR_10);
+        }
+        return false;
+    }
+
+    return true;
+
+}
+
+function checkForInvalidZipCode(postalCode) {
+    if(postalCode.length !== 5 && postalCode.length !== 10 ) {
+        return true;
+    }
+
+    return !RA.UI.hasNoMoreThanOneMinusSign(postalCode);
+}
+
+// checks if there are more than one dashes in zip code and also checks if there is a dash, it should be 6th character.
+// due to gaig-zip-postal-code implementation is not handling this case now.
+RA.UI.hasNoMoreThanOneMinusSign = function hasNoMoreThanOneMinusSign(postalCode) {
+    var count = 0;
+    for(var i = 0; i < postalCode.length; i++){
+        if(postalCode.charAt(i) === "-")
+            count = count + 1;
+    }
+
+    return !(count > 1 || (count == 1 && postalCode.charAt(5) !== "-"));
+};
+
+RA.UI.getOrderedRpmCollection = function(rpmCollection)
+{
+    if (!rpmCollection) {
+        return [];
+    }
+    return rpmCollection.sort(function (a, b) {
+        if (a.getValue('sequenceNumber') || b.getValue('sequenceNumber')) {
+            if(a.getValue('sequenceNumber') === null){
+                return 1;
+            }
+            else if(b.getValue('sequenceNumber') === null){
+                return -1;
+            }
+            return a.getValue('sequenceNumber') - b.getValue('sequenceNumber');
+        } else {
+            return a.id - b.id;
+        }
+    });
+};
+
+// Use to collect data from user and parse it into a list without worrying too much about which delimiter they use
+RA.UI.getListFromDelimitedText = function(delimitedText) {
+    var list = [];
+
+    if (typeof delimitedText === 'string' && delimitedText.length > 0) {
+        var delimiter = ',';
+        var matchTrailingDelimiter = new RegExp(delimiter + "$","g");
+
+        // Remove white space and standardize delimiter
+        var text = delimitedText.trim();
+        text = text.replace(/\s+|;+/g, delimiter);
+        text = text.replace(/,+/g, delimiter);
+        text = text.replace(matchTrailingDelimiter, '');
+
+        if (text.indexOf(delimiter) > -1) {
+            list = text.split(delimiter);
+        } else {
+            list[0] = text;
+        }
+    }
+    return list;
+};
+
+RA.UI.formattedTextFromList = function(list, delimiter) {
+    var text = "";
+
+    if (Array.isArray(list) && delimiter && delimiter.length > 0) {
+        for (var item in list) {
+            text = text + delimiter + list[item];
+        }
+        text = text.substring(text.length, delimiter.length);
+    }
+    return text;
+};

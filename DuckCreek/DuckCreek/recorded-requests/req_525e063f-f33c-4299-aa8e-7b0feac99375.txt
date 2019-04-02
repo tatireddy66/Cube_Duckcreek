@@ -1,0 +1,15 @@
+POST https://uncd63.duckcreekondemand.com:443/Policy/default.aspx?_windowGuid=d7a71aba-ddc1-4e65-9e22-3428907c4ce3 HTTP/1.1
+Host: uncd63.duckcreekondemand.com
+Connection: keep-alive
+Content-Length: 1717
+Origin: https://uncd63.duckcreekondemand.com
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept: */*
+Referer: https://uncd63.duckcreekondemand.com/Policy/default.aspx
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: ASP.NET_SessionId=ddl2hpu0e2ocnpdngsmcpam0
+
+_popUp=false&_sortColumn=&_sortDirection=&_targetPage=&_submitAction=&_action=a_dBF77094EE6AF4D1D8256A55BE7C1763B1F_3_1&_pageSet=&_fieldChanged=0&_autoSaveState=1&_stateID=16618e5f-f13c-4290-b56e-bd7846d8df65&_focusField=dBF77094EE6AF4D1D8256A55BE7C1763B1F_3_1&_prevFocusField=&_previewXSL=&_currentPageID=352ADBDC6F58475AA5D6128B731859EB&_parentGroupIsPaged=&_hiddenFormatNumMask=!.%2C-%24&_secure=&_hiddenFormatDtMask=m%2Fd%2Fyyyy&_hiddenExtJsDateformat=n%2Fj%2FY&_hiddenExtJsDateTimeformat=n%2Fj%2FY%20h%3Ai%20A&_windowGuid=d7a71aba-ddc1-4e65-9e22-3428907c4ce3&_newTabOpened=&_duplicateWindow=0&_sectionStates=&_debugMode=0&runInterviewActionAsync=false&_clientChanges=%3CAjaxRequest%3E%3Caction%3EnoAction%3C%2Faction%3E%3CcurrentPageID%3E352ADBDC6F58475AA5D6128B731859EB%3C%2FcurrentPageID%3E%3CpopUp%3Efalse%3C%2FpopUp%3E%3CclientChanges%3E%7B%22items%22%3A%5B%7B%22path%22%3A%22%2F%40value%22%2C%22id%22%3A%22_action%22%2C%22value%22%3A%22a_dBF77094EE6AF4D1D8256A55BE7C1763B1F_3_1%22%2C%22type%22%3A%22change%22%7D%2C%7B%22path%22%3A%22%2F%40value%22%2C%22id%22%3A%22_fieldChanged%22%2C%22value%22%3A%220%22%2C%22type%22%3A%22change%22%7D%5D%7D%3C%2FclientChanges%3E%3C%2FAjaxRequest%3E&_currentAction=Carrier_CommercialAuto_Pages_US_10_22_0_0_MainInterview_Pricing&_PortfolioID=&_UsingPortfolio=0&_ClientID=70490B2E33D93050&_QuoteID=17105&_taskId=&_SuppressAutoSave=&int_1E9=0&f_lDB5CF405772141D1BC7EB174968829861E9_4_1-inputEl=0&int_1EC=0&f_lDB5CF405772141D1BC7EB174968829861EC_4_1-inputEl=0&float_201%7C-0.%3F%3F%3F=1&float_247%7C%3F%3F%3F.%3F%3F=20&~boolean_14=1&~boolean_19=0&footerImageComboHidden=en-US&footerImageComboInputId-inputEl=English&devToolbarSystemDate-inputEl=&jsField=&classField=&ajax=true

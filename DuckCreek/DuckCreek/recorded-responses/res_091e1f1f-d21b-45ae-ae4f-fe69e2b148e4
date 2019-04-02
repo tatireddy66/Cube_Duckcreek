@@ -1,0 +1,3958 @@
+/*!
+ * Mondo
+ * mondo.map.js | Ryan Doughty <rdoughty@gaig.com>
+ * Copyright (c) 2015 Great American Insurance Group
+ * http://ux/uxweb/mondo
+ */
+
+/**
+ * @name Mondo
+ * @requires Dynamis
+ *
+ * @description
+ * This object provides utility methods for recursively traversing RPM session data.
+ * Additional functionality may be provided by modules.
+ *
+ * It can be created like this:
+ *
+ * var m = Mondo();
+ *
+ * @returns {Object} a data model optimized for UI generation
+ */
+var Mondo = (function() {
+    'use strict';
+
+    // Baseline setup
+    // --------------
+
+    // Establish root screen.
+    var screen;
+
+    //var scope;
+
+    /**
+     * @private
+     * @description
+     * Reference to prototype method.
+     */
+    var has = Object.prototype.hasOwnProperty;
+
+    var regXFuncName = /function ([a-z]{1,})\(/;
+
+    /**
+     * @constructor
+     */
+    var Mondo = function () {
+        if ((this instanceof Mondo) === false ) {
+            return Object.create(Mondo.prototype);
+        }
+    };
+
+    /**
+     * @name primitive
+     * @private
+     * @returns true if the object is a primitive data type.
+     */
+    var primitive = function primitive(obj) {
+        if (typeof obj['isPrimitive'] === 'function' && obj.isPrimitive()) {
+            return true;
+        }
+    };
+
+    var isObjectReference = function isObjectReference(obj) {
+        if(obj.hasOwnProperty('traits')){
+            if(obj.getTrait('ui:options')) {
+                return true;
+            }
+        }
+    };
+
+
+    /**
+     * @name isComplex
+     * @private
+     * @returns true if the object has a non-primitive field.
+     */
+    var isComplex = function isComplex(obj){
+        var fields = obj.fields;
+
+        for (var f in fields) {
+            if (has.call(fields, f) && !primitive(fields[f])) {
+                return true;
+            }
+        }
+    };
+
+    /**
+     * @name isComplexField
+     * @private
+     * @returns true if the field contains nested complex objects.
+     */
+    var isComplexField = function isComplexField(curField) {
+        var objs = getAllTargets(curField);
+
+        for (var obj in objs) {
+            if (has.call(objs, obj) && isRelevant(objs[obj])) {
+                if (isComplex(objs[obj])) {
+                    return true;
+                }
+            }
+        }
+    };
+
+    var getAllTargets = function getAllTargets(curField) {
+        var owner = curField.getOwner();
+        var rpmSession = owner.rpmSession;
+        var targets = rpmSession.getTargets(owner, curField.name, 'ALL');
+
+        return sortObjects(curField, targets);
+    };
+
+    var isActionable = function isActionable(curField) {
+        var obj = curField.getOwner();
+        if (obj.isActive() && curField.getTrait('r:action') && m.getGroupTraits(curField).actionable !== 'false') {
+            return true;
+        }
+    };
+
+    var isRelevant = function isRelevant(obj) {
+        var action;
+        if (obj.hasField('actionRef')){
+            action = obj.getField('actionRef').getValue();
+        }
+
+        return obj.isActive() || (action === 'D' && !obj.isActive());
+    };
+
+    var sortObjects = function sortObjects(parent, objs) {
+        var orderA,
+            orderB;
+
+        var noOrders = [];
+
+        for (var o = 0; o < objs.length; o++) {
+            var curObj = parent.getTrait('v:enum').fields[objs[o].getRpmClass().getEffectiveName()];
+            if (!curObj.hasTrait('ui:order') || curObj.getTrait('ui:order') == '') {
+                noOrders.push(curObj);
+                delete objs[o];
+            }
+        }
+
+        for (var o = 0; o < objs.length; o++) {
+            objs.sort(function(a, b) {
+                orderA = parent.getTrait('v:enum').fields[a.getRpmClass().getEffectiveName()].getTrait('ui:order');
+                orderB = parent.getTrait('v:enum').fields[b.getRpmClass().getEffectiveName()].getTrait('ui:order');
+
+                if (orderA === orderB) {
+                    orderA = parent.getTrait('v:enum').fields[a.getRpmClass().getEffectiveName()].getTrait('r:desc');
+                    orderB = parent.getTrait('v:enum').fields[b.getRpmClass().getEffectiveName()].getTrait('r:desc');
+                    if (orderA < orderB) {
+                        return -1;
+                    } else if (orderA > orderB) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+
+                } else {
+                    return orderA - orderB;
+                }
+
+            });
+        }
+
+        noOrders.sort(function(a, b) {
+            if (orderA === orderB) {
+                orderA = parent.getTrait('v:enum').fields[a.getRpmClass().name].getTrait('r:desc');
+                orderB = parent.getTrait('v:enum').fields[b.getRpmClass().name].getTrait('r:desc');
+                if (orderA < orderB) {
+                    return -1;
+                } else if (orderA > orderB) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+
+            } else {
+                return orderA - orderB;
+            }
+
+        });
+        objs.concat(noOrders);
+
+        return objs;
+    };
+
+
+    // Map methods
+    // --------------
+    Mondo.prototype = {
+
+        maps: {},
+
+        /**
+         * @name Mondo.mapNamedObjects
+         * @kind function
+         *
+         * @description
+         * Creates a static map from namedObjects that can be quickly traversed
+         * during DOM creation.
+         *
+         * @param {Object} namedObjects
+         * @param {string} view
+         * @param {boolean} disabled Value of rpm-disabled attribute on the rpm-panel element.
+         * @returns {Object} Mapped object.
+         */
+        mapNamedObjects: function mapNamedObjects($scope, namedObjects, view, disabled, panelId) {
+            // Assign view to current screen.
+            this.view = screen = view;
+            this.isDisabled = disabled || false;
+            //scope = $scope;
+
+            var id,
+                nobj,
+                tmpobj,
+                map = {};
+
+            if (typeof namedObjects === 'string') {
+                nobj = rpmSession.getObjectById(namedObjects);
+
+                if (typeof nobj !== 'undefined' && has.call(nobj, 'fields')) {
+                    map[namedObjects] = this.setGroupTraits(nobj);
+                }
+            } else {
+                for (var obj in namedObjects) {
+                    if (obj.indexOf('@') > -1)
+                        continue;
+
+                    if (has.call(namedObjects, obj)) {
+                        tmpobj = namedObjects[obj];
+                        if (this.dataType(tmpobj, 'array')) {
+                            for (id = 0; id < tmpobj.length; id++) {
+                                nobj = rpmSession.getObjectById(tmpobj[id]);
+                                if (nobj === null){
+                                    return map;
+                                }
+                                if (typeof nobj !== 'undefined' && has.call(nobj, 'fields')) {
+                                    map[obj] = this.setGroupTraits(nobj);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            this.maps[panelId] = map;
+
+            return map;
+        },
+
+        // Generate groups object.
+        mapGroup: function(group) {
+            var id = group.id,
+                groups = {},
+                fields,
+                curField,
+                val;
+
+            if (this.dataType(group, 'RpmObject')) {
+                if (typeof group['getFields'] === 'function') {
+                    fields = group.getFields();
+
+                    for (var f in fields) {
+                        if (has.call(fields, f)) {
+                            curField = fields[f];
+
+                            if (!this.shouldRender(curField)) {
+                                continue;
+                            }
+
+                            val = curField.getValue();
+
+                            if (primitive(curField) || isObjectReference(curField)) {
+                                groups = this.appendGroup(fields[f], groups, id);
+                            }
+                            else if (this.dataType(val, 'array')) {
+                                groups = this.appendComplexGroup(curField, groups);
+                            }
+                        }
+                    }
+                }
+            }
+
+            groups = this.sortGroups(groups);
+            return groups;
+        },
+
+        setGroupTraits: function(obj) {
+            var traits = {};
+            traits.id = obj.id;
+            traits.name = obj.getRpmClass().getClassTrait('ui:label');
+            traits.groups = this.sortFields(this.mapGroup(obj));
+            traits.active = obj.isActive();
+
+            return traits;
+        },
+
+        // Append single group.
+        appendGroup: function(curField, groups) {
+            if (!this.getGroupObject(curField)) {
+                return groups;
+            }
+
+            var groupName = this.getGroupName(curField),
+                groupTraits = this.getGroupObject(curField).rpmClass.fields.CLASS_TRAITS.traits,
+                field = {};
+
+            groups[groupName] = groups[groupName] || {};
+            groups[groupName].traits = groupTraits;
+            groups[groupName].fields = groups[groupName].fields || {};
+            groups[groupName].groupFields = this.getGroupFields(curField) || [];
+
+            field.id = curField.owner.id;
+            field.name = curField.name;
+            field.traits = curField.getTraits();
+
+            delete field.traits['ui:group'];
+            groups[groupName].fields[curField.name] = field;
+
+            groups[groupName].fields = this.sortFields(groups[groupName].fields);
+
+            return groups;
+        },
+
+        // Append complex / non-primitive field group.
+        appendComplexGroup: function(curField, groups) {
+            var groupName,
+                groupTraits,
+                fieldTraits,
+                effectiveName,
+                entry,
+                enums = {},
+                objs,
+                obj,
+                child,
+                field,
+                fields,
+                newFields;
+
+            if (!this.getGroupObject(curField)) {
+                groupName = this.getGroupName(curField);
+                groups[groupName] = groups[groupName] || {};
+
+                if (typeof curField['getTraits'] === 'function') {
+                    fieldTraits = curField.getTraits();
+                    enums.options = this.parseEnum(curField, fieldTraits['v:enum']);
+                }
+
+                if (isActionable(curField)) {
+                    enums.action = curField.getTrait('r:action').scope.scope;
+                }
+
+                enums.sourceField = curField.getName();
+                enums.sourceId = curField.owner.id.toString();
+
+                groups[groupName].enums = enums;
+
+                if (curField.getMin() > 0 && curField.getMax() > 1) {
+                    enums.options = this.parseEnum(curField, fieldTraits['v:enum']);
+                    if(isActionable(curField)){
+                        enums.action = fieldTraits['r:action'].scope.scope;
+                    }
+                    enums.sourceField = curField.getName();
+                    enums.sourceId = curField.owner.id.toString();
+
+                    groups[groupName].enums = enums;
+                }
+
+                groups[groupName].fields = groups[groupName].fields || [];
+                groups[groupName].groupFields = this.getGroupFields(curField) || [];
+                objs = getAllTargets(curField);
+
+            } else {
+                fieldTraits = curField.getTraits();
+                // Do not create the group if there are no available children
+                enums.options = this.parseEnum(curField, fieldTraits['v:enum']);
+                if (this.availableCount(enums) > 0) {
+                    groupTraits = this.getGroupObject(curField).rpmClass.fields.CLASS_TRAITS.traits;
+                    groupName = this.getGroupName(curField);
+                    objs = getAllTargets(curField);
+
+                    groups[groupName] = groups[groupName] || {};
+                    groups[groupName].traits = groupTraits;
+                    groups[groupName].fields = groups[groupName].fields || [];
+                    groups[groupName].groupFields = this.getGroupFields(curField) || [];
+
+                    if (curField.getMax() > 1) {
+                        enums.options = this.parseEnum(curField, fieldTraits['v:enum']);
+                        if(isActionable(curField)){
+                            enums.action = fieldTraits['r:action'].scope.scope;
+                        }
+                        enums.sourceField = curField.getName();
+                        enums.sourceId = curField.owner.id.toString();
+
+                        groups[groupName].enums = enums;
+                    }
+                }
+            }
+
+            // Map child complex fields.
+            if ( isComplexField(curField) ) {
+                for (obj in objs) {
+                    if (has.call(objs, obj) && isRelevant(objs[obj])) {
+                        effectiveName = objs[obj].rpmClass.getEffectiveName();
+                        entry = enums.options[effectiveName];
+
+                        if (this.getGroupTraits(entry).relevant !== 'true') {
+                            continue;
+                        }
+
+                        child = this.sortFields( this.mapGroup(objs[obj] ));
+
+                        field = {};
+                        field = this.setGroupTraits(objs[obj]);
+
+                        if (this.getGroupTraits(entry).render === 'true') {
+                            groups[groupName].fields.push(field);
+                        } else {
+                            for (var group in child) {
+                                if (has.call(groups, group)) {
+                                    var childGroup = child[group];
+
+                                    for (var childField in childGroup.fields) {
+                                        var childFields = childGroup.fields[childField];
+                                        for (var f in childFields) {
+                                            groups[group].fields[f] = childFields[f];
+                                        }
+                                    }
+                                } else {
+                                    groups[group] = child[group];
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                for (obj in objs) {
+                    if (has.call(objs, obj) && isRelevant(objs[obj])) {
+                        effectiveName = objs[obj].rpmClass.getEffectiveName();
+                        entry = enums.options[effectiveName];
+
+                        if(this.getGroupTraits(entry).relevant !== 'true'){
+                            continue;
+                        }
+
+                        newFields = {};
+                        fields = objs[obj].fields;
+
+                        for (var fa in fields) {
+                            if (has.call(fields, fa)) {
+                                field = {};
+
+                                if (has.call(this.getGroupTraits(fields[fa]), 'order')) {
+                                    field.id = objs[obj].id;
+                                    field.name = fa;
+                                    field.traits = fields[fa].getTraits();
+
+                                    newFields[fa] = field;
+                                }
+                            }
+                        }
+
+                        if (Object.keys(newFields).length > 0) {
+                            var sorted = this.sortFields(newFields);
+                            sorted.id = objs[obj].id;
+                            sorted.active = objs[obj].isActive().toString();
+                            sorted.isDeletable = this.isDeletableObject(objs[obj],enums);
+                            groups[groupName].fields.push(sorted);
+                        }
+
+
+                    }
+                }
+            }
+
+            // check if group exists since we may not create it if there are no available element
+            if (has.call(groups, groupName) && has.call(groups[groupName], 'fields') && groups[groupName].fields.length === 0) {
+                if (has.call(groups[groupName], 'enums') && !has.call(groups[groupName].enums, 'action')) {
+                    delete groups[groupName];
+                }
+            }
+
+            return groups;
+        },
+
+        /**
+         * Returns the number of options that are available
+         * @param option
+         * @param sourceField
+         * @param sourceId
+         */
+        availableCount: function(enums) {
+            var count = 0;
+            var options = enums.options;
+            for (var option in options) {
+                if (this.isAvailable(options[option], enums.sourceField, enums.sourceId)) {
+                    count++;
+                }
+            }
+            return count;
+        },
+
+        /**
+         * Returns true if the option is available
+         * Options are available if there origin is 'user'
+         * @param option
+         * @param sourceField
+         * @param sourceId
+         * @returns {boolean}
+         */
+        isAvailable: function(option, fieldName, parentId) {
+          return (option.getTrait('r:origin') === 'user' && this.isRelevant(option));
+        },
+
+        /**
+         * Returns true if the option is relevant for this context
+         * @param option
+         * @param sourceField
+         * @param sourceId
+         * @returns {boolean}
+         */
+        isRelevant: function(option) {
+            return (this.getGroupTraits(option)['relevant'] === 'true');
+
+        },
+
+        /**
+         * Returns true if the option is selectable
+         * Option is selectable if the count of this type on the parent (sourceID) in the sourceField < option max
+         * @param option
+         * @param sourceField
+         * @param sourceId
+         * @returns {boolean}
+         */
+        isSelectable: function(option, sourceField, sourceId) {
+            var max = option.getTrait('v:max') || 99999999;
+            return this.childCount(option, sourceField, sourceId) < max;
+        },
+
+        /**
+         * Returns true if the option is deletable
+         * Option is deletable if the count of this type on the parent (sourceID) in the sourceField > option min
+         * @param option
+         * @param sourceField
+         * @param sourceId
+         * @returns {boolean}
+         */
+        isDeletableOption: function(option, sourceField, sourceId) {
+            var min = option.getTrait('v:min') || 0;
+            return this.childCount(option, sourceField, sourceId) > min;
+        },
+
+        /**
+         * Returns true if the object is deletable
+         * Object is deletable if the count of this type on the parent (sourceID) in the sourceField > option min
+         * @param option
+         * @param sourceField
+         * @param sourceId
+         * @returns {boolean}
+         */
+        isDeletableObject: function(object, enums) {
+            var option = this.findOptionFor(object, enums);
+            if (!option) return true;
+            var min = option.getTrait('v:min') || 0;
+            return this.childCount(option, enums.sourceField, enums.sourceId) > min;
+        },
+
+
+        /**
+         * Returns the option in the enum that corresponds to the object.
+         * @param object
+         * @param enums
+         * @returns {*}
+         */
+        findOptionFor: function(object, enums) {
+            var foundOption;
+            for (var option in enums.options) {
+                if ((object.rpmClass.getEffectiveName() == enums.options[option].name)) {
+                    return enums.options[option];
+                }
+            }
+            return foundOption;
+        },
+
+        /**
+         * Returns the number of children of the type which are active
+         * @param option
+         * @param sourceField
+         * @param sourceId
+         * @returns {number}
+         */
+        childCount: function(option, sourceField, sourceId) {
+            var count = 0;
+            var parentObject = rpmSession.getObjectById(sourceId);
+            if (!parentObject) {return 0};
+            var children = parentObject.getField(sourceField).getValue();
+            for (var child in children) {
+                if ((children[child].rpmClass.getEffectiveName() == option.name) && children[child].active) {
+                    count++;
+                }
+            }
+            return count;
+        },
+
+    // Parse enumerations.
+        parseEnum: function(curField, enumObj) {
+            var fa = {},
+                enumFields;
+
+            if (has.call(enumObj, 'fields')) {
+                enumFields = enumObj.fields;
+
+                for (var i in enumFields) {
+                    if (has.call(enumFields, i)) {
+                        fa[i] = enumFields[i];
+                        fa[i].isAvailable = this.isAvailable(enumFields[i], curField.getName(), curField.owner.id.toString());
+                        fa[i].isSelectable = this.isSelectable(enumFields[i], curField.getName(), curField.owner.id.toString());
+                        fa[i].isDeletable = this.isDeletableOption(enumFields[i], curField.getName(), curField.owner.id.toString());
+                    }
+                }
+            }
+
+            return fa;
+        },
+
+        // Check relevant trait to see if field(s) should be displayed.
+        shouldRender: function(field) {
+            var isRelevant = this.getGroupTraits(field).relevant || 'false';
+
+            return this.getGroupObject(field) !== 'undefined' && isRelevant.toString() === 'true';
+        },
+
+        // Check relevant trait to see if field(s) should be displayed.
+        shouldRenderEnum: function(field) {
+            var isRelevant = this.getGroupTraits(field).relevant || 'false';
+            return isRelevant.toString() === 'true';
+        },
+
+        // Sorting
+        // --------------
+
+        // Sorting routines.
+        sortFields: function(fields) {
+            var sortable = [],
+                sorted = {};
+
+            for (var field in fields) {
+                if (has.call(fields, field) && has.call(fields[field], 'traits')) {
+                    sortable.push([field, fields[field]]);
+                }
+            }
+
+            sortable.sort(function (a, b) {
+                if (typeof a[1].traits[screen] !== 'undefined' && typeof b[1].traits[screen]) {
+                    return a[1].traits[screen].order - b[1].traits[screen].order;
+                }
+            });
+
+            for (var s = 0, slen = sortable.length; s < slen; s += 1) {
+                sorted[sortable[s][0]] = sortable[s][1];
+            }
+
+            return sorted;
+        },
+
+        sortObjectsById: function(fields) {
+            fields.sort(function (a, b) {
+                return b[1].id - a[1].id;
+            });
+
+            return fields;
+        },
+
+        // Sort groups.
+        sortGroups: function(groups) {
+            var sortable = [],
+                sorted = {};
+
+            for (var group in groups) {
+                if (has.call(groups, group)) {
+                    sortable.push([group, groups[group]]);
+                }
+            }
+
+            sortable.sort(function(a, b) {
+                if (has.call(a[1], 'traits') && has.call(b[1], 'traits')) {
+                    if (a[1].traits['ui:order'] && b[1].traits['ui:order']) {
+                        return a[1].traits['ui:order'] - b[1].traits['ui:order'];
+                    }
+                }
+
+            });
+
+            for (var s = 0, slen = sortable.length; s < slen; s += 1) {
+                sorted[sortable[s][0]] = sortable[s][1];
+            }
+
+            return sorted;
+        },
+
+        // Sort items in enum dropdown.
+        sortOptionItems: function(options, ascendingDescending, sortTrait) {
+            var sortable = [],
+                sorted = {};
+
+            for (var option in options) {
+                if (has.call(options, option) && has.call(options[option], 'traits') && options[option].name !== 'CLASS_TRAITS') {
+                    sortable.push([option, options[option]]);
+                }
+            }
+
+            sortable.sort(function (a, b) {
+                var aValue = a[1].traits[sortTrait];
+                var bValue = b[1].traits[sortTrait];
+                if (aValue < bValue) {
+                    return ascendingDescending.toString() === 'ascending' ? -1 : 1;
+                } else if (aValue > bValue) {
+                    return ascendingDescending.toString() === 'ascending' ? 1 : -1;
+                }
+
+                return 0;
+            });
+
+            for (var s = 0, slen = sortable.length; s < slen; s += 1) {
+                sorted[sortable[s][0]] = sortable[s][1];
+            }
+
+            return sorted;
+        },
+
+        // Group trait getters
+        // --------------
+
+        // Get group traits for current view.
+        getGroupTraits: function(field) {
+            var traits;
+
+            if (typeof field['getTraits'] === 'function' ) { //has.call(field, 'getTraits')) {
+                traits = field.getTraits();
+
+                if (has.call(traits, this.view)) {
+                    return traits[this.view];
+                } else {
+                    if (has.call(traits, screen)) {
+                        return traits[screen];
+                    } else {
+                        return false;
+                    }
+                }
+            } else {
+                traits = field.traits;
+
+                if (traits && has.call(traits, screen)) {
+                    return traits[screen];
+                } else {
+                    return false;
+                }
+            }
+        },
+
+        // Get group object.
+        getGroupObject: function(field) {
+            var groupTraits = this.getGroupTraits(field);
+
+            if (groupTraits) {
+                var groupName = groupTraits.group;
+                var rpmSession = field.owner.rpmSession;
+                var groupObject = rpmSession.namedObjects.groupsMap[groupName];
+
+                return groupObject;
+            } else {
+                return false;
+            }
+        },
+
+        // Get group name from class trait.
+        getGroupName: function(field) {
+            var groupObject,
+                groupClass,
+                groupName;
+
+            groupObject = this.getGroupObject(field);
+
+            if (groupObject) {
+                groupClass = groupObject.rpmClass;
+
+                groupName = groupClass.fields.CLASS_TRAITS.traits['ui:label'];
+
+                return groupName;
+            } else {
+                return false;
+            }
+        },
+
+        getGroupFields: function(curfield) {
+            var groupObject;
+
+            groupObject = this.getGroupObject(curfield);
+
+            if (groupObject) {
+                var fieldTraits = [];
+                for (var field in groupObject.rpmClass.fields) {
+                    if ((field !== '@type') && (field !== 'CLASS_TRAITS')) {
+                        fieldTraits.push(groupObject.rpmClass.fields[field]);
+                    }
+                }
+                return fieldTraits;
+            } else {
+                return false;
+            }
+        },
+
+        getDefaultGroupTraits: function() {
+            var defaults = {
+                'r:exists': true,
+                'ui:expandable': false,
+                'ui:columns': '5',
+                'ui:label': '',
+                'ui:order': '010',
+                'ui:width': 100,
+                'ui:wrapwith': 'div'
+            };
+
+            return defaults;
+        },
+
+        // Get or check against data type from constructor.
+        dataType: function dataType(obj, type) {
+            var query = (regXFuncName).exec((obj).constructor.toString().toLowerCase());
+            var result = (query && query.length > 1) ? query[1] : '';
+
+            if (typeof type === 'string') {
+                return result === type.toLowerCase();
+            }
+
+            return result;
+        },
+
+        getState: function(panelId, state) {
+            var stateObj = JSON.parse(sessionStorage.getItem(panelId));
+
+            return stateObj[state] || false;
+        },
+
+        saveState: function(panelId, state, value) {
+            var stateObj = {};
+
+            stateObj[state] = value;
+            sessionStorage.setItem(panelId, JSON.stringify(stateObj));
+        }
+    };
+
+    Mondo.prototype.constructor = Mondo;
+
+    return Mondo;
+
+}());
+
+/*!
+ * Mondo
+ * mondo.render.js | Ryan Doughty <rdoughty@gaig.com>
+ * Copyright (c) 2015 Great American Insurance Group
+ * http://ux/uxweb/mondo
+ */
+
+(function (Mondo) {
+    'use strict';
+
+    var fn = Mondo.prototype;
+
+    var uicontrol = 'rpm-control';
+
+    var has = Object.prototype.hasOwnProperty;
+
+    // Create fieldset container.
+    fn.createFieldset = function (legend, curObject, objID, active, core) {
+        var fieldset, legendEl;
+
+        if (legend) {
+            fieldset = document.createElement('fieldset');
+
+            fieldset.setAttribute('gaig-fieldset', '');
+            fieldset.classList.add('rpm-parent');
+
+            legendEl = document.createElement('legend');
+            legendEl.textContent = legend;
+
+            fieldset.appendChild(legendEl);
+        } else {
+            fieldset = document.createElement('div');
+            fieldset.classList.add('rpm-parent');
+        }
+
+        if (curObject && has.call(curObject, 'enums')) {
+            if (has.call(curObject.enums, 'action')) {
+                this.renderDelete(objID, legendEl, active, core);
+            }
+        }
+
+
+        return fieldset;
+    };
+
+    // Render delete and soft delete actions.
+    fn.renderDelete = function (field, parent, active, core) {
+        if (this.isDisabled !== undefined) {
+            if (this.isDisabled.toString() === 'true') {
+                return;
+            }
+        }
+        var fieldId = field.id || field,
+            deleteAction,
+            restoreAction;
+
+        if (core && typeof core !== 'undefined' && core.toString() === 'true') {
+            deleteAction = 'executePipeline("delete", {"sourceId":"'+fieldId.toString()+'", "actionEl":"actionable'+field.id+'"})';
+            restoreAction = 'executePipeline("restore", {"sourceId":"'+fieldId.toString()+'"})';
+        } else {
+            deleteAction = 'Delete(\'' + fieldId + '\')';
+            restoreAction = 'Restore(\'' + fieldId + '\')';
+        }
+
+        var render = document.createElement('div');
+        render.setAttribute('id', 'actionable'+field.id);
+
+        render.classList.add('fl');
+        render.classList.add('gaig-icon');
+        if (active === 'true' || active === true) {
+            render.classList.add('gaig-icon-remove-circle');
+            render.classList.add('sm-red');
+
+            render.setAttribute('gaig-confirm-click', deleteAction);
+            render.setAttribute('title', 'Delete');
+            render.setAttribute('message', 'Are you sure you want to delete this item?');
+            render.setAttribute('confirm-label', 'Delete');
+        } else if (active === 'false' || active === false) {
+            render.classList.add('gaig-icon-repeat');
+            render.classList.add('sm-green');
+            render.setAttribute('gaig-confirm-click', restoreAction);
+            render.setAttribute('title', 'Restore');
+            render.setAttribute('message', 'Are you sure you want to restore this item?');
+            render.setAttribute('confirm-label', 'Restore');
+        }
+        render.setAttribute('icon', 'gaig-icon-warning-sign');
+        render.setAttribute('cancel-label', 'Nevermind');
+
+        parent.appendChild(render);
+    };
+
+    // Build out fields inside of fieldset.
+    fn.createFieldGroup = function (fields, row, groupTraits, parentContainer, groupObj, active, core, section) {
+        var container,
+            deleteContainer,
+            col = 1,
+            actionsSet = false;
+
+        for (var i in fields) {
+
+            if (typeof fields[i] === 'string') {
+                continue;
+            }
+
+            if (this.dataType(fields[i] === 'object')) {
+                var curField = fields[i];
+
+                if (!curField || !this.getGroupTraits(curField) || this.getGroupTraits(curField).relevant.toString() === 'false') {
+                    continue;
+                }
+
+                if (!row) {
+                    row = document.createElement('div');
+                    row.classList.add('form-row');
+
+                    if (groupObj && has.call(groupObj, 'enums')) {
+                        if (has.call(groupObj.enums, 'action')) {
+                            deleteContainer = document.createElement('div');
+                            deleteContainer.classList.add('form-cell');
+                            deleteContainer.classList.add('list-item-actions');
+
+                            if (!actionsSet) {
+                                if (has.call(fields, 'isDeletable')) {
+                                    if (fields.isDeletable) {
+                                        this.renderDelete(curField, deleteContainer, active, core);
+                                    }
+                                } else {
+                                    this.renderDelete(curField, deleteContainer, active, core);
+                                }
+                            }
+
+                            row.appendChild(deleteContainer);
+                        }
+                    }
+                }
+
+                container = this.createField(curField, groupTraits, section);
+
+                if (this.getGroupTraits(fields[i]).uiColumnWidth) {
+                    var curCol = parseInt(this.getGroupTraits(fields[i]).uiColumnWidth);
+                    var cols = 8;
+                    if (curCol + col >= cols) {
+                        row.appendChild(container);
+                        parentContainer.appendChild(row);
+                        row = null;
+                        actionsSet = true;
+                        col = 1;
+                    } else {
+                        row.appendChild(container);
+                        parentContainer.appendChild(row);
+                        col += curCol;
+                    }
+                } else if (has.call(groupTraits, 'ui:columns')) {
+                    var cols = parseInt(groupTraits['ui:columns']);
+
+                    if (col >= cols) {
+                        row.appendChild(container);
+                        parentContainer.appendChild(row);
+                        row = null;
+                        actionsSet = true;
+                        col = 1;
+                    } else {
+                        row.appendChild(container);
+                        parentContainer.appendChild(row);
+                        col = col + 1;
+                    }
+                }
+
+                if (row) {
+                    row.appendChild(container);
+                    parentContainer.appendChild(row);
+                }
+
+            }
+
+        }
+
+        row = null;
+
+    };
+
+    // Create field cell.
+    fn.createField = function (field, groupTraits, section) {
+        var el,
+            labelText,
+            label,
+            container,
+            span;
+
+        if (this.getGroupTraits(field).uiColumnWidth) {
+            span = this.getGroupTraits(field).uiColumnWidth;
+        } else if (has.call(groupTraits, 'ui:columns')) {
+            span = Math.ceil(8 / parseInt(groupTraits['ui:columns']));
+        }
+
+        container = document.createElement('div');
+        container.classList.add('form-cell');
+        container.classList.add('span' + span);
+
+        el = document.createElement(uicontrol);
+        el.setAttribute('rpm-field', field.name);
+        el.setAttribute('rpm-item', field.id);
+        el.setAttribute('rpm-type', this.getGroupTraits(field).widget);
+        el.setAttribute('section', section);
+
+        if (this.getGroupTraits(field).changeable.toString() === 'false') {
+            el.setAttribute('ng-disabled', 'true');
+        }
+
+        if (this.isDisabled.toString() === 'true') {
+            el.setAttribute('ng-disabled', 'true');
+        }
+
+        labelText = this.getGroupTraits(field).label;
+
+        label = document.createElement('label');
+        label.textContent = labelText;
+
+        if (field.traits['v:min'] >= 1) {
+            label.classList.add('required');
+            label.setAttribute('required', null);
+        }
+
+        container.appendChild(label);
+        container.appendChild(el);
+
+        return container;
+    };
+
+    // Render select menu for enums.
+    fn.renderEnumSelect = function (enums, rootEl, core) {
+        var actionBtn,
+            action,
+            sourceField,
+            id,
+            enumFrag,
+            formCell;
+
+        if (enums.sourceField && typeof enums.sourceField !== 'undefined') {
+            sourceField = enums.sourceField.toString();
+        }
+
+        enumFrag = document.createElement('div');
+        enumFrag.classList.add('form-row');
+
+        id = Math.floor(Math.random() * new Date().getTime().toString()).toString();
+
+        // if we allow actions and there are available children, then we create the dropdown
+        if (has.call(enums, 'action')) {
+            var options = enums.options || null;
+            action = this.buildAction(enums, id, sourceField, enums.sourceId, core);
+
+            var el = document.createElement('select');
+            el.setAttribute('id', id);
+
+            if (has.call(options, 'CLASS_TRAITS') &&
+                has.call(options.CLASS_TRAITS, 'ui:orderBy')) {
+                options = this.sortOptionItems(options, 'ascending', options.CLASS_TRAITS['ui:orderBy']);
+            } else {
+                options = this.sortOptionItems(options, 'ascending', 'r:desc');
+            }
+
+            // create options for all children which are selectable and origin = 'user'
+            var optionsArray = [];
+            for (var option in options) {
+                if (has.call(options, option) && options[option].name !== 'CLASS_TRAITS') {
+                    //if (isAvailable(options[option], sourceField, enums.sourceId)) {
+                    //    if (isSelectable(options[option], sourceField, enums.sourceId)) {
+                    if (options[option].isAvailable && options[option].isSelectable) {
+                        optionsArray.push({name:options[option].getName(), desc:options[option].getTrait('r:desc')});
+                    }
+                }
+            }
+
+            if (optionsArray.length > 0) {
+                if (optionsArray.length > 1) {
+                    var defaultOption = document.createElement('option');
+                    defaultOption.setAttribute('value', '');
+                    defaultOption.innerHTML = '-- Select --';
+                    el.appendChild(defaultOption);
+                }
+
+                for (var i = 0; i < optionsArray.length; i++) {
+                    var tmpOpt = document.createElement('option');
+                    tmpOpt.setAttribute('value', optionsArray[i].name);
+                    tmpOpt.innerHTML = optionsArray[i].desc;
+                    el.appendChild(tmpOpt);
+                }
+
+                actionBtn = document.createElement('span');
+                actionBtn.setAttribute('ng-click', action);
+                actionBtn.classList.add('sm-green');
+                actionBtn.classList.add('gaig-icon');
+                actionBtn.classList.add('gaig-icon-plus-sign');
+                actionBtn.classList.add('ng-scope');
+
+                if (this.isDisabled.toString() === 'true') {
+                    el.setAttribute('disabled', 'disabled');
+                    actionBtn.setAttribute('disabled', 'disabled');
+                }
+
+                formCell = document.createElement('div');
+                formCell.classList.add('form-cell');
+                formCell.appendChild(el);
+                enumFrag.appendChild(formCell);
+
+                if (this.isDisabled.toString() !== 'true') {
+                    formCell = document.createElement('div');
+                    formCell.classList.add('form-cell');
+                    formCell.appendChild(actionBtn);
+                    enumFrag.appendChild(formCell);
+                }
+            }
+        }
+        rootEl.appendChild(enumFrag);
+    };
+
+    fn.buildAction = function (enums, elementId, sourceField, sourceId, core) {
+        var id,
+            actionStr,
+            itemToAdd;
+
+        id = elementId.toString();
+
+        if (core && typeof core !== 'undefined' && core.toString() === 'true') {
+            actionStr = 'executePipeline("' + enums.action.action.toLowerCase() + '", {"itemToAdd":"'+id+'", "sourceField":"'+sourceField+'", "sourceId":"'+sourceId.toString()+'"})';
+        } else {
+            actionStr = enums.action.action + '(' + id + ',\'' + sourceField + '\',\'' + sourceId + '\')';
+        }
+
+        return actionStr;
+    };
+
+    return Mondo;
+
+}(Mondo));
+
+'use strict';
+(function(Mondo) {
+    'use strict';
+    gaigUi.app.factory('du', utilFactory);
+    gaigUi.app.factory('dynUtil', utilFactory);
+
+    /**
+     * Provides basic utility functions presented in a literal syntax in order
+     * to make code more self-documenting
+     *
+     * @returns {{convert: convertTarget, does: doesTarget,
+     * extend: extendTarget, get: getTarget, is: isTarget, not: notTarget,
+     * valueOf: theValueOfTarget}}
+     */
+    function utilFactory() {
+        var utils = {
+            convert: convertTarget,
+            does: doesTarget,
+            extend: extendTarget,
+            get: getTarget,
+            is: isTarget,
+            not: notTarget,
+            valueOf: theValueOfTarget
+        };
+        extendTarget(utils).forProperty('valueOf').addAlias('the');
+        return utils;
+    }
+
+    /* ------------------------- Factory Bundles -------------------------- */
+
+    /*
+     * The following are groups of methods bundled based primarily on wording
+     * the wording is intended to represent a more fluent syntax to aid in 
+     * code readability
+     */
+
+
+    /**
+     * Basic library for converting the target into something else. Typically
+     * another type
+     *
+     * @param target
+     * @returns {{toAnArray: *}}
+     */
+    function convertTarget(target) {
+        return {
+            toAnArray: convertTargetToArray(target),
+            toKebabCase: convertTargetToKebabCase(target)
+        };
+    }
+
+    /**
+     * Basic library for value checking, similar to isTarget, but focused on
+     * action style value methods
+     * e.g. It makes more sense to say "does target contain x" than it does to
+     *      say "is target containing x"
+     * @param target
+     * @returns {*}
+     */
+    function doesTarget(target) {
+        return extendTarget({
+            contain: doesTargetContain(target),
+            haveProperty: doesTargetHaveProperty(target),
+            havePropChain: doesTargetHavePropertyChain(target)
+        }).withNotMethods();
+    }
+
+    /**
+     * Use the extendTarget library to extend existing objects or methods
+     * with new properties or functionality
+     * @param target
+     * @returns {{forProperty: *, using: *, withNotMethods: *}}
+     */
+    function extendTarget(target) {
+        return {
+            forProperty: extendTargetForProperty(target),
+            using: extendTargetUsing(target),
+            withNotMethods: extendTargetWithNotMethods(target)
+        };
+    }
+
+    /**
+     * Basic library for "get"ting information from the target
+     * @param target
+     * @returns {{propertyNames: *, keys: *}}
+     */
+    function getTarget(target) {
+        return {
+            propertyNames: getTargetPropertyNames(target),
+            keys: getTargetKeys(target)
+        };
+    }
+
+    /**
+     * Basic library for value checking, similar to doesTarget, but focused on
+     * equality style value methods
+     * e.g. It makes more sense to say "is target an array" than it does to
+     *      say "does target be an array"
+     * @param target
+     * @returns {*}
+     */
+    function isTarget(target) {
+        return extendTarget({
+            oneOfThese: isTargetOneOfThese(target),
+            anArray: isTargetAnArray(target),
+            aFunction: isTargetAFunction(target)
+        }).withNotMethods();
+    }
+
+    /**
+     * If applied to a function, this returns a function that will return the
+     * negated value normally returned from the original function
+     * If a value is the target, then this will return the negated value
+     *
+     * NOTE: If a value is simply truthy or falsey, this will return the
+     * boolean negation (true or false, not truthy or falsey) of the original
+     * value.
+     * @param target
+     * @returns {*}
+     */
+    function notTarget(target) {
+        if (typeof target === 'function') {
+            return not;
+        }
+
+        return !target;
+
+        function not() {
+            return !target.apply(this, arguments);
+        }
+    }
+
+    /**
+     * valueOf is primarily for consolidation and occasionally as an alias for
+     * other methods in dynUtil. Sometimes it is simpler to assign a "valueOf"
+     * to a variable and then apply all the other methods against that variable
+     * Another alias for this is "the".
+     * NOTE: This will utilize slightly more memory and be a bit less efficient
+     *       than the smaller bundles of these methods, so only use it when it
+     *       makes more sense to do so.
+     * @param target
+     * @returns {{contains: *, doesNotContain: *, isAnArray: *, isNotAnArray: *,
+      * isNotOneOfThese: *, isOneOfThese: *, ownPropertyNames: *}}
+     */
+    function theValueOfTarget(target) {
+        var get_Target = getTarget(target);
+        var is_Target = isTarget(target);
+        var does_Target = doesTarget(target);
+
+        return {
+            contains: does_Target.contain,
+            doesNotContain: does_Target.notContain,
+            isAnArray: is_Target.anArray,
+            isNotAnArray: is_Target.notAnArray,
+            isNotOneOfThese: is_Target.notOneOfThese,
+            isOneOfThese: is_Target.oneOfThese,
+            ownPropertyNames: get_Target.propertyNames
+        };
+    }
+
+
+    /* ------------------------- Utility Methods -------------------------- */
+
+    /* 
+     * The following methods constitute the core of this library. They are
+     * written as closures to allow the exposure of a more fluent syntax
+     * 
+     * They are not included directly in the functions above in order to reduce
+     * overall memory usage.
+     * 
+     */
+
+    function convertTargetToArray(target) {
+        return convertToArray;
+        function convertToArray(startIndex) {
+            startIndex = startIndex || 0;
+            return Array.prototype.slice.call(target, startIndex);
+        }
+    }
+
+    function convertTargetToKebabCase(target) {
+        return convertToKebabCase;
+        function convertToKebabCase() {
+            var char;
+            var i;
+            var isUpper;
+            var output;
+
+            if (typeof target !== 'string')
+                throw new Error('Target must be a string.');
+
+            output = target[0];
+
+            for (i = 1; char = target[i]; i++) {
+                isUpper = char === char.toUpperCase();
+                output += (isUpper ? '-' : '') + char;
+            }
+
+            return output.toLowerCase();
+        }
+    }
+
+    function doesTargetContain(target) {
+        return doesContain;
+        function doesContain(value) {
+            return target.indexOf(value) > -1;
+        }
+    }
+
+    function doesTargetHaveProperty(target) {
+        return doesHaveProperty;
+        function doesHaveProperty(name) {
+            if (typeof name !== 'string') {
+                throw new Error('Name to check must be a string');
+            }
+            if (target === null || typeof target === 'undefined')
+                return false;
+            return typeof target[name] !== 'undefined';
+        }
+    }
+
+    function doesTargetHavePropertyChain(target) {
+        return doesHavePropertyChain;
+        function doesHavePropertyChain(list) {
+            var current = target;
+            var props;
+            if (target === null || typeof target === 'undefined')
+                return false;
+
+            if (!arguments.length) {
+                throw new Error('Must supply at least one property');
+            }
+            else if (arguments.length > 1) {
+                props = convertTargetToArray(arguments)();
+            }
+            else if (list.constructor === Array) {
+                props = list;
+            }
+            else if (typeof list === 'string') {
+                props = list.split(/[\.\,]/g);
+            }
+            else {
+                throw new Error(
+                    'Must supply an array, string or multiple arguments'
+                );
+            }
+            return props.every(function(prop) {
+                if (current === null) return false;
+                current = current[prop];
+                return typeof current !== 'undefined';
+            });
+        }
+    }
+
+    function extendTargetForProperty(target) {
+        var propExtensions;
+        return extendForProperty;
+        function extendForProperty(propName) {
+            propExtensions = {
+                addAlias: extendTargetForPropertyAddAlias(target, propName)
+            };
+            return propExtensions;
+        }
+
+        function extendTargetForPropertyAddAlias(target, propName) {
+            return addAlias;
+            function addAlias(alias) {
+                _ensureTargetDoesNotAlreadyHaveAliasProperty(target, alias);
+                target[alias] = target[propName];
+                return propExtensions;
+            }
+        }
+    }
+
+
+    function extendTargetUsing(target) {
+        return extendUsing;
+        function extendUsing(obj) {
+            getTargetKeys(obj)()
+                .forEach(_applyPropertyToTargetMapper(target, obj));
+        }
+    }
+
+    function extendTargetWithNotMethods(target) {
+        return extendWithNotMethods;
+        function extendWithNotMethods() {
+            Object.keys(target)
+                .filter(_methodsFilter(target))
+                .forEach(_notMethodAdder(target));
+            return target;
+        }
+    }
+
+    function getTargetPropertyNames(target) {
+        return getPropertyNames;
+        function getPropertyNames() {
+            return Object.getOwnPropertyNames(target);
+        }
+    }
+
+    function getTargetKeys(target) {
+        return getKeys;
+        function getKeys() {
+            return Object.keys(target);
+        }
+    }
+
+    function isTargetOneOfThese(target) {
+        return isOneOfThese;
+        function isOneOfThese(list) {
+            var isListNotAnArray;
+            var argsLength = arguments.length;
+
+            _ensureArgsAreNotEmpty(argsLength);
+
+            isListNotAnArray = !isTargetAnArray(list)();
+
+            _ensureItemIsArrayIfOnlyOneArg(argsLength, isListNotAnArray);
+
+            if (isListNotAnArray || argsLength > 1)
+                list = convertTargetToArray(arguments)();
+
+            return list.indexOf(target) > -1;
+        }
+    }
+
+    function isTargetAnArray(target) {
+        return isAnArray;
+        function isAnArray() {
+            return target.constructor === Array;
+        }
+    }
+
+    function isTargetAFunction(target) {
+        return isAFunction;
+        function isAFunction() {
+            return typeof target === 'function';
+        }
+    }
+
+
+    /* -------------------------- Helper Methods -------------------------- */
+
+    /*
+     * The following methods are helper methods to the core methods above and
+     * are separated primarily to reduce memory consumption
+     */
+
+    function _methodsFilter(target) {
+        return filterForMethod;
+        function filterForMethod(propName) {
+            return typeof target[propName] === 'function';
+        }
+    }
+
+    function _applyPropertyToTargetMapper(target, obj) {
+        return applyPropertyToTarget;
+        function applyPropertyToTarget(propName) {
+            target[propName] = obj[propName];
+        }
+    }
+
+
+    // NOTE: has dependency on notTarget. Do not use in notTarget.
+    function _notMethodAdder(target) {
+        return addNotMethod;
+        function addNotMethod(propName) {
+            var newProp = 'not' +
+                propName.charAt(0).toUpperCase() +
+                propName.slice(1);
+            target[newProp] = notTarget(target[propName]);
+        }
+    }
+
+    function _ensureArgsAreNotEmpty(argsLength) {
+        if (argsLength === 0)
+            throw new Error('List cannot be empty');
+    }
+
+    function _ensureItemIsArrayIfOnlyOneArg(argsLength, isListNotAnArray) {
+        if (argsLength === 1 && isListNotAnArray)
+            throw new Error('List must be an array if only one argument is ' +
+                'supplied');
+    }
+
+    function _ensureTargetDoesNotAlreadyHaveAliasProperty(target, alias) {
+        if (target.hasOwnProperty(alias))
+            throw new Error('Cannot create an alias for a property that ' +
+                'already exists on the target');
+    }
+
+})(Mondo || {});
+
+'use strict';
+(function(Mondo) {
+    'use strict';
+    gaigUi.app.directive('rpmControl',
+        ['$rootScope', '$compile', 'dynUtil', RpmControlDirective]);
+
+    gaigUi.app.directive('rpmField',
+        ['$rootScope', '$compile', 'dynUtil', RpmControlDirective]);
+
+    function RpmControlDirective($rootScope, $compile, dynUtil) {
+
+        var has = Object.prototype.hasOwnProperty;
+        var iss = dynUtil.is;
+        var does = dynUtil.does;
+        var gett = dynUtil.get;
+        var convert = dynUtil.convert;
+        var extend = dynUtil.extend;
+
+        var buildAdditionalElementsIfAny = angular.noop;
+        var dashNames = {};
+
+        var templates = defineTemplates();
+
+        return {
+            restrict: 'E',
+            scope: true,
+            link: link
+        };
+
+        function link(scope, element, attrs) {
+            var type = (attrs.rpmType || attrs.type).toLowerCase();
+            var isManualControl = attrs.objectId || attrs.objectName;
+
+            if (isManualControl) {
+                scope.onPageStateChanged = _onPageStateChanged;
+                addListeners(scope, attrs);
+                scope.$on('pageStateChanged', _onPageStateChanged);
+            } else {
+                createField(scope, element, attrs, type, false);
+            }
+
+            function _onPageStateChanged(event,args) {
+                var focusedChildIndex = element.children().index(document.activeElement);
+
+                if((args === undefined)||(args['itemsToRefresh'] === undefined)||( args['itemsToRefresh'].indexOf(scope.$eval(attrs.objectId)) > -1)) {
+                    element.empty();
+                    createField(scope, element, attrs, type, true);
+                }
+
+                if (focusedChildIndex !== -1) {
+                    element.children().eq(focusedChildIndex).focus();
+                }
+            }
+        }
+
+        function defineTemplates() {
+            var templates = {
+                'accumulator': '<gaig-accumulator-listbox>' +
+                '</gaig-accumulator-listbox>',
+                'check': '<input type="checkbox" class="checkbox">',
+                'currency': textInputCtrl('class', 'gaig-currency'),
+                'date': '<gaig-datepicker></gaig-datepicker>',
+                'duration': textInputCtrl() + toggleLblCtrl('&nbsp;(days)'),
+                'number': textInputCtrl('gaig-number'),
+                'percentage': textInputCtrl('gaig-percentage') +
+                toggleLblCtrl(),
+                'plaintext': '<div></div>',
+                'radio': '<gaig-radio-buttons></gaig-radio-buttons>',
+                'select': selectCtrl(true),
+                'selectmulti': selectCtrl(),
+                'selectreq': selectCtrl(false),
+                'switch': '<gaig-switch></gaig-switch>',
+                'textarea': '<textarea></textarea>',
+                'textinput': textInputCtrl()
+            };
+            var forTemplateType = extend(templates).forProperty;
+
+            forTemplateType('percentage')
+                .addAlias('negotiated')
+                .addAlias('standard');
+            forTemplateType('radio')
+                .addAlias('options_buttons')
+                .addAlias('boolean');
+            forTemplateType('selectmulti')
+                .addAlias('options_dropdown');
+            forTemplateType('textinput')
+                .addAlias('default');
+
+            return templates;
+        }
+
+        function addListeners(scope, attrs) {
+            if (!attrs.listen) return;
+
+            attrs.listen
+                .split(',')
+                .filter(validEvents)
+                .forEach(addEventListener);
+
+            function validEvents(event) { return event !== 'pageStateChanged'; }
+
+            function addEventListener(event) {
+                scope.$on(event, scope.onPageStateChanged);
+            }
+        }
+
+        function createField(scope, element, attrs, type, manual) {
+            var section = attrs.section;
+            var fieldName = attrs.rpmField || attrs.field;
+            var disabled = (attrs.ngDisabled || false).toString();
+            var option, options, item, model, field, group;
+            var el = angular.element(getTemplate(type, manual));
+
+            if (manual) {
+                model = manualControlModel(scope, attrs, el, fieldName);
+            } else {
+                item = attrs.rpmItem;
+                field = $rootScope
+                    .rpmSession
+                    .getObjectById(item)
+                    .fields[fieldName];
+                model = 'rpmSession' +
+                    '.getObjectById(\'' + item + '\')' +
+                    '.fields[\'' + fieldName + '\']' +
+                        // reverting to .traits[r:value] for non-primitive fields, which is essentially not defined
+                    (field.isPrimitive() ? '.value' : '.traits[\'r:value\']');
+                group = field.getTraits()[section];
+            }
+
+            if (group && group.uiClass) {
+                el.addClass(group.uiClass);
+            } else {
+                if (el.attr('type') === 'text') {
+                    el.addClass('input-small');
+                } else if (isMediumInputType(type)) {
+                    el.addClass('input-medium');
+                }
+            }
+
+            scope.setValue = function(model, newVal) {
+                var m = scope.$eval(model);
+                m.setValue(newVal);
+            };
+
+            if (typeof disabled !== 'undefined') {
+                el.attr('ng-disabled', disabled);
+            }
+
+            // HACK: Make "manual" (e.g. RpmField) ignore the following type for backward consistency
+            if (type === 'options_dropdown' && !manual) {
+                (function() {
+                    var optionsTrait = field.getTrait('ui:options');
+                    var enumTrait = field.getTrait('v:enum');
+                    var hasOptionsTrait = !!(optionsTrait &&
+                    optionsTrait.length);
+                    if (hasOptionsTrait) {
+                        (function() {
+                            var value = field.getValue();
+                            if (field &&
+                                (
+                                typeof field.traits['ui:optionSelected'] ===
+                                'undefined' ||
+                                field.traits['ui:optionSelected'] === '')
+                            ) {//AddRel
+                                el.append(
+                                    '<option value="" selected>' +
+                                    '-- Select --' +
+                                    '</option>');
+                            } else if (
+                                typeof value === 'undefined' || value === ''
+                            ) {//setValue
+                                el.append(
+                                    '<option value="-- Select --" selected>' +
+                                    '-- Select --' +
+                                    '</option>');
+                                field.traits['ui:optionSelected'] =
+                                    '-- Select --';
+                            }
+
+                            model = 'rpmSession' +
+                                '.getObjectById("' + item + '")' +
+                                '.fields["' + fieldName + '"]' +
+                                '.traits["ui:optionSelected"]';
+
+                            gett(optionsTrait).keys().forEach(
+                                addOptionFromTrait(
+                                    optionsTrait, value, el, field
+                                )
+                            );
+                        }());
+                    }
+                    else if (enumTrait && enumTrait.hasOwnProperty('fields')) {
+                        (function() {
+                            var enumFields = enumTrait.fields;
+                            var options;
+
+                            if (field &&
+                                typeof field.getValue() === 'undefined' ||
+                                field.getValue() === '') {
+                                el.append(
+                                    '<option value="" selected>' +
+                                        '-- Select --' +
+                                    '</option>');
+                            }
+
+                            options = {};
+
+                            gett(enumFields)
+                                .keys()
+                                .filter(sortableFields)
+                                .map(fieldData)
+                                .sort(dataSorter)
+                                .filter(addableFields)
+                                .map(valueLabelMap)
+                                .forEach(forAdditionalSortingAddTo(options));
+
+                            gett(options)
+                                .keys()
+                                .map(backToValueLabelMap(options))
+                                .forEach(addFieldOption);
+
+                            function sortableFields(key) {
+                                var enumField = enumFields[key];
+                                return enumField.hasOwnProperty('traits') &&
+                                    enumField.name !== 'CLASS_TRAITS';
+                            }
+
+                            function fieldData(key) {
+                                var value = enumFields[key];
+                                return {
+                                    sortBy: value.traits['r:desc'],
+                                    value: value
+                                };
+                            }
+
+                            function dataSorter(a, b) {
+                                if (a.sortBy < b.sortBy) return -1;
+                                if (a.sortBy > b.sortBy) return 1;
+                                return 0;
+                            }
+
+                            function addableFields(fieldData){
+                                var value = fieldData.value.name;
+                                return typeof value !== 'undefined';
+                            }
+
+                            function valueLabelMap(fieldData){
+                                var fieldValue = fieldData.value;
+                                return {
+                                    value: fieldValue.name,
+                                    label:fieldValue.getTrait('r:desc')
+                                };
+                            }
+
+                            function addFieldOption(data) {
+                                el.append(
+                                    '<option value="' + data.value + '">' +
+                                    data.label +
+                                    '</option>');
+                            }
+
+
+                            // TODO: replace with better sorting algorithm
+                            function forAdditionalSortingAddTo(options) {
+                                // This function is here to replicate original
+                                // sorting of rpm-control. It relies on Chrome
+                                // sorting algorithms that are not part of the
+                                // JavaScript spec and can't be relied on so
+                                // this should eventually be done differently
+                                // -CS 1/28/2016
+                                return function (data) {
+                                    options[data.value] = data.label;
+                                }
+                            }
+
+                            function backToValueLabelMap(options){
+                                // This function goes with
+                                // the forAdditionalSortingAddTo method
+                                // remove it when that is fixed.
+                                return function (key) {
+                                    return {
+                                        value: key,
+                                        label: options[key]
+                                    };
+                                }
+                            }
+
+                        }());
+                    }
+                }());
+            }
+
+            // HACK: Make "manual" (e.g. RpmField) ignore the following type for backward consistency
+            else if (type === 'options_buttons' && !manual) {
+                (function() {
+                    var choices = [],
+                        roptions = [];
+
+                    if (field && field.getTrait('v:enum') &&
+                        has.call(field.getTrait('v:enum'), 'fields')) {
+                        options = field.getTrait('v:enum').getFields();
+                        for (option in options) {
+                            if (has.call(options, option) &&
+                                options[option].name !== 'CLASS_TRAITS') {
+                                roptions.push(options[option]);
+                            }
+                        }
+
+                        roptions.sort(function(a, b) {
+                            return a.getTrait('r:ordinal') -
+                                b.getTrait('r:ordinal');
+                        });
+
+                        for (var i = 0; i < roptions.length; i++) {
+                            choices.push({
+                                "value": roptions[i].name,
+                                "label": roptions[i].getTrait('r:desc')
+                            });
+                        }
+
+                    }
+
+
+                    scope.radioOptions = {};
+                    scope.radioOptions.choices = choices;
+
+                    el.attr('options', 'radioOptions.choices');
+                }());
+            }
+
+            // HACK: Make "manual" (e.g. RpmField) ignore the following type for backward consistency
+            else if (type === 'boolean' && !manual) {
+                (function() {
+                    var selectedValue = field.value;
+                    scope.selectedValue = selectedValue.toString();
+                    scope.choices = [];
+
+                    scope.choices.push({"value": "true", "label": "true"});
+                    scope.choices.push({"value": "false", "label": "false"});
+
+                    el.attr('options', 'choices');
+                }());
+            }
+
+            // HACK: Make "manual" (e.g. RpmField) ignore the following type for backward consistency
+            else if (type === 'number' && !manual) {
+                (function() {
+                    if (typeof disabled !== 'undefined') {
+                        el.find('input').attr('ng-disabled', 'true');
+                    }
+
+                    if (group && group.decimalPlaces) {
+                        el.attr('decimal-places', group.decimalPlaces);
+                    }
+                }());
+            }
+
+            // HACK: Make "manual" (e.g. RpmField) ignore the following type for backward consistency
+            else if (type === 'percentage' && !manual) {
+                (function() {
+                    if (group && group.decimalPlaces) {
+                        el.attr('decimal-places', group.decimalPlaces);
+                    }
+                }());
+            }
+
+            // HACK: Make "manual" (e.g. RpmField) ignore the following type for backward consistency
+            else if ((type === 'plaintext' || type === '') && !manual) {
+                (function() {
+                    var ptext = '';
+
+                    if (field && field.getTrait('v:enum') &&
+                        has.call(field.getTrait('v:enum'), 'fields')) {
+                        var enumVal = field.value;
+                        options = field.getTrait('v:enum').getFields();
+                        ptext = options[enumVal];
+
+                        if (typeof ptext !== 'undefined' &&
+                            has.call(ptext, 'getTrait')) {
+                            ptext = ptext.getTrait('r:desc');
+                        }
+                    } else {
+                        ptext = field.value;
+                    }
+
+                    el.append(ptext);
+                }());
+            }
+
+            // HACK: Make "manual" (e.g. RpmField) ignore the following type for backward consistency
+            else if (type === 'accumulator' && !manual) {
+                (function() {
+                    scope.models = {};
+                    scope.models.choices = [];
+                    scope.models.accumulatorValue = [];
+                    var optionSelected = field.getValue();//RpmObjects
+                    for (var key in optionSelected) {
+                        scope.models.accumulatorValue.push(
+                            optionSelected[key].id);
+                    }
+                    model =
+                        'rpmSession.getObjectById("' + item + '").fields["' +
+                        fieldName + '"].traits["ui:optionSelected"]';
+                    options = field.getTrait('ui:options');
+                    for (option in options) {
+                        if (has.call(options, option) &&
+                            options[option] !== 'lhMap' &&
+                            typeof options[option] !== 'undefined') {
+                            scope.models.choices.push(
+                                {"value": option, "label": options[option]});
+                        }
+                    }
+                    field.traits["ui:optionSelected"] =
+                        scope.models.accumulatorValue;
+                    el.attr('options', 'models.choices');
+                    el.attr('ordering', 'true');
+                    el.attr('size', 10);
+                    el.attr('label', field.name);
+                    el.attr('on-add',
+                        "execute('addRel','" + item + "','" + fieldName +
+                        "','" +
+                        field.owner.id + "',$addedItems)");
+                    el.attr('on-remove',
+                        "execute('deleteRel','" + item + "','" + fieldName +
+                        "','" +
+                        field.owner.id + "',$removedItems)");
+                }());
+            }
+
+            else if (type === 'check') {
+                (function() {
+                    el.attr('ng-checked', model);
+                }());
+            }
+
+            else if (type === 'selectmulti') {
+                (function() {
+                    el.attr('ng-options',
+                        'item.value as item.label for item in ' + attrs.list);
+                }());
+            }
+
+            onChange(field, item, fieldName, model, group, el);
+
+            function onChange(field, item, fieldName, model, group, el) {
+                var ngChange='';
+                var fieldOwnerId;
+
+                function execAddRel(item, fieldName, fieldOwnerId) {
+                    return 'execute(\'addRel\',\'' + item + '\',\'' +
+                        fieldName +
+                        '\',\'' + fieldOwnerId + '\');';
+                }
+
+                if (field) {
+                    if (hasNonPrimitiveOption(field)) {
+                        ngChange = execAddRel(item, fieldName, field.owner.id);
+                    }
+                    else if (model.indexOf('.value')<0) {
+                        ngChange = 'setValue(\'rpmSession.getObjectById("' + item +
+                            '").fields["' + fieldName + '"]\',' + model + ');';
+                    }
+                }
+
+                if (group) {
+                    if (group.uiAction) {
+                        ngChange +=
+                            "execute('" + group.uiAction + "','" + item +
+                            "','" + fieldName + "','" + field.owner.id + "');";
+                    }
+
+                    if (group.uiActionOptions) {
+                        el.attr('ng-model-options', group.uiActionOptions);
+                    }
+                }
+
+                if (item) {
+                    el.attr('id', item + '-' + fieldName);
+                }
+
+                if (ngChange!=='') {
+                    el.attr('ng-change',ngChange);
+                }
+                return ngChange;
+
+                function hasNonPrimitiveOption(field) {
+                    return field.getTrait('ui:options') && !field.isPrimitive();
+                }
+            }
+
+            el.attr('ng-model', model);
+            el.addClass('rpm-element');
+
+            if (type === 'textarea' && attrs.maxLength) {
+                el.attr('gaig-maxlength', attrs.maxLength);
+                el = wrapWithSpan(el);
+            }
+
+            if (group && group.uiSupport) {
+                addUiSupport(scope, element, group, {
+                    item: item,
+                    fieldName: fieldName,
+                    fieldOwnerId: field.owner.id
+                });
+            }
+
+            if (attrs.label) {
+                element.append(null, makeLabel(scope, attrs));
+            }
+
+            element.append(null, el);
+
+            buildAdditionalElementsIfAny(scope, el, attrs);
+
+            $compile(el)(scope);
+
+        }
+
+        function getTemplate(type, manual) {
+            var template;
+            var isType = iss(type);
+
+            // HACK: Make "manual" (e.g. RpmField) types ignore all but the following types:
+            //       Prior to RpmField merge into RpmControl, RpmControl types were ignored and the system was happy -CS
+            if(manual && isType.notOneOfThese(
+                    'input',
+                    'select',
+                    'selectreq',
+                    'selectmulti',
+                    'switch',
+                    'check',
+                    'textarea',
+                    'date',
+                    'radio',
+                    'currency'
+                )){
+
+                return;
+            }
+
+            template = templates[type] || templates['default'];
+
+            if (isType.oneOfThese('select', 'selectreq')) {
+                buildAdditionalElementsIfAny = buildOptions(true);
+            }
+
+            return template;
+        }
+
+        function manualControlModel(scope, attrs, templateElement, fieldName) {
+            var rpmSession;
+            var model;
+
+            if (attrs.objectId) {
+                rpmSession = addRpmSessionToModel(attrs, scope);
+                model = rpmSession + '.getRpmObjectById(\'' +
+                    scope.$eval(attrs.objectId) + '\')';
+            }
+            else {
+                addGetRpmObjectsToModel(scope);
+                model = 'getRpmObjects(\'' + attrs.session + '\', \'' +
+                    attrs.objectName + '\')';
+            }
+            model += '.fields[\'' + fieldName + '\']' +
+                '.value';
+
+            addAttributes(scope, templateElement, attrs);
+            return model;
+        }
+
+        function addUiSupport(scope, element, group, options) {
+            var button = null;
+
+            if (group.uiSupport.toLowerCase() === 'button') {
+                button = makeUiSupportButton(group, options.item,
+                    options.fieldName, options.fieldOwnerId);
+            }
+
+            element.append(null, button);
+            $compile(button)(scope);
+        }
+
+        function makeUiSupportButton(group, item, fieldName, fieldOwnerId) {
+            var button = angular.element('<button></button>');
+            var span = angular.element('<span></span>');
+            var clickEvent;
+            var classs = 'gaig-icon ' + group.uiSupportIcon;
+
+            clickEvent = "execute('" + group.uiSupportAction + "','" + item +
+                "','" + fieldName + "','" + fieldOwnerId + "')";
+
+            button.attr({
+                'type': 'button',
+                'ng-click': clickEvent
+            });
+
+            span.attr('class', classs);
+
+            button.append(null, span);
+
+            return button;
+        }
+
+        function makeLabel(scope, attrs) {
+            var id = (attrs.id || attrs.objectId);
+            var label = attrs.label;
+            var labelTemplate = '<label for="' + id + '">' + label + '</label>';
+            var labelElem = angular.element(labelTemplate);
+
+            if (attrs.labelClass) {
+                labelElem.attr({
+                    'class': (scope.$eval(attrs.labelClass) || attrs.labelClass)
+                });
+            }
+            return labelElem;
+        }
+
+        function addOptionFromTrait(optionsTrait, value, el, field) {
+            return addOption;
+            function addOption(option) {
+                var optionValue = optionsTrait[option];
+                var optionId;
+                var optionLabel;
+                var optionEl;
+
+                if (optionValue !== 'java.util.LinkedHashMap' &&
+                    typeof optionValue !== 'undefined') {
+                    optionId = optionValue.id;
+                    optionLabel = optionValue.label;
+                    optionEl = angular.element('<option />');
+
+                    optionEl.text(optionLabel);
+                    optionEl.attr('value', optionId);
+
+                    if (value === optionId ||
+                        (value && value.id === optionId)) {
+                        optionEl.attr('selected', true);
+                        field.traits['ui:optionSelected'] = optionId;
+                    }
+                    el.append(optionEl);
+                }
+            }
+        }
+
+        function wrapWithSpan(element) {
+            var wrapper = angular.element('<span />');
+            wrapper.append(element);
+            return wrapper;
+        }
+
+        function addGetRpmObjectsToModel(model) {
+            model.getRpmObjects = $rootScope.getRpmObjects;
+        }
+
+        function addRpmSessionToModel(attrs, model) {
+            var rpmSession = $rootScope.getRpmSession(attrs.session);
+            model[rpmSession] = $rootScope[rpmSession];
+            return rpmSession;
+        }
+
+        function makeDashName(camelCase) {
+            if (dashNames.hasOwnProperty(camelCase)) {
+                return dashNames[camelCase];
+            }
+
+            return dashNames[camelCase] = convert(camelCase).toKebabCase();
+        }
+
+        function isMediumInputType(type) {
+            return iss(type).oneOfThese(
+                'options_dropdown',
+                'accumulator',
+                'select',
+                'selectreq',
+                'selectmulti'
+            );
+        }
+
+        function addAttributes(scope, el, attrs) {
+            gett(attrs).keys()
+                .filter(validProperties)
+                .forEach(addAttribute);
+
+            function validProperties(prop) {
+                return does(prop).notContain('$') &&
+                    iss(prop).notOneOfThese(
+                        'objectId',
+                        'field',
+                        'type',
+                        'session',
+                        'ngModel',
+                        'maxLength'
+                    );
+            }
+
+            function addAttribute(prop) {
+                var dashName = makeDashName(prop);
+                var value = doEval(prop) ?
+                    scope.$eval(attrs[prop]) :
+                    attrs[prop];
+
+                if (value) {
+                    if(prop === 'class') {
+                        el.addClass(value)
+                    }
+                    else {
+                        if(dashName === 'on-label' || dashName === 'off-label') {
+                            dashName = 'data-' + dashName;
+                        }
+                        el.attr(dashName, value);
+                    }
+                }
+            }
+        }
+
+        function doEval(name) {
+            return ['ngShow', 'ngHide'].indexOf(name) > -1;
+        }
+
+        function buildOptions(showBlankOption) {
+            return function(scope, elem, attrs) {
+                var option;
+                if (showBlankOption) {
+                    elem.append('<option value=""></option>');
+                }
+
+                if (typeof(elem[0]) !== 'undefined' && elem[0].tagName === "SELECT" && elem[0].size <= 1) {
+                    //larger selects have to use ng-repeat, which they then remove later, to replace with ng-options elsewhere.
+                    elem.attr('ng-options','item.value as item.label for item in '+attrs.list+' track by item.value');
+                } else {
+                    option = angular
+                        .element(
+                            '<option ng-repeat="item in ' + attrs.list +
+                            '" value="{{item.value}}">{{item.label}}</option>'
+                        );
+
+                    $compile(option)(scope);
+                    elem.append(option);
+                }
+            }
+        }
+
+        function textInputCtrl(attr, value) {
+            value = value ? '="' + value + '"' : '';
+            attr = attr ? (attr + value) : '';
+
+            return '<input type="text" ' + attr + '/>';
+        }
+
+        function selectCtrl(allowClear) {
+            var clearIsSet = allowClear === true || allowClear === false;
+            var gaigSelect = clearIsSet ?
+            ' gaig-select="{allowClear: ' + allowClear.toString() + '}"' :
+                '';
+
+            return '<select' + gaigSelect + '></select>';
+        }
+
+        function toggleLblCtrl(content) {
+            content = content || '';
+            return '<div class="toggleLabel">' + content + '</div>';
+        }
+
+
+    }
+})(Mondo || {});
+
+;(function(Mondo) {
+    'use strict';
+
+    gaigUi.app.directive('rpmGrid', ['$rootScope', '$compile', function($rootScope, $compile) {
+
+        var disabled,
+            screen;
+
+        var has = Object.prototype.hasOwnProperty;
+
+        function genTableId() {
+            return 'rpm-grid-' + Math.floor( Math.random() * new Date().getTime().toString() );
+        }
+
+        var link = function($scope, $element, $attrs) {
+            var root = $scope.grids[$attrs.rpmItem] || [];
+            //screen = $attrs.section;
+            disabled = $scope.$eval($attrs.rpmDisabled).toString();
+            var core = $attrs.core || null;
+
+            $element.empty();
+            rpmToDom(root);
+
+            function rpmToDom(root) {
+                var frag,
+                    el,
+                    fields,
+                    rows = [],
+                    deletedRows = [],
+                    tableRow = [],
+                    curField,
+                    curHeader,
+                    curHeaderName = '',
+                    headers;
+
+                fields = root.fields || [];
+                headers = root.groupFields || {};
+
+                fields = m.sortObjectsById(fields);
+
+                frag = document.createDocumentFragment();
+
+                var headerOrder = headers.sort(function (a, b) {
+                    return a.traits['ui:order'] - b.traits['ui:order'];
+                });
+
+                if (has.call(fields, 'length') > 0 || Object.keys(fields)) {
+                    for (var f = 0; f < fields.length; f += 1) {
+                        curField = fields[f];
+                        var obj = $scope.rpmSession.getObjectById(curField.toString());
+
+                        for (var h = 0; h < headerOrder.length; h++) {
+                            curHeader = headerOrder[h];
+                            curHeaderName = curHeader.name;
+                            el = '--';
+
+                            var derivation = curHeader.traits['ui:derivation'];
+                            var model = '';
+                            if(derivation.indexOf('{this}') > -1){
+                                var context = 'rpmSession.getObjectById("' + curField.toString() + '")';
+                                model = derivation.replace(/{this}/g, context);
+                            }else{
+                                model = 'rpmSession.getObjectById("' + curField.toString() + '").' + derivation;
+                            }
+                            var value = $scope.$eval(model);
+
+
+                            if (typeof value !== 'undefined') {
+                                el = value;
+                            }
+
+                            tableRow.push(el);
+                        }
+
+                        tableRow.id = obj.id;
+
+                        if (obj.isActive()) {
+                            rows.push(tableRow);
+                        } else {
+                            deletedRows.push(tableRow);
+                        }
+
+                        tableRow = [];
+                    }
+
+                    if (headers && headers.length > 0) {
+                        var table = drawTable(frag, headers, rows, deletedRows, root);
+                        $compile(table)($scope);
+                        $element.append(table);
+                    }
+                    if (has.call(root, 'enums')) {
+                        renderEnumSelect(root.enums, $element, core);
+                    }
+                }
+            }
+
+            function drawTable(el, headers, rows,deletedRows, group) {
+                var c,
+                    r,
+                    maxCells,
+                    maxRows,
+                    cell,
+                    tbody,
+                    twisty,
+                    menu,
+                    tableId,
+                    objId,
+                    panelId,
+                    panelRow,
+                    panelCell,
+                    editPanel,
+                    frag = document.createDocumentFragment(),
+                    table = document.createElement('table'),
+                    head = document.createElement('thead'),
+                    row = document.createElement('tr');
+
+                tableId = genTableId();
+                table.setAttribute('id', tableId);
+                table.classList.add('rpm-table');
+                table.classList.add('gaig-table');
+                table.classList.add('table-striped');
+
+                cell = document.createElement('th');
+
+                if (hasContextMenu(group)) {
+                    cell.innerHTML = '<div class="gaig-icon gaig-icon-cog"></div>';
+                    row.appendChild(cell);
+                }
+
+                var headerOrder = headers.sort(function (a, b) {
+                    return a.traits['ui:order'] - b.traits['ui:order'];
+                });
+
+                for (var i = 0, len = headerOrder.length; i < len; i++) {
+                    cell = document.createElement('th');
+                    cell.innerHTML = headerOrder[i].traits['ui:label'];
+                    row.appendChild(cell);
+                }
+
+                head.appendChild(row);
+                table.appendChild(head);
+                tbody = document.createElement('tbody');
+
+                rows.sort(function (a, b) {
+                    return a['id'] - b['id'];
+                });
+
+                for (r = 0, maxRows = rows.length; r < maxRows; r++) {
+                    row = document.createElement('tr');
+                    cell = document.createElement('td');
+                    objId = rows[r].id;
+                    panelId = 'panel' + objId;
+
+                    if (hasContextMenu(group)) {
+                        twisty = angular.element('<button type="button" class="btn btn-mini" ng-click="toggleDetailsPanel(\''+panelId+'\', $event)"> <div class="gaig-icon gaig-icon-chevron-right"></div> </button>');
+                        cell.appendChild(twisty[0]);
+
+                        if (has.call(group, 'enums')) {
+                            if (has.call(group.enums, 'action')) {
+                                if (disabled === 'false') {
+                                    menu = angular.element('<gaig-context-menu class="ng-scope gaig-context-menu"> <button type="button" class="btn btn-mini"> <div class="gaig-icon gaig-icon-pencil"></div> </button> <ul class="context-menu context-menu-alt"><li id="editLink"><a href="#" ng-click="toggleDetailsPanel(\''+panelId+'\', $event)">Edit</a></li> <li id="copyLink"><a href="#"">Copy</a> </li> <li id="addLink"><a href="#" cancel-label="Nevermind" message="Are you sure you want to delete?" gaig-confirm-click="Delete(\'' + objId + '\')">Delete</a></li></ul> </gaig-context-menu>');
+                                    cell.appendChild(menu[0]);
+                                }
+                            }
+                        }
+                        row.appendChild(cell);
+                    }
+
+                    if(useTableInputs(group)) {
+                        for (i = 0, maxCells = group.groupFields.length; i < maxCells; i++) {
+                            if(typeof group.groupFields[i].traits['ui:type'] !== 'undefined') {
+                                var rowCell = document.createElement('td');
+                                var widget = group.groupFields[i].traits['ui:type'];
+                                var cell = document.createElement('rpm-control');
+                                cell.setAttribute('rpm-field', group.groupFields[i].name);
+                                cell.setAttribute('rpm-item', objId);
+                                cell.setAttribute('rpm-type', widget);
+                                cell.setAttribute('ng-disabled', disabled);
+
+                                rowCell.appendChild(cell);
+                                row.appendChild(rowCell);
+                            }else {
+                                var rowCell = document.createElement('td');
+                                rowCell.innerHTML = (rows[r][i]);
+                                row.appendChild(rowCell);
+                            }
+                        }
+                    }else{
+                        for (c = 0, maxCells = rows[r].length; c < maxCells; c++) {
+                            var rowCell = document.createElement('td');
+                            rowCell.innerHTML = (rows[r][c]);
+                            row.appendChild(rowCell);
+                        }
+                    }
+
+                    tbody.appendChild(row);
+
+                    //build twisty panel
+                    panelRow = document.createElement('tr');
+                    if (hasContextMenu(group)) {
+                        panelCell = document.createElement('td');
+                        panelCell.setAttribute('colspan', '10');
+                        editPanel = angular.element('<rpm-panel id="'+panelId+'" rpm-object="'+objId+'" section="{{context.view}}" rpm-disabled="'+disabled+'" core="'+core+'" style="display:none"></rpm-panel>');
+
+                        panelCell.appendChild(editPanel[0]);
+                        panelRow.appendChild(panelCell);
+                        updatePanelState(panelId, editPanel, twisty);
+                    } else {
+                        editPanel = angular.element('<rpm-panel id="'+panelId+'" rpm-object="'+objId+'" section="{{context.view}}" rpm-disabled="'+disabled+'" core="'+core+'" style="display:none"></rpm-panel>');
+                        panelRow.appendChild(editPanel[0]);
+                    }
+
+                    tbody.appendChild(panelRow);
+
+                }
+
+                table.appendChild(tbody);
+
+                //*********************** Deleted Rows section ******************************
+                tbody = document.createElement('tbody');
+
+                if (deletedRows.length > 0) {
+                    var pRow = document.createElement('tr');
+                    var pCell = document.createElement('td');
+
+                    pCell.setAttribute('colspan', '10');
+                    pCell.style.color = 'blue';
+                    pCell.innerHTML = 'Removed';
+                    pRow.appendChild(pCell);
+                    tbody.appendChild(pRow);
+                }
+
+                for (r = 0, maxRows = deletedRows.length; r < maxRows; r++) {
+                    objId = deletedRows[r].id;
+                    panelId = 'panel' + objId;
+
+                    row = document.createElement('tr');
+                    row.setAttribute('rpm-object', objId);
+
+                    cell = document.createElement('td');
+
+                    twisty = angular.element('<button type="button" class="btn btn-mini" ng-click="toggleDetailsPanel(\''+panelId+'\', $event)"> <div class="gaig-icon gaig-icon-chevron-right"></div> </button>');
+                    cell.appendChild(twisty[0]);
+
+                    if (has.call(group, 'enums')) {
+                        if (has.call(group.enums, 'action')) {
+                            //if (disabled === 'false') {
+
+                            if (core && typeof core !== 'undefined' && core.toString() === 'true') {
+                                menu = angular.element('<gaig-context-menu class="ng-scope gaig-context-menu"> <button type="button" class="btn btn-mini"> <div class="gaig-icon gaig-icon-pencil"></div> </button> <ul class="context-menu context-menu-alt"><li id="editLink"><a href="#" ng-click="toggleDetailsPanel(\''+panelId+'\', $event)">View Details</a></li> <li id="addLink"><a href="#" ng-confirm-click="Are you sure you want to restore?" ng-click="executePipeline("restore", {"sourceId":"'+objId+'"})">Restore</a></li></ul> </gaig-context-menu>');
+                            } else {
+                                menu = angular.element('<gaig-context-menu class="ng-scope gaig-context-menu"> <button type="button" class="btn btn-mini"> <div class="gaig-icon gaig-icon-pencil"></div> </button> <ul class="context-menu context-menu-alt"><li id="editLink"><a href="#" ng-click="toggleDetailsPanel(\''+panelId+'\', $event)">View Details</a></li> <li id="addLink"><a href="#" ng-confirm-click="Are you sure you want to restore?" ng-click="Restore(\'' + objId + '\')">Restore</a></li></ul> </gaig-context-menu>');
+
+                            }
+                            cell.appendChild(menu[0]);
+                            //}
+                        }
+                    }
+
+                    row.appendChild(cell);
+
+                    for (c = 0, maxCells = deletedRows[r].length; c < maxCells; c++) {
+                        cell = document.createElement('td');
+                        cell.innerHTML = (deletedRows[r][c]);
+                        row.appendChild(cell);
+                    }
+
+                    tbody.appendChild(row);
+
+                    //build twisty panel
+                    panelRow = document.createElement('tr');
+                    panelCell = document.createElement('td');
+                    panelCell.setAttribute('colspan', '10');
+
+                    editPanel = angular.element('<rpm-panel id="'+panelId+'" rpm-object="'+objId+'" section="{{context.view}}" rpm-disabled="'+disabled+'" core="'+core+'" style="display:none"></rpm-panel>');
+                    panelCell.appendChild(editPanel[0]);
+                    panelRow.appendChild(panelCell);
+                    tbody.appendChild(panelRow);
+                }
+
+                table.appendChild(tbody);
+
+                //*********************** END Deleted Rows section **************************
+
+                frag.appendChild(table);
+                el.appendChild(frag);
+
+                return el;
+            }
+
+            function hasContextMenu(group){
+                if(has.call(group.traits, 'ui:contextMenu')) {
+                    if(group.traits['ui:contextMenu'] === 'false'){
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            function useTableInputs(group){
+                if(has.call(group.traits, 'ui:tableInputs')) {
+                    if(group.traits['ui:tableInputs'] === 'true'){
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            function renderEnumSelect(enums, el, core) {
+                var rootEl = el || $element;
+                var actionBtn,
+                    sourceField,
+                    id,
+                    enumFrag,
+                    formCell;
+
+                if (enums.sourceField && typeof enums.sourceField !== 'undefined') {
+                    sourceField = enums.sourceField.toString();
+                }
+
+                enumFrag = angular.element('<div>');
+                enumFrag.addClass('form-row');
+                enumFrag.addClass('grid-final-select');
+                id = Math.floor( Math.random() * new Date().getTime().toString() );
+
+                if (has.call(enums, 'action')) {
+                    var options = enums.options || null;
+
+                    if (has.call(enums.options, 'CLASS_TRAITS') && has.call(enums.options.CLASS_TRAITS, 'ui:orderBy')) {
+                        options = m.sortOptionItems(options, 'ascending', enums.options.CLASS_TRAITS['ui:orderBy']);
+                    } else {
+                        options = m.sortOptionItems(options, 'ascending', 'r:desc');
+                    }
+
+                    var optionsArray = [];
+                    for (var option in options) {
+                        if (has.call(options, option) && options[option].name !== 'CLASS_TRAITS') {
+                            if (options[option].isAvailable && options[option].isSelectable) {
+                                optionsArray.push({name:options[option].getName(), desc:options[option].getTrait('r:desc')});
+                            }
+                        }
+                    }
+                    if (optionsArray.length > 0) {
+                        var el = angular.element('<select id="' + id + '"></select>');
+                        if (optionsArray.length > 1) {
+                            el.append('<option value="">-- Select --</option>');
+                        }
+
+                        for (var i = 0; i < optionsArray.length; i++) {
+                            el.append('<option value="' + optionsArray[i].name + '">' + optionsArray[i].desc + '</option>');
+                        }
+
+                        if (core && typeof core !== 'undefined' && core.toString() === 'true') {
+                            actionBtn = 'executePipeline("delete", {"sourceId":"' + fieldId + '"})';
+                        } else {
+                            actionBtn = $compile(angular.element('<span class="gaig-icon gaig-icon-plus-sign sm-green" ng-click="' + enums.action.action + '(' + id + ',\'' + sourceField + '\',\'' + enums.sourceId + '\')"><\/span>'))($scope);
+                        }
+
+                        if (disabled === 'true') {
+                            el.attr('disabled', 'disabled');
+                            actionBtn.attr('disabled', 'disabled');
+                        }
+
+                        formCell = angular.element('<div>');
+                        formCell.addClass('form-cell');
+                        formCell.append(el);
+                        enumFrag.append(formCell);
+
+                        if (disabled !== 'true') {
+                            formCell = angular.element('<div>');
+                            formCell.addClass('form-cell');
+                            formCell.append(actionBtn);
+                            enumFrag.append(formCell);
+                        }
+                    }
+                }
+                rootEl.append(enumFrag);
+            }
+
+            function updatePanelState(panelId, editPanel, twisty) {
+                if (sessionStorage.getItem(panelId)) {
+                    var state = m.getState(panelId, 'expanded');
+
+                    if (state) {
+                        editPanel.show();
+                        editPanel.addClass('expanded');
+                        m.saveState(panelId, 'expanded', true);
+                    } else {
+                        twisty.closest('.gaig-icon').addClass('gaig-icon-chevron-right');
+                        twisty.closest('.gaig-icon').removeClass('gaig-icon-chevron-down');
+                        editPanel.removeClass('expanded');
+                        m.saveState(panelId, 'expanded', false);
+                    }
+                } else {
+                    editPanel.show();
+                    twisty.closest('.gaig-icon').addClass('gaig-icon-chevron-down');
+                    twisty.closest('.gaig-icon').removeClass('gaig-icon-chevron-right');
+                    editPanel.addClass('expanded');
+                    m.saveState(panelId, 'expanded', true);
+                }
+            }
+
+            $scope.toggleDetailsPanel = function toggleDetailsPanel(panelId, $event) {
+                var panelDiv = $('#' + panelId);
+                var toggleButton = $($event.target).closest('.gaig-icon');
+                var state = m.getState(panelId, 'expanded');
+
+                toggleButton.toggleClass('gaig-icon-chevron-right');
+                toggleButton.toggleClass('gaig-icon-chevron-down');
+
+                if (!state) {
+                    panelDiv.show();
+                    panelDiv.addClass('expanded');
+                    toggleButton.closest('.gaig-icon').addClass('gaig-icon-chevron-down');
+                    toggleButton.closest('.gaig-icon').removeClass('gaig-icon-chevron-right');
+                    m.saveState(panelId, 'expanded', true);
+                } else {
+                    panelDiv.hide();
+                    panelDiv.removeClass('expanded');
+                    toggleButton.closest('.gaig-icon').addClass('gaig-icon-chevron-right');
+                    toggleButton.closest('.gaig-icon').removeClass('gaig-icon-chevron-down');
+                    m.saveState(panelId, 'expanded', false);
+                }
+            };
+        };
+
+        return {
+            restrict: 'E',
+            scope: true,
+            link:link,
+            transclude: true
+        };
+    }]);
+})(Mondo);
+
+;(function() {
+    'use strict';
+
+    gaigUi.app.directive('rpmPanelLegacy', ['$rootScope', '$compile', function($rootScope, $compile) {
+
+        var uicontrol = 'rpm-control-legacy';
+
+        var _hasOwnProperty = Object.prototype.hasOwnProperty;
+
+        var link = function($scope, $element, $attrs) {
+
+            function render() {
+
+                $element.empty();
+
+                $scope.rpmModel = $attrs.rpmModel;
+                $scope.rpmObjects = $element.context.getAttribute('rpm-objects');
+                $scope.rpmLayout = ($attrs.layout && $scope[$attrs.layout]) ? $scope[$attrs.layout] : null;
+                $scope.rpmTrait = $attrs.rpmTrait || '';
+                $scope.rpmValue = $attrs.rpmValue ? $attrs.rpmValue.toString().split('|') : '';
+                $scope.rpmOper = $attrs.rpmOper ? $attrs.rpmOper.toString().toLowerCase() : '';
+                $scope.isDisabled = ($attrs.ngDisabled && $scope[$attrs.ngDisabled]) ? $scope[$attrs.ngDisabled] : $scope.$eval($attrs.ngDisabled);
+
+                if (!$scope.rpmLayout || !$scope.rpmLayout.groups.length) return;
+
+                rpmToDom();
+            }
+
+            function rpmToDom() {
+                var rpmNamedObjects = getNamedObjects($scope.rpmObjects, $scope.rpmModel),
+                    rpmLayout = $scope.rpmLayout,
+                    frag,
+                    groups = rpmLayout.groups;
+
+                for (var n in rpmNamedObjects) {
+                    if (_hasOwnProperty.call(rpmNamedObjects, n)) {
+                        var curObject = rpmNamedObjects[n];
+                        var wrap;
+
+                        if (rpmLayout.containSubGroups) {
+                            wrap = document.createElement('fieldset');
+                            wrap.setAttribute('gaig-fieldset', null);
+                            var productName = rpmSession.rpmObjects[n].getRpmClass().getClassTrait('ui:label');
+                            var legend = document.createElement('legend');
+                            legend.textContent = 'Product: ' + productName;
+                            wrap.appendChild(legend);
+                        } else {
+                            wrap = document.createElement('div');
+                        }
+
+                        frag = document.createDocumentFragment();
+
+                        traverseGroup(groups, n, curObject, $scope.rpmTrait, wrap);
+
+                        frag.appendChild(wrap);
+                        $compile(frag)($scope);
+
+                        $element.append(null, frag);
+                        $element.append('<div class="clear-fix"></div>');
+
+                        frag = null;
+                        wrap = null;
+                    }
+                }
+            }
+
+            function traverseGroup(groups, n, curObject, rpmTrait, fset) {
+                var wrapEl, sub_frag, sub_fset, legend, label, el, container, clearfix, col;
+
+                for (var a = 0, glen = groups.length; a < glen; a++) {
+
+                    if (_hasOwnProperty.call(groups[a], 'groups')) {
+                        sub_frag = document.createDocumentFragment();
+
+                        wrapEl = groups[a].wrapWith || 'div';
+
+                        sub_fset = document.createElement(wrapEl);
+                        sub_fset.classList.add('rpm-group');
+
+                        if (wrapEl === 'fieldset') {
+                            if (_hasOwnProperty.call(groups[a], 'name') && groups[a].name !== '') {
+                                legend = document.createElement('legend');
+                                legend.textContent = groups[a].name;
+                                sub_fset.appendChild(legend);
+                            }
+                        }
+
+                        if (_hasOwnProperty.call(groups[a], 'class')) {
+                            var cset = groups[a].class.split(' ');
+                            for (var ci = 0, csetLen = cset.length; ci < csetLen; ci++) {
+                                sub_fset.classList.add(cset[ci]);
+                            }
+                        }
+
+                        if (_hasOwnProperty.call(groups[a], 'attrs')) {
+                            var aset = groups[a].attrs.split(',');
+                            for (var ai = 0, asetLen = aset.length; ai < asetLen; ai++) {
+                                var res = aset[ai].split(':');
+                                sub_fset.setAttribute(res[0], res[1]);
+                            }
+                        }
+
+                        sub_frag.appendChild(sub_fset);
+                        fset.appendChild(sub_frag);
+
+                        traverseGroup(groups[a].groups, n, curObject, rpmTrait, sub_fset);
+                    }
+
+                    col = 1;
+
+                    var fields = groups[a].fields;
+
+                    if (typeof fields === 'undefined') continue;
+
+                    sub_frag = document.createDocumentFragment();
+
+                    wrapEl = groups[a].wrapWith || 'fieldset';
+
+                    sub_fset = document.createElement(wrapEl);
+
+                    if (wrapEl === 'fieldset') {
+                        if (_hasOwnProperty.call(groups[a], 'name') && groups[a].name !== '') {
+                            legend = document.createElement('legend');
+                            legend.textContent = groups[a].name;
+                            sub_fset.appendChild(legend);
+                        }
+                    }
+
+                    for (var i = 0, len = fields.length; i < len; i++) {
+                        var k, labelText;
+
+                        if (typeof fields[i] === 'string') {
+                            k = fields[i];
+                        }
+                        else if (_hasOwnProperty.call(fields[i], 'name')) {
+                            k = fields[i].name;
+                        }
+
+                        if (typeof curObject.fields[k] === 'undefined') {
+//                            console.warn('WARNING: Field "' + fields[i] + '" does not exist, skipping.');
+                            continue;
+                        }
+                        if (typeof curObject.fields[k].name === 'undefined') {
+//                            console.warn('WARNING: Field "' + fields[i].name + '" does not exist, skipping.');
+                            continue;
+                        }
+
+                        var curField = curObject.fields[k];
+
+
+
+                        if ($scope.rpmTrait && typeof $scope.rpmTrait !== 'undefined' && $scope.rpmValue && typeof $scope.rpmValue !== 'undefined') {
+
+                            var cmpres = $scope.rpmValue.indexOf(curField.getTrait($scope.rpmTrait).toString());
+
+                            switch ($scope.rpmOper) {
+                                case 'neq':
+                                    if (cmpres > -1) {
+                                        continue;
+                                    }
+                                    break;
+
+                                default:
+                                    if (cmpres === -1) {
+                                        continue;
+                                    }
+                            }
+
+                        }
+
+                        if (!row) {
+                            var row = document.createElement('div');
+                            row.classList.add('row-form');
+                        }
+
+                        el = document.createElement(uicontrol);
+
+                        el.setAttribute('rpm-object', n);
+                        el.setAttribute('rpm-field', curField.name);
+                        el.setAttribute('rpm-trait', 'r:value');
+                        if (typeof $scope.isDisabled !== 'undefined' && $scope.isDisabled.toString() === 'true' || (_hasOwnProperty.call(groups[a], 'viewmode') && groups[a].viewmode === 'disabled')) {
+                            el.setAttribute('ng-disabled', 'true');
+                        }
+
+                        curField.layout = {};
+                        curField.layout.class = fields[i].class;
+                        curField.layout.attrs = fields[i].attrs;
+
+                        $rootScope.rpmUiMap[n].fields[k].events = fields[i].events || {};
+
+                        if (_hasOwnProperty.call(fields[i], 'control') && !$rootScope.rpmUiMap[n].fields[k].traits['ui:type']) {
+                            $rootScope.rpmUiMap[n].fields[k].traits['ui:type'] = fields[i].control;
+                        }
+
+                        if (_hasOwnProperty.call(fields[i], 'value') && !$rootScope.rpmUiMap[n].fields[k].traits['r:value']) {
+                            $rootScope.rpmUiMap[n].fields[k].traits['r:value'] = fields[i].value;
+                        }
+
+                        container = document.createElement('div');
+                        container.classList.add('form-cell');
+
+                        if (_hasOwnProperty.call(fields[i], 'label')) {
+                            labelText = fields[i].label;
+                        }
+                        else {
+                            labelText = curField.getTrait('ui:label');
+                        }
+
+                        if (typeof labelText !== 'undefined' && labelText !== '') {
+                            label = document.createElement('label');
+                            label.textContent = labelText;
+                            container.appendChild(label);
+                        }
+
+                        container.appendChild(el);
+
+                        if (typeof curField.getTrait('ui:type') !== 'undefined' && curField.getTrait('ui:type').toLowerCase() === 'radiobutton') {
+                            row.appendChild(container);
+                            sub_fset.appendChild(row);
+                            row = null;
+                            col = 1;
+                        }
+
+                        else if (_hasOwnProperty.call(groups[a], 'cols')) {
+                            var cols = groups[a].cols;
+                            if (col >= cols) {
+                                clearfix = document.createElement('div');
+                                clearfix.setAttribute('class', 'clear-fix');
+                                row.appendChild(container);
+                                sub_fset.appendChild(clearfix);
+                                sub_fset.appendChild(row);
+                                row = null;
+                                col = 1;
+                            } else {
+                                row.appendChild(container);
+                                sub_fset.appendChild(row);
+                                col = col + 1;
+                            }
+                        }
+
+                        else if (row) {
+                            row.appendChild(container);
+                            sub_fset.appendChild(row);
+                            col = col + 1;
+                        }
+
+                    }
+
+                    sub_frag.appendChild(sub_fset);
+                    fset.appendChild(sub_frag);
+
+                    if (_hasOwnProperty.call(groups[a], 'last')) {
+                        if (groups[a].last) {
+                            clearfix = document.createElement('div');
+                            clearfix.setAttribute('class', 'clear-fix field-return');
+                            fset.appendChild(clearfix);
+                        }
+                    }
+
+                    row = null;
+                    sub_frag = null;
+                    sub_fset = null;
+                }
+            }
+
+            function getNamedObjects(rpmObjects, rpmModel) {
+                var obj, namedObjects = [];
+                var rpmUiMap = $rootScope.rpmUiMap;
+
+                if (rpmObjects && rpmObjects[0] !== '') {
+                    rpmObjects = rpmObjects.toString().split('|');
+
+                    for (var filtered in rpmObjects) {
+                        obj = null;
+
+                        for (obj in rpmUiMap) {
+                            if (_hasOwnProperty.call(rpmObjects, filtered)) {
+                                if (obj === rpmObjects[filtered] && _hasOwnProperty.call(rpmUiMap, obj)) {
+                                    namedObjects[obj] = rpmUiMap[obj];
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (rpmModel) {
+                    obj = null;
+
+                    if ($rootScope.rpmSession.namedObjects) {
+                        var ids = $rootScope.rpmSession.namedObjects[rpmModel] || [];
+                        for (var i = 0, len = ids.length; i < len; i++) {
+                            namedObjects[ids[i]] = rpmUiMap[ids[i]];
+                        }
+                    }
+                }
+
+                return namedObjects;
+            }
+
+            function mapSession(newSession) {
+                $rootScope.rpmSession = newSession;
+                $scope.rpmUiObjects = $rootScope.rpmSession.getRpmObjects();
+                $rootScope.rpmUiMap = mapFields();
+
+                window.rpmUiMap = $rootScope.rpmUiMap;
+                window.rpmSession = newSession;
+            }
+
+            function mapFields() {
+                var map = {},
+                    fields = {},
+                    id,
+                    rpmField,
+                    ui_label,
+                    name,
+                    fieldsInObject;
+
+                for (var a in $scope.rpmUiObjects) {
+                    if (_hasOwnProperty.call($scope.rpmUiObjects, a)) {
+                        id = $scope.rpmUiObjects[a].getId();
+                        fields[id] = {};
+                        map[id] = {};
+                        fieldsInObject = $scope.rpmUiObjects[a].getFields();
+
+                        for (var f in fieldsInObject) {
+                            if (_hasOwnProperty.call(fieldsInObject, f)) {
+                                rpmField = fieldsInObject[f];
+                                name = rpmField.name;
+
+                                if (name === 'THIS' || typeof name === 'undefined') continue;
+
+                                ui_label = rpmField.getTrait('ui:label');
+
+                                fields[id][name] = rpmField;
+                            }
+                        }
+
+                        map[id]['fields'] = fields[id];
+                    }
+                }
+                return map;
+            }
+
+            $scope.$watch('rpmSession', function(newSession) {
+                if (typeof newSession !== 'undefined') {
+                    mapSession(newSession);
+                    render();
+                }
+            });
+
+            $rootScope.render = $scope.render = render;
+            $rootScope.mapSession = $scope.mapSession = mapSession;
+        };
+
+        return {
+            restrict: 'E',
+            scope: true,
+            link:link
+        };
+    }]);
+
+}).call(this);
+
+;(function() {
+    'use strict';
+
+    gaigUi.app.directive('rpmControlLegacy', ['$rootScope', '$compile', function ($rootScope, $compile) {
+
+        // Generic component definitions
+        var UI_COMPONENT_TYPES = {
+            TEXTINPUT: 'textbox',
+            TEXTAREA: 'textarea',
+            STRING: 'plaintext',
+            CURRENCY: 'currency',
+            DATE: 'datepicker',
+            DURATION: 'duration',
+            NUMBER: 'number',
+            PERCENTAGE: 'percentage',
+            CONTEXT_MENU: 'contextmenu',
+            OPTIONS_DROPDOWN: 'dropdown',
+            OPTIONS_BUTTONS: 'radio',
+            LISTBOX: 'accumulator'
+        };
+
+        var _hasOwnProperty = Object.prototype.hasOwnProperty;
+
+        var textInputTemplate = '<input type="text" />';
+        var durationTemplate = '<input type="text" /><div class="toggleLabel">&nbsp;(days)</div>';
+        var percentageTemplate = '<input type="text" gaig-percentage /><div class="toggleLabel"></div>';
+        var currencyTemplate = '<input type="text" class="gaig-currency" />';
+        var numberTemplate = '<input type="text" gaig-number />';
+        var textareaTemplate = '<textarea></textarea>';
+        var dropdownTemplate = '<select></select>';
+        var datepickerTemplate = '<gaig-datepicker></gaig-datepicker>';
+        var booleanSwitchTemplate = '<gaig-radio-buttons></gaig-radio-buttons>';
+        var radioTemplate = '<gaig-radio-buttons></gaig-radio-buttons>';
+        var plaintextTemplate = '<div></div>';
+
+        var getTemplate = function (type) {
+            var template = '';
+            type = (type) ? type.toLowerCase() : '';
+
+            switch (type) {
+                case 'textinput':
+                    template = textInputTemplate;
+                    break;
+                case 'duration':
+                    template = durationTemplate;
+                    break;
+                case 'percent':
+                    template = percentageTemplate;
+                    break;
+                case 'standard':
+                    template = percentageTemplate;
+                    break;
+                case 'negotiated':
+                    template = percentageTemplate;
+                    break;
+                case 'number':
+                    template = numberTemplate;
+                    break;
+                case 'text':
+                    template = textInputTemplate;
+                    break;
+                case 'textarea':
+                    template = textareaTemplate;
+                    break;
+                case 'dropdown':
+                    template = dropdownTemplate;
+                    break;
+                case 'currency':
+                    template = currencyTemplate;
+                    break;
+                case 'datepicker':
+                    template = datepickerTemplate;
+                    break;
+                case 'radiobutton':
+                    template = radioTemplate;
+                    break;
+                case 'booleanswitch':
+                    template = booleanSwitchTemplate;
+                    break;
+                case 'plaintext':
+                    template = plaintextTemplate;
+                    break;
+                default:
+                    template = textInputTemplate;
+                    break;
+            }
+
+            return template;
+        };
+
+        var link = function (scope, element, attrs) {
+            if (!$rootScope.rpmUiMap) return;
+
+            var rpmObjectId = attrs.rpmObject;
+            var rpmField = attrs.rpmField;
+            var disabled = attrs.ngDisabled;
+            var rpmUiMap = $rootScope.rpmUiMap;
+            var rpmObject = rpmUiMap[rpmObjectId];
+            var fields = rpmObject.fields;
+            var type = attrs.rpmType ? attrs.rpmType : fields[rpmField].traits['ui:type'] || fields[rpmField].getTrait('ui:type');
+            var el = angular.element(getTemplate(type));
+            var model = 'rpmUiMap["' + rpmObjectId + '"].fields.' + rpmField + '.traits["r:value"]';
+            var id = rpmObjectId + '-' + fields[rpmField].name;
+            var options, vmin, vmax;
+            var layout = fields[rpmField].layout || null;
+
+            fields[rpmField].setTrait('ui:type', type);
+
+            el.attr('id', id);
+
+            if (typeof disabled !== 'undefined')
+                el.attr('ng-disabled', disabled);
+
+            if (typeof vmax !== 'undefined')
+                el.attr('maxlength', vmax);
+
+            if (type.toLowerCase() === 'dropdown') {
+                var ddField = fields[rpmField];
+
+                if (ddField.getTrait('v:enum') && ddField.getTrait('v:enum').hasOwnProperty('fields')) {
+                    options = ddField.getTrait('v:enum').fields;
+
+                    for (var option in options) {
+                        if (_hasOwnProperty.call(options, option)) {
+                            el.append('<option value="' + options[option].name + '">' + options[option].getTrait('r:desc') + '</option>');
+                        }
+                    }
+                }
+            }
+
+            else if (type.toLowerCase() === 'radiobutton' || type.toLowerCase() === 'radio') {
+                var radioOptions = fields[rpmField];
+                var choices = [];
+
+                if (radioOptions.getTrait('v:enum') && _hasOwnProperty.call(radioOptions.getTrait('v:enum'), 'fields')) {
+                    var options = radioOptions.getTrait('v:enum').getFields();
+
+                    var roptions = [];
+                    for (option in options) {
+                        roptions.push(options[option]);
+                    }
+
+                    roptions.sort(function(a, b) {return a.getTrait('r:ordinal') - b.getTrait('r:ordinal')});
+
+                    for (var i = 0; i < roptions.length; i++) {
+                        choices.push({"value": roptions[i].name, "label": roptions[i].getTrait('r:desc')});
+                    }
+
+                }
+
+
+                scope.radioOptions = {};
+                scope.radioOptions.choices = choices;
+
+                el.attr('options', 'radioOptions.choices');
+            }
+
+            else if (type.toLowerCase() === 'booleanswitch') {
+                var selectedValue = fields[rpmField].getTrait('r:value');
+                scope.selectedValue = selectedValue.toString();
+                scope.choices = [];
+
+                scope.choices.push({"value": "true", "label": "true"});
+                scope.choices.push({"value": "false", "label": "false"});
+
+                el.attr('options', 'choices');
+            }
+
+            else if (type.toLowerCase() === 'plaintext' || type === '') {
+                var ptext = fields[rpmField].getTrait('r:value');
+                el.append(ptext);
+            }
+
+            else if (type.toLowerCase() === 'textarea') {
+                vmax = fields[rpmField].getTrait('v:max');
+                el.attr('gaig-maxlength', vmax);
+            }
+
+            injectExtras(el, layout);
+
+            el.attr('ng-model', model);
+            el.addClass('rpm-element');
+
+            element.append(null, el);
+            $compile(el)(scope);
+
+            attachEvents(el, fields[rpmField].events);
+
+            function attachEvents(el, events) {
+                if (Object.keys(events).length) {
+                    var reqEvents = events;
+
+                    var reqEventHandler = function reqEventHandler(e) {
+                        eval(e.data.cause[e.data.effect]);
+                    };
+
+                    for (var reqEvent in reqEvents) {
+                        el.bind(reqEvent, {
+                            cause: reqEvents,
+                            effect: reqEvent
+                        }, reqEventHandler);
+                    }
+                }
+            }
+
+        };
+
+        function injectExtras(el, layout) {
+            if (layout.attrs) {
+                var aset = layout.attrs.split(',');
+                for (var ai = 0, asetLen = aset.length; ai < asetLen; ai++) {
+                    var res = aset[ai].split(':');
+                    el.attr(res[0], res[1]);
+                }
+            }
+
+            if (layout.class) {
+                var cset = layout.class.split(',');
+                for (var ci = 0, csetLen = cset.length; ci < csetLen; ci++) {
+                    el.addClass(cset[ci]);
+                }
+            }
+        }
+
+        return {
+            restrict: 'E',
+            scope: true,
+            link: link
+        };
+
+    }]);
+
+}).call(this);
+
+;(function(Mondo) {
+    'use strict';
+
+    gaigUi.app.directive('rpmPanel', ['$rootScope', '$compile', function($rootScope, $compile) {
+
+        var m = new Mondo();
+        window.m = m;
+
+        var disabled, screen;
+        var has = Object.prototype.hasOwnProperty;
+
+        var createClearFix = function createClearFix() {
+            var clearfix = document.createElement('div');
+            clearfix.classList.add('clear-fix');
+
+            return clearfix;
+        };
+
+        var getGroupTraits = function getGroupTraits(field, section) {
+            return field.traits[section];
+        };
+
+        var hasUIRelevant = function hasUIRelevant(fields, section) {
+            var curField;
+
+            for (var i in fields) {
+                if (has.call(fields, i)) {
+                    if (typeof fields[i] === 'object') {
+                        curField = fields[i];
+                        if (typeof section === 'undefined') continue;
+                        if ( getGroupTraits(curField, section).relevant.toString() !== 'false' ) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+
+        var link = function($scope, $element, $attrs) {
+            screen = $attrs.section;
+            var section = 'ui:group.'+$attrs.section;
+            var panelId = $attrs.id || Math.floor( Math.random() * new Date().getTime().toString());
+            var rpmModel = $attrs.rpmModel || [];
+            var rpmObject = $attrs.rpmObject || null;
+            var core = $attrs.core || null;
+            var refreshEvents = $attrs.refreshEvents || '';
+            var panelScope = null;
+
+            $scope.grids = [];
+
+            function render() {
+                if (!$attrs.rpmDisabled) return;
+                disabled = $scope.$eval($attrs.rpmDisabled).toString();
+
+                if (panelScope) {
+                    panelScope.$destroy();
+                }
+                panelScope = $scope.$new();
+                panelScope.lastRpmSession = $scope.rpmSession
+                panelScope.lastSection = $attrs.section;
+                panelScope.lastDisabled = $attrs.rpmDisabled;
+
+                $element.attr('id', panelId);
+                $element.empty();
+                rpmToDom(section);
+            }
+
+            function rpmToDom(section) {
+                var rpmNamedObjects = m.maps[panelId],
+                    frag,
+                    wrap,
+                    obj,
+                    childFrag = null,
+                    clearfix = createClearFix();
+
+                for (var key in rpmNamedObjects) {
+                    if (has.call(rpmNamedObjects, key)) {
+                        if (!$attrs.rpmObject && rpmModel.length > 0 && rpmModel.indexOf(key) === -1) continue;
+
+                        frag = document.createDocumentFragment();
+
+                        var rootObj = rpmNamedObjects[key];
+
+                        if (typeof rootObj === 'undefined') continue;
+
+                        if (has.call(rootObj, 'groups')) {
+
+                            childFrag = document.createDocumentFragment();
+                            obj = rootObj;
+                            wrap = m.createFieldset(obj.name, curObject, objId, obj.active);
+
+                            traverseGroup(obj, objId, wrap, section);
+
+                            childFrag.appendChild(wrap);
+                            $compile(childFrag)(panelScope);
+
+                            $element.append(null, childFrag);
+                            $element.append(clearfix);
+
+                            wrap = null;
+                            childFrag = null;
+                        }
+
+                        for (var index in rootObj) {
+                            var curObject = rootObj[index];
+
+                            if (has.call(curObject, 'enums')) {
+                                m.renderEnumSelect(curObject.enums, frag, core);
+                            }
+
+                            $compile(frag)(panelScope);
+
+                            $element.append(null, frag);
+                            $element.append(clearfix);
+
+                            for (var objId in curObject) {
+                                if (has.call(curObject, objId)) {
+                                    if (has.call(curObject[objId], 'groups')) {
+
+                                        childFrag = document.createDocumentFragment();
+                                        obj = curObject[objId];
+                                        wrap = m.createFieldset(obj.name, curObject, objId, obj.active);
+
+                                        traverseGroup(obj, objId, wrap, section);
+
+                                        childFrag.appendChild(wrap);
+                                        $compile(childFrag)(panelScope);
+
+                                        $element.append(null, childFrag);
+                                        $element.append(clearfix);
+
+                                        wrap = null;
+                                        childFrag = null;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            function traverseGroup(root, objId, fieldSet, section) {
+                var wrapEl,
+                    subGroup,
+                    subFrag,
+                    subFieldset,
+                    legend,
+                    row = 0,
+                    clearfix,
+                    groupTraits,
+                    fields,
+                    groups = root.groups,
+                    child,
+                    panel,
+                    curWidth = 100;
+
+                for (var group in groups) {
+                    if (has.call(groups, group)) {
+
+                        if (has.call(groups, 'groups')) {
+                            child = m.createFieldset(groups[group].name, {});
+                            fieldSet.appendChild(child);
+
+                            traverseGroup(groups[group].groups, objId, fieldSet, section);
+                        }
+
+                        fields = groups[group].fields || {};
+                        groupTraits = groups[group].traits || null;
+
+                        subFrag = document.createDocumentFragment();
+
+                        wrapEl = 'div';
+                        subFieldset = document.createElement(wrapEl);
+
+                        wrapEl = groups[group].traits['ui:wrapwith'] || 'div';
+
+                        if (wrapEl === 'div') {
+                            subFieldset = document.createElement('div');
+                        } else {
+                            subFieldset = document.createElement('fieldset');
+
+                            legend = document.createElement('legend');
+                            legend.textContent = group;
+                            subFieldset.appendChild(legend);
+
+                            if (has.call(groupTraits, 'ui:expandable') && groupTraits['ui:expandable'].toString() === 'true') {
+                                subFieldset.setAttribute('gaig-fieldset', '');
+                            }
+                        }
+
+                        if (wrapEl === 'Table' || wrapEl === 'grid' || wrapEl === 'ComplexTable') {
+                            /*
+                             Flatten groups.
+
+                             At this point, groups[group].fields could be a group of more fields and groups.
+                             For now, we'll assume a single group level and push each 'fields' object onto a new
+                             'fields' array. The grid directive expects 'fields' to be an array of objects, each one
+                             being a row.
+                             */
+
+                            var rpmItem = 'grid' + Math.floor( Math.random() * new Date().getTime().toString() );
+                            var gridObject = {};
+                            gridObject.enums = groups[group].enums;
+                            gridObject.traits = groups[group].traits;
+                            gridObject.fields = [];
+
+                            if (has.call(groups[group], 'fields')) {
+                                var tmpFields = groups[group].fields;
+
+                                for (var t = 0; t < tmpFields.length; t++) {
+                                    gridObject.fields.push(tmpFields[t].id);
+                                }
+                            }
+                            gridObject.groupFields = groups[group].groupFields;
+                            panelScope.grids[rpmItem] = gridObject;
+
+                            subFieldset.innerHTML += '<rpm-grid rpm-item="'+rpmItem+'" rpm-disabled="'+disabled+'" section="'+screen+'" core="'+core+'"></rpm-grid>';
+                            subFrag.appendChild(subFieldset);
+                            fieldSet.appendChild(subFrag);
+
+                            continue;
+                        }
+
+                        if (has.call(fields, 'length') > 0) {
+                            clearfix = createClearFix();
+
+                            panel = document.createElement('div');
+                            panel.classList.add('list-group');
+
+                            for (var f = 0; f < fields.length; f += 1) {
+
+                                if (has.call(fields[f], 'groups')) {
+
+                                    subGroup = m.createFieldset(fields[f].name, {});
+
+                                    if (has.call(groups[group], 'enums')) {
+                                        if (has.call(groups[group].enums, 'action')) {
+                                            m.renderDelete(fields[f], subGroup.children[0], fields[f].active, core);
+                                        }
+                                    }
+
+                                    subFieldset.appendChild(subGroup);
+
+                                    traverseGroup(fields[f], objId, subGroup, section);
+
+                                } else if ( hasUIRelevant(fields[f], section) ) {
+
+                                    var item = document.createElement('li');
+                                    item.classList.add('list-group-item');
+
+                                    if (f % 2 === 0) {
+                                        item.classList.add('odd-row');
+                                    }
+
+                                    m.createFieldGroup(fields[f], row, groupTraits, item, groups[group], fields[f].active, core, section);
+
+                                    panel.appendChild(item);
+                                    subFieldset.appendChild(panel);
+                                }
+                            }
+
+                        } else {
+                            m.createFieldGroup(fields, row, groupTraits, subFieldset, '', '', core, section);
+                        }
+
+                        if (has.call(groups[group], 'enums')) {
+                            m.renderEnumSelect(groups[group].enums, subFieldset, core);
+                        }
+
+                        if (groupTraits && has.call(groupTraits, 'ui:width')) {
+                            curWidth -= groupTraits['ui:width'];
+                        } else {
+                            curWidth = 0;
+                        }
+
+                        if (curWidth <= 0) {
+                            clearfix = createClearFix();
+
+                            fieldSet.appendChild(clearfix);
+                            curWidth = 100;
+                        }
+
+                        subFrag.appendChild(subFieldset);
+                        fieldSet.appendChild(subFrag);
+
+                        subFrag = null;
+                        subFieldset = null;
+                    }
+
+                }
+
+                $element.append( createClearFix() );
+            }
+
+            function mapSession(newSession, viewMode) {
+                var mappedObjects;
+
+                viewMode = viewMode || 'false';
+
+                $rootScope.rpmSession = newSession;
+
+                if (rpmObject && rpmObject.length) {
+                    mappedObjects = rpmObject;
+                } else {
+                    mappedObjects = newSession.getNamedObjects();
+                }
+
+                window.rpmSession = newSession;
+                m.mapNamedObjects( panelScope, mappedObjects, section, viewMode, panelId );
+            }
+
+            $scope.$watch('rpmSession', function(newSession, oldSession) {
+                if ( !(newSession instanceof Dynamis.RpmSession) ) return;
+
+                if (panelScope && newSession && panelScope.lastRpmSession===newSession) return;
+
+                if (typeof newSession !== 'undefined' && $attrs.rpmDisabled !== '' && typeof $attrs.rpmDisabled !== 'undefined' && $attrs.section !== '' && typeof $attrs.section !== 'undefined') {
+                    //if (typeof oldSession !== 'undefined' && panelId !== '' && newSession.rpmObjects[panelId] == oldSession.rpmObjects[panelId]) {
+                    //    return;
+                    //}
+
+                    mapSession(newSession, $attrs.rpmDisabled);
+                    render();
+                }
+
+            });
+
+            $attrs.$observe('rpmDisabled', function(val) {
+                if ( !($scope.rpmSession instanceof Dynamis.RpmSession) ) return;
+
+                if ( panelScope && val && panelScope.lastDisabled === val ) return;
+
+                if (typeof val !== 'undefined' && val.toString !== '') {
+                    if (typeof val !== 'undefined' && typeof $scope.rpmSession !== 'undefined' && $attrs.section !== '' && typeof $attrs.section !== 'undefined') {
+                        mapSession($scope.rpmSession, val);
+                        render();
+                    }
+                }
+            });
+
+            //$attrs.$observe('rpmObject', function(val) {
+            //    if ( !($scope.rpmSession instanceof Dynamis.RpmSession) ) return;
+            //
+            //    if (typeof val !== 'undefined' && val.toString !== '') {
+            //        if (typeof val !== 'undefined' && typeof $scope.rpmSession !== 'undefined' && $attrs.section !== '' && typeof $attrs.section !== 'undefined') {
+            //            console.log('rpmObject changed');
+            //            mapSession($scope.rpmSession, $attrs.rpmDisabled);
+            //            render();
+            //        }
+            //    }
+            //});
+
+            $attrs.$observe('section', function(val) {
+                if ( !($scope.rpmSession instanceof Dynamis.RpmSession) ) return;
+                //if ( !($scope.rpmSession instanceof Dynamis.RpmSession) || !core || core.toString !== 'true') return;
+
+                if (panelScope && val && panelScope.lastSection === val ) return;
+
+                if (typeof val !== 'undefined' && val.toString !== '') {
+                    if (typeof val !== 'undefined' && typeof $scope.rpmSession !== 'undefined' && $attrs.section !== '' && typeof $attrs.section !== 'undefined') {
+                        section = 'ui:group.' + $attrs.section;
+                        mapSession($scope.rpmSession, $attrs.rpmDisabled);
+                        render();
+                    }
+                }
+            });
+
+
+            $scope.$on('panelRefresh', function(event, args) {
+                mapSession(args.newSession);
+                render();
+            });
+
+            $rootScope.mapSession = mapSession;
+            $rootScope.render = render;
+        };
+
+        return {
+            restrict: 'E',
+            scope: true,
+            link:link
+        };
+
+    }]);
+})(Mondo);
+
+function RpmSessionsDirective()
+{
+    var dir =
+    {
+        restrict: 'E',
+        scope: {map: '@map'},
+        controller: function($scope, $rootScope, RpmConfig)
+        {
+            var index = {};
+            var indexConfig;
+            $rootScope.sessionsMap;
+            $rootScope.rpmCollections;
+            $rootScope.rpmCollectionsInactive;
+            buildIndexConfig();
+
+            $rootScope.getRpmSession = function getRpmSession(key)
+            {
+                return $rootScope.sessionsMap.hasOwnProperty(key) ? 'sessionsMap[\'' + key + '\']' : key;
+            };
+
+            $rootScope.getRpmObjects = function getRpmObjects(sessionKey, objectKey)
+            {
+                var sessionIndex = index[sessionKey];
+                var indexName = indexConfig[objectKey] || objectKey;
+                if(!sessionIndex || !indexConfig || !sessionIndex.hasOwnProperty(indexName))
+                {
+                    return;
+                }
+
+                var stored = sessionIndex[indexName];
+                var session = $rootScope.sessionsMap[sessionKey];
+                if(stored instanceof Array)
+                {
+                    var retVal = [];
+                    for(var i = 0; i < stored.length; i++)
+                    {
+                        retVal.push(session.getRpmObjectById(stored[i]));
+                    }
+                    return retVal;
+                }
+                else if(stored)
+                {
+                    return session.getRpmObjectById(stored);
+                }
+            };
+
+            $rootScope.getRpmCollection = function getRpmCollection(sessionKey, collectionKey, status)
+            {
+                if(!$rootScope.rpmCollections && !$rootScope.rpmCollectionsInactive)
+                {
+                    return [];
+                }
+
+                status = status || Dynamis.ActivationStatus.ACTIVE;
+                var coll = status === Dynamis.ActivationStatus.INACTIVE ? $rootScope.rpmCollectionsInactive[sessionKey] : $rootScope.rpmCollections[sessionKey];
+                return coll ? coll[indexConfig[collectionKey]] : [];
+            };
+
+            $rootScope.onSessionChanged = function onSessionChanged()
+            {
+                var map = $rootScope[$scope.map];
+                if(map && Object.keys(map).length > 0)
+                {
+                    $rootScope.sessionsMap = {};
+                    $rootScope.rpmCollections = {};
+                    $rootScope.rpmCollectionsInactive = {};
+
+                    for(var key in map)
+                    {
+                        var session = map[key];
+                        indexObjects(key, session);
+                        $rootScope.sessionsMap[key] = session;
+                    }
+                }
+            }
+
+            $rootScope.$on('sessionChanged', $rootScope.onSessionChanged);
+
+            function indexObjects(key, rpmSession)
+            {
+                var localIndex = {};
+                var objects = rpmSession.getRpmObjects();
+                for(var id in objects)
+                {
+                    var rpmObject = objects[id];
+                    var className = rpmObject.getRpmClass().getName();
+                    indexTargets(key, rpmSession, rpmObject, className);
+                    indexInactiveTargets(key, rpmSession, rpmObject, className);
+                    if(localIndex.hasOwnProperty(className)) // multiple instances of a class
+                    {
+                        var stored = localIndex[className];
+                        if(stored instanceof Array)
+                        {
+                            stored.push(id);
+                        }
+                        else
+                        {
+                            localIndex[className] = [stored, id];
+                        }
+                    }
+                    else // single(or first) instance of a class
+                    {
+                        localIndex[className] = id;
+                    }
+                }
+                index[key] = localIndex;
+            }
+
+            function indexTargets(sessionKey, rpmSession, rpmObject, className)
+            {
+                var active = $rootScope.rpmCollections[sessionKey] || {};
+                var rels = rpmSession.getRelBySource(rpmObject);
+                for(var i = 0; i < rels.length; i++)
+                {
+                    var rel = rels[i];
+                    var indexBy = className + '.' + rel.getRpmField().getName();
+                    var target = rel.getTarget();
+                    if(active.hasOwnProperty(indexBy))
+                    {
+                        active[indexBy].push(target);
+                    }
+                    else
+                    {
+                        active[indexBy] = [target];
+                    }
+                }
+                $rootScope.rpmCollections[sessionKey] = active;
+            }
+
+            function indexInactiveTargets(sessionKey, rpmSession, rpmObject, className)
+            {
+                var inactive = $rootScope.rpmCollectionsInactive[sessionKey] || {};
+                var rels = rpmSession.getRelBySource(rpmObject, undefined, Dynamis.ActivationStatus.INACTIVE);
+                for(var i = 0; i < rels.length; i++)
+                {
+                    var rel = rels[i];
+                    var indexBy = className + '.' + rel.getRpmField().getName();
+                    var target = rel.getTarget();
+                    if(inactive.hasOwnProperty(indexBy))
+                    {
+                        inactive[indexBy].push(target);
+                    }
+                    else
+                    {
+                        inactive[indexBy] = [target];
+                    }
+                }
+                $rootScope.rpmCollectionsInactive[sessionKey] = inactive;
+            }
+
+            function buildIndexConfig()
+            {
+                indexConfig = {};
+
+                var initConfig = RpmConfig.getRpmClassNames();
+                if(!initConfig)
+                {
+                    return;
+                }
+
+                for(var i = 0; i < initConfig.length; i++)
+                {
+                    var conf = initConfig[i];
+                    for(var key in conf)
+                    {
+                        indexConfig[key] = conf[key];
+                    }
+                }
+            }
+        }
+    };
+    return dir;
+}
+
+gaigUi.app.directive('rpmSessions', RpmSessionsDirective);
+
+function RpmCtrl($scope, pipeline)
+{
+    $scope.executePipeline = function(action, opts)
+    {
+        opts = opts || {};
+
+        pipeline.execute(action, $scope.rpmSession, opts);
+    }
+}
+Dynamis.version = "5.7.2";

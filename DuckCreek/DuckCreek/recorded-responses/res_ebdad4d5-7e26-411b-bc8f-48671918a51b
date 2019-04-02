@@ -1,0 +1,486 @@
+
+(function () {
+    var LETTER_TEMPLATE = {
+        BASE_URL: '/UwdRefApp/dyn',
+        CSS_TEMPLATE_READY: 'letter-template--ready',
+        CSS_TEMPLATE_BODY: 'letter-template__body',
+        CSS_TEMPLATE_LOADING: 'letter-template__loading',
+        CSS_TEMPLATE_SECTION: 'letter-template__section',
+        CSS_QUICK_LINK_ACTIVE: 'letter-editor__nav-list-item--active'
+    };
+
+    /**
+     * Letter Template Module Configuration
+     */
+    function letterTemplateConfig($animateProvider) {
+        $animateProvider.classNameFilter(/\banimated\b/);
+    }
+
+    /**
+     * Title Case Filter
+     */
+    function titleCaseFilter() {
+        return function titleCase(input) {
+
+            if (!input) {
+                return;
+            }
+
+            var pascalCase = input.charAt(0).toUpperCase() + input.substr(1);
+            return pascalCase
+                .replace(/([a-z])([A-Z])/g, '$1 $2')
+                .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')
+                .replace(/([a-z])([0-9])/gi, '$1 $2')
+                .replace(/([0-9])([a-z])/gi, '$1 $2');
+        }
+    }
+
+    function newlineFilter() {
+        return function newline(input) {
+            return RA.UI.toHtmlBreaks(input);
+        }
+    }
+
+    function orderObjectByFilter() {
+        return function (items, field, reverse) {
+            function isNumeric(n) {
+                return !isNaN(parseFloat(n)) && isFinite(n);
+            }
+
+            var filtered = [];
+
+            angular.forEach(items, function (item, key) {
+                item.key = key;
+                filtered.push(item);
+            });
+
+            function index(obj, i) {
+                if (obj && obj.hasOwnProperty(i)) {
+                    return obj[i];
+                }
+            }
+
+            filtered.sort(function (a, b) {
+                var comparator;
+                var reducedA = field.split('.').reduce(index, a);
+                var reducedB = field.split('.').reduce(index, b);
+
+                if (isNumeric(reducedA) && isNumeric(reducedB)) {
+                    reducedA = Number(reducedA);
+                    reducedB = Number(reducedB);
+                }
+
+                switch (true) {
+                    case reducedA === reducedB:
+                        comparator = 0;
+                        break;
+                    case reducedA === undefined:
+                        comparator = 1;
+                        break;
+                    case reducedB === undefined:
+                        comparator = -1;
+                        break;
+                    default:
+                        comparator = reducedA > reducedB ? 1 : -1;
+                }
+
+                return comparator;
+            });
+
+            if (reverse) {
+                filtered.reverse();
+            }
+
+            return filtered;
+        }
+    }
+
+    /**
+     * Letter Template Service
+     */
+    function letterTemplateService(LETTER_TEMPLATE, $templateRequest) {
+
+        function templateUrlTransformer(templateUrl) {
+            var ret = templateUrl ? LETTER_TEMPLATE.BASE_URL + '/' + templateUrl.slice(0, -5) : '';
+            return ret;
+        }
+
+        return {
+            templateUrlTransformer: templateUrlTransformer,
+            loadTemplate: function loadTemplate(templateUrl) {
+                return $templateRequest(templateUrlTransformer(templateUrl));
+            }
+        }
+
+    }
+
+    /**
+     * Letter Template Directive
+     */
+    function letterTemplateDirective(LETTER_TEMPLATE, letterTemplateService, $compile, $parse) {
+
+        return {
+            restrict: 'E',
+            link: function letterTemplateLink($scope, element, attr) {
+                var templateUrl = $parse(attr.templateUrl)($scope);
+
+                letterTemplateService.loadTemplate(templateUrl).then(render);
+
+                function render(template) {
+                    if (!template) {
+                        return;
+                    }
+
+                    $compile(angular.element(template))($scope, function (clonedTemplate) {
+                        element
+                            .empty()
+                            .append(clonedTemplate);
+                    });
+
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Remove From Flow Directive
+     *
+     * This directive will remove an element from the document flow by appending it to document.body (used for CSS
+     * positioning of "modal-ish" windows)
+     */
+    function removeFromFlowDirective($document) {
+        return {
+            restrict: 'A',
+            link: function removeFromFlowLink(scope, element, attr) {
+                var body = $document.find('body');
+
+                body.append(element);
+            }
+        }
+    }
+
+    function repeatLoadingDirective($rootScope) {
+        return {
+            restrict: 'A',
+            link: function repeatLoadingLink(scope, element, attr) {
+                $rootScope.showPageLoading();
+                $rootScope.$on(attr.repeatLoading, function () {
+                    $rootScope.hidePageLoading();
+                });
+            }
+        }
+    }
+
+    function letterTableDirective($timeout) {
+        return {
+            restrict: 'A',
+            priority: 1,
+            link: function letterTableLink(scope, element, attr) {
+
+                // explicitly set width for PDF
+                $timeout(function () {
+                    element.css('width', element.width());
+                }, 0);
+            }
+        }
+    }
+
+    function letterTemplateSectionDirective(letterTemplateService, $compile, $parse, LETTER_TEMPLATE) {
+
+        return {
+            restrict: 'E',
+            scope: true,
+            template: '<templatex ng-include src="getTemplateSrc()"></templatex>',
+            replace: false,
+            link: function letterTemplateSectionLink(scope, element, attr, controllers) {
+                var templateUrl = letterTemplateService.templateUrlTransformer($parse(attr.templateUrl)(scope));
+
+                scope.getTemplateSrc = function getTemplateSrc() {
+                    return templateUrl;
+                };
+            }
+        }
+    }
+
+    function letterEditorDirective($document) {
+        return {
+            restrict: 'E',
+            link: function letterEditorLink(scope, element, attr) {
+
+            }
+        }
+    }
+
+    /**
+     * Letter Anchor Directive
+     *
+     * Use this directive to register an anchor point on the letter. Anchor points are used to generate the quick links
+     * section of the letter template nav.
+     *
+     * This directive will add a letter-anchor="VALUE" attribute as an identifier for the quick links.
+     * To guarantee the order of the quick links, pass letter-anchor-order="VALUE" (quick links are sorted by `VALUE`
+     * greatest to least).
+     *
+     *
+     * Usage as root: <ANY letter-anchor="anchor-name" ...>
+     * Usage with parent: <ANY letter-anchor="parentAnchor|anchorName" ...>
+     * Usage with multiple parents: <ANY letter-anchor="parentAnchor|parentAnchor2|...parentAnchor|anchorName" ...>
+     */
+    function letterAnchorDirective(letterAnchorFactory) {
+        return {
+            restrict: 'A',
+            compile: function letterAnchorCompile(cElement, cAttr) {
+                return {
+                    pre: function letterAnchorPreLink(scope, element, attr) {
+                        var arg = attr.letterAnchor;
+                        var config = {};
+                        config.order = attr.letterAnchorOrder;
+
+                        if (!arg.length) {
+                            throw new Error('Error in directive letterAnchor: letter-anchor attribute must have a value');
+                        }
+
+                        letterAnchorFactory.register(arg, config);
+
+                        scope.$on('$destroy', function () {
+                            letterAnchorFactory.empty();
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    function letterAnchorFactory() {
+        var _anchors = [];
+
+        function _registerLetterAnchor(arg, config) {
+            var letterAnchor;
+            var parts = arg.split('|');
+            var anchor = parts.pop();
+            var order = config.order || -1;
+
+            if (parts.length) {
+                letterAnchor = _setLetterAnchorIn(parts, anchor);
+            } else {
+                letterAnchor = _setLetterAnchor(anchor);
+            }
+
+            letterAnchor.selector = arg;
+            letterAnchor.order = order;
+        }
+
+        function _setLetterAnchor(anchor) {
+            var anchorObj = {
+                name: anchor,
+                children: []
+            };
+
+            _anchors.push(anchorObj);
+            return anchorObj;
+        }
+
+        function _setLetterAnchorIn(parts, anchor) {
+            var anchorObj = {
+                name: anchor,
+                children: []
+            };
+            var parent = _getParent(parts, _getLetterAnchors());
+
+            parent.children.push(anchorObj);
+
+            return anchorObj;
+        }
+
+        function _getLetterAnchors() {
+            return _anchors;
+        }
+
+        function _getParent(parts, anchors) {
+            var anchor;
+            var ret;
+
+            while (parts.length) {
+                var parent;
+
+                anchor = parts.shift();
+                anchors.some(function (currentAnchor, index) {
+                    if (currentAnchor.name === anchor) {
+                        parent = anchors[index];
+                        return true;
+                    }
+                });
+
+                if (!parent) {
+                    throw new Error('Error in letterAnchorFactory: parent `' + parts + '` not found in `' + anchors + '`');
+                }
+
+                if (parts.length) {
+                    ret = _getParent(parts, parent.children);
+                } else {
+                    ret = parent;
+                }
+            }
+
+            return ret;
+        }
+
+        function _emptyLetterAnchors() {
+            _anchors = [];
+        }
+
+        return {
+            register: _registerLetterAnchor,
+            set: _setLetterAnchor,
+            setIn: _setLetterAnchorIn,
+            get: _getLetterAnchors,
+            empty: _emptyLetterAnchors
+        }
+    }
+
+    function letterNavDirective() {
+        return {
+            restrict: 'E',
+            link: function letterNavLink(scope, element, attr) {
+                var positionWithOffset;
+                var scrollTop;
+                var editor = angular.element('#letter-template');
+                var position = element.position();
+
+                editor.on('scroll.letterTemplate', handleScroll);
+
+                function handleScroll(event) {
+                    positionWithOffset = position.top + 40 + 10;
+                    scrollTop = editor.scrollTop();
+
+                    if (scrollTop > positionWithOffset) {
+                        element.css('top', scrollTop);
+                        element.css('position', 'fixed');
+                    } else {
+                        element.css('top', 0);
+                        element.css('position', 'static');
+                    }
+                }
+
+                scope.$on('$destroy', function () {
+                    editor.off('scroll.letterTemplate');
+                });
+            }
+        }
+    }
+
+    function letterQuickLinksDirective(letterAnchorFactory, LETTER_TEMPLATE) {
+        return {
+            bindToController: true,
+            controllerAs: 'quickLinks',
+            controller: function letterQuickLinksController($scope) {
+                var quickLinks = this;
+                var viewport = $('#letter-template');
+                var _handleScroll = cubeUtils.debounce(_handleAnchors, 0);
+
+                viewport.on('scroll', _handleScroll);
+
+                quickLinks.anchors = letterAnchorFactory.get();
+
+                quickLinks.scrollTo = function quickLinksScrollTo(event, selector) {
+                    var targetOffset;
+                    var body = $('#letter-template');
+                    var target = _getTargetBySelector(selector);
+
+                    if (event) {
+                        event.preventDefault();
+                    }
+
+                    if (target.length) {
+                        targetOffset = target.offset();
+
+                        body.animate({
+                            scrollTop: body.scrollTop() + targetOffset.top
+                        }, {
+                            duration: 300,
+                            easing: 'easeOutCubic',
+                            complete: function () {
+                                quickLinks.setActiveClasses(quickLinks.anchors, selector);
+                            }
+                        });
+                    } else {
+                        throw new Error('Error in letterQuickLinksDirective: could not locate target with selector `' + selector + '`')
+                    }
+                };
+
+                quickLinks.setActiveClasses = function setActiveClasses(anchors, activeSelector) {
+                    anchors.forEach(function (anchor) {
+
+                        // if the current anchor selector is activeSelector or if activeSelector is a child of anchor
+                        // selector then add the active class
+                        if (anchor.selector === activeSelector || activeSelector.indexOf(anchor.selector) > -1) {
+                            quickLinks.addActiveClass(activeSelector);
+                        } else {
+                            quickLinks.removeActiveClass(anchor.selector);
+
+                            if (anchor.children.length) {
+                                quickLinks.setActiveClasses(anchor.children, activeSelector);
+                            }
+                        }
+                    });
+                };
+
+                quickLinks.removeActiveClass = function removeActiveClass(anchorSelector) {
+                    var anchor = $('[letter-quicklink="' + anchorSelector + '"]');
+                    anchor.removeClass(LETTER_TEMPLATE.CSS_QUICK_LINK_ACTIVE);
+                };
+
+                quickLinks.addActiveClass = function addActiveClass(anchorSelector) {
+                    var anchor = $('[letter-quicklink="' + anchorSelector + '"]');
+                    anchor.addClass(LETTER_TEMPLATE.CSS_QUICK_LINK_ACTIVE);
+                };
+
+                function _handleAnchors() {
+                    letterAnchorFactory.get().forEach(_handleAnchor);
+                }
+
+                function _handleAnchor(anchor) {
+                    var target = _getTargetBySelector(anchor.selector);
+                    var isInViewport = target.isInViewport({ tolerance: 40, viewport: viewport }).length ? true : false;
+
+                    if (isInViewport) {
+                        quickLinks.setActiveClasses(quickLinks.anchors, anchor.selector);
+                        anchor.children.forEach(_handleAnchor);
+                    } else {
+                        quickLinks.removeActiveClass(anchor.selector);
+                    }
+                }
+
+                function _getTargetBySelector(selector) {
+                    return $('[letter-anchor="' + selector + '"]').first();
+                }
+            },
+            replace: true,
+            require: ['letterQuickLinks'],
+            restrict: 'E',
+            scope: true
+        }
+    }
+
+    /**
+     * Register module
+     */
+    angular.module('letterTemplate', ['ngAnimate'])
+        .config(letterTemplateConfig)
+        .filter('titleCaseFilter', titleCaseFilter)
+        .filter('newlineFilter', newlineFilter)
+        .filter('orderObjectBy', orderObjectByFilter)
+        .constant('LETTER_TEMPLATE', LETTER_TEMPLATE)
+        .factory('letterAnchorFactory', letterAnchorFactory)
+        .factory('letterTemplateService', letterTemplateService)
+        .directive('letterEditor', letterEditorDirective)
+        .directive('letterAnchor', letterAnchorDirective)
+        .directive('letterQuickLinks', letterQuickLinksDirective)
+        .directive('letterNav', letterNavDirective)
+        .directive('letterTemplate', letterTemplateDirective)
+        .directive('letterTemplateSection', letterTemplateSectionDirective)
+        .directive('repeatLoading', repeatLoadingDirective)
+        .directive('letterTable', letterTableDirective)
+        .directive('removeFromFlow', removeFromFlowDirective);
+})();

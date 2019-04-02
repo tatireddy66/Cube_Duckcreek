@@ -1,0 +1,10 @@
+GET https://cdn.gaic.com:443/cdn/ui-bootstrap/0.78.3/img/glyphicons-halflings-custom-white.png HTTP/1.1
+Host: cdn.gaic.com
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: image/webp,image/apng,image/*,*/*;q=0.8
+Referer: https://cdn.gaic.com/cdn/ui-bootstrap/0.78.3/css/gaig-bootstrap.css
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: cookiemonster=!sc7CY6uWgrOQvM4S8/4zppzveG5js/buHLw/ZQe1VvXQX8t2P3vooczCaN4tNeiCBHI1e3vI7lNXIkEC85Dc2M2gB4BZwIER6GsdL1HFwVp0WahvZD+WRC8xB++/iC/b+KucXNXNj+tyZQrz1qVA6K8SeAzoIuU=
+

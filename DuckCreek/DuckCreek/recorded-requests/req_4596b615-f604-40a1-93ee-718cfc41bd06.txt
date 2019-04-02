@@ -1,0 +1,11 @@
+GET https://uncd63.duckcreekondemand.com:443/Policy/default.aspx?_windowGuid=d7a71aba-ddc1-4e65-9e22-3428907c4ce3&resumeState=ae319916-b59a-4776-a209-2f05399c0cb5 HTTP/1.1
+Host: uncd63.duckcreekondemand.com
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: https://uncd63.duckcreekondemand.com/Policy/default.aspx
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: ASP.NET_SessionId=ddl2hpu0e2ocnpdngsmcpam0
+

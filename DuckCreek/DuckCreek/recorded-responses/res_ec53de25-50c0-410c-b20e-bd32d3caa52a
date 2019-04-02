@@ -1,0 +1,1 @@
+{"@type":"hMap","data":{"@type":"hMap","ActivityController.doCheckValidCreate":{"@type":"hMap","data":{"@type":"lhMap","CAP AG68409 00 00":true},"messages":{"@type":"[Lcom.gaic.bue.uwd.ra.common.resource.Message;","@items":[]},"status":true}},"messages":{"@type":"hSet"},"status":true}

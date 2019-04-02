@@ -1,0 +1,408 @@
+var appLeftNav = angular.module('refAppDirectivesLeftNav', ['navigationServices']);
+
+
+
+appLeftNav.directive('leftnav', ['$compile', function ($compile)
+{
+    var generateTreeViewDivTemplate = function generateTreeViewTemplate(treeModelName)
+    {
+        var treeViewDivTemplate =
+            '<div ' +
+                'ra-treeview="true"' +
+                'tree-id="staticLeftNavTreeView"' +
+                'tree-model="' + treeModelName + '" ' +
+                'tree-css="gaig-left-nav-pills" ' +
+                'tree-node-css="gaig-left-nav-pill" ' +
+                'sub-tree-css="gaig-left-nav-sub-pills" ' +
+                'sub-tree-node-css="gaig-left-nav-sub-pill" ' +
+                'tree-node-link-css="gaig-left-nav-pill-link" ' +
+                'sub-tree-node-link-css="gaig-left-nav-sub-pill-link" ' +
+                'tree-node-group-css="gaig-left-nav-pill-group" ' +
+                'tree-node-group-header-css="gaig-left-nav-pill-group-header">' +
+            '</div>';
+
+        return treeViewDivTemplate;
+    };
+
+    var leftNavTemplate =
+        '<div class="gaig-sidebar">' +
+            '<div id="leftNavTree" class="gaig-sidebar-inner">' +
+                '<div>' +
+                    generateTreeViewDivTemplate('staticNodes') +
+                '</div>' +
+                '<div ng-show="dynamicNodes.length">' +
+                    '<hr/>&nbsp;&nbsp;&nbsp;<h>Workflow</h>'+
+                 '</div>' +
+                 '<div ng-show="dynamicNodes.length"' +
+                    generateTreeViewDivTemplate('dynamicNodes') +
+                 '</div>' +
+            '</div>' +
+        '</div>';
+
+    return {
+        restrict: 'E',
+        transclude: true,
+        scope: true,
+        controller: function ($rootScope, $scope, $timeout, Navigation)
+        {
+            var EXPANDED_NODES_KEY = 'expandedNodesKey';
+            var MAKE_ACTIVE_NODE_ID = 'makeActiveNodeIdKey';
+            var ACTIVE_NODE_ID = 'activeNodeIdKey';
+
+            HTMLElement.prototype.removeNodeActiveClass = function removeNodeActiveClass()
+            {
+                //adding contains check due to ie doesn't fully support classlist.toggle
+                if (this.classList.contains('active'))
+                    this.classList.toggle('active');
+            };
+
+            HTMLElement.prototype.addNodeActiveClass = function addNodeActiveClass()
+            {
+                //adding contains check due to ie doesn't fully support classlist.toggle
+                if (!this.classList.contains('active'))
+                    this.classList.toggle('active');
+            };
+
+            $scope.load = function load()
+            {
+                var submissionId = RA.Session.getSubmissionId() || RA.Session.getSubmissionIdSearch() || RA.Session.getSubmissionIdCopy();
+                var quoteId = RA.Session.getQuoteId();
+                var selectedQuoteId = RA.Session.getSelectedQuoteId();
+
+                if($scope.setupEventListening)
+                    $scope.setupEventListening();
+
+                async.series(
+                    {
+                        leftNavNodes: function(callback)
+                        {
+                            Navigation.doGetLeftNavNodes({submissionId: submissionId, quoteId: quoteId, selectedQuoteId: selectedQuoteId, viewOnlyMode: RA.Session.getViewOnlyMode()}, function(result)
+                            {
+                                var data = RA.Service.handleServiceResult(result, $scope);
+                                callback(null, data);
+                            });
+                        }
+                    },
+                    function(err, results)
+                    {
+                        $scope.staticNodes = results.leftNavNodes.staticNodes;
+
+                        var dynamicNodes = results.leftNavNodes.dynamicNodes;
+                        var dynamicNode;
+                        var expandedNodes;
+
+                        //if there  are dynamic nodes,
+                        //check session storage for collapsible nodes that are expanded in the user's browser session
+                        if (dynamicNodes)
+                        {
+                            expandedNodes = sessionStorage.getItem(EXPANDED_NODES_KEY);
+                            if (expandedNodes)
+                            {
+                                for (var i = 0; i < dynamicNodes.length; i++)
+                                {
+                                    dynamicNode = dynamicNodes[i];
+
+                                    if (dynamicNode.childNodes && dynamicNode.collapsible && (expandedNodes.indexOf(dynamicNode.id) > -1))
+                                        dynamicNode.collapsed = false;
+                                }
+                            }
+
+                            $scope.dynamicNodes = dynamicNodes;
+                        }
+
+                        $scope.$apply();
+                        $scope.setActiveNode();
+                    }
+                );
+            };
+
+            if (!$scope.staticNodes)
+                $scope.load();
+
+            $scope.doHandleNodeClick = function doHandleNodeClick(event, functionName, location, nodeCollapsed, functionOpts)
+            {
+                if (event)
+                    event.preventDefault();
+
+                if (event.target.classList.contains("disabled")) {
+                    return;
+                }
+
+                var nodeId = event.target.attributes.id.value;
+                var expandedNodes = sessionStorage.getItem(EXPANDED_NODES_KEY) || '';
+
+                //index of first char of the node id in the expanded nodes comma separated string
+                var nodeIndexInSession = expandedNodes.indexOf(nodeId);
+
+                //if the node was collapsed and was tracked in session as an expanded node, then remove it
+                if (nodeCollapsed === true && nodeIndexInSession !== -1)
+                    expandedNodes = expandedNodes.replace((nodeId + ','), '');
+                else if (nodeCollapsed === false && nodeIndexInSession === -1)
+                    expandedNodes = expandedNodes + nodeId + ','; //add an expanded node to session
+
+                //update expanded nodes in session
+                if (expandedNodes)
+                    sessionStorage.setItem(EXPANDED_NODES_KEY, expandedNodes);
+                else
+                    sessionStorage.removeItem(EXPANDED_NODES_KEY);
+
+                if (functionName)
+                {
+                    var functionToExec = $scope[functionName];
+                    functionToExec(functionOpts);
+                }
+
+                if(location && location !== '#')
+                {
+                    sessionStorage.setItem(MAKE_ACTIVE_NODE_ID, nodeId);
+
+                    location.startsWith('http') ? RA.UI.doNavigation(location, true) : location.indexOf('dyn/') > -1 || location.indexOf('.jsf') > -1 ? RA.UI.doNavigation(location) :
+                        ($scope.applyLayout ? $scope.applyLayout(location) : (function(){sessionStorage.setItem('mainDisplayPage', location); RA.UI.doNavigation('/UwdRefApp/dyn/html/main');})());
+                }
+            };
+
+            $scope.setSessionVars = function(opts)
+            {
+                //optional session attributes defined by the clicked node
+                opts = opts || {};
+
+                var parentScope = getMyParentScope() || {};
+
+                var submission = parentScope.submission;
+
+                if (submission)
+                {
+                    if (submission.policyInfo)
+                    {
+                        var policyInfo = submission.policyInfo;
+
+                        var sessionVars = RA.Session.buildSelectedPolicyObject( RA.UI.doMakeDateMMDDYYYY(submission.policyTermEffectiveDate),
+                            RA.UI.doMakeDateMMDDYYYY(submission.policyTermExpirationDate),
+                            submission.submissionId,
+                            submission.customerNumber,
+                            policyInfo.policyNumber,
+                            policyInfo.policyMod,
+                            policyInfo.policySymbol,
+                            policyInfo.policyVersion);
+
+                        RA.Session.addSelectedPolicy(sessionVars);
+                    }
+
+                    RA.Session.addSubmissionIdSearch(submission.submissionId + '');
+
+                    opts['sourceSystemRefCode'] = submission.sourceSystemRefCode;
+                    opts['transactionTypeRefCode'] = submission.transactionTypeRefCode;
+                }
+
+                if (parent.currentUser)
+                    RA.Session.addCurrentUserHid(parentScope.currentUser.createHid);
+
+                //load optional session attributes defined by the clicked node
+                for (var key in opts)
+                    setSessionItem(key, opts[key]);
+            };
+
+            $scope.doOpenNotesWindow = function doOpenNotesWindow(opts)
+            {
+                RA.UI.doOpenNotesWindow(getMyParentScope());
+            };
+
+            $scope.doLoadLetters = function doOpenLetters(opts) {
+                sessionStorage.setItem(TEMPLATE_IS_OPEN, 'false');
+                $scope.setSessionVars(opts);
+            };
+
+            $scope.doOpenMyFile = function doOpenMyFile(opts)
+            {
+                var parentScope = getMyParentScope() || {};
+
+                if (parentScope.doOpenMyFile)
+                {
+                    parentScope.doOpenMyFile();
+                }
+                else
+                {
+                    var myFileArgs;
+                    if (parentScope.submission)
+                    {
+                        myFileArgs = 'SubmissionID=' + parentScope.submission.submissionId;
+                    }
+                    else if (parentScope.customerNumber)
+                    {
+                        myFileArgs = 'CustomerNumber=' + parentScope.customerNumber;
+                    }
+                    else throw "Unable to determine method for opening My File...";
+
+                    Navigation.doGetMyFileLink(function(result)
+                    {
+                        var link = RA.Service.handleServiceResult(result, $scope);
+                        RA.Controller.viewDocumentsMyfile(link, myFileArgs);
+                    });
+                }
+            };
+
+            $scope.setActiveNode = function setActiveNode()
+            {
+                var makeActiveNodeId = sessionStorage.getItem(MAKE_ACTIVE_NODE_ID);
+                var currActiveNodeId = sessionStorage.getItem(ACTIVE_NODE_ID);
+
+                var newActiveNodeElement;
+                var currActiveNodeElement;
+
+                if (makeActiveNodeId)
+                    newActiveNodeElement = $('#' + makeActiveNodeId);
+
+                if (!newActiveNodeElement)
+                {
+                    var pageKey = sessionStorage.getItem('mainDisplayPage');
+
+                    //Attempt to determine active node from page key.
+                    //Only supports submission and manage activities.
+                    //These pages are generally accessed from non left nav links
+                    if (pageKey)
+                    {
+                        if (pageKey === 'submission')
+                            newActiveNodeElement = $('#submissionInfoNode');
+                        else if (pageKey === 'manageActivities')
+                            newActiveNodeElement = $('#LHNManageActivities');
+                    }
+                }
+
+                if (currActiveNodeId)
+                    currActiveNodeElement = $('#' + currActiveNodeId);
+
+                $timeout(function()
+                {
+                    if (newActiveNodeElement && newActiveNodeElement.length)
+                    {
+                        //if there is a current active node, unset active
+                        if (currActiveNodeElement && currActiveNodeElement.length)
+                            currActiveNodeElement[0].parentElement.removeNodeActiveClass();
+
+                        //set the new active node class and into session
+                        newActiveNodeElement[0].parentElement.addNodeActiveClass();
+                        sessionStorage.setItem(ACTIVE_NODE_ID, newActiveNodeElement[0].id);
+                        sessionStorage.removeItem(MAKE_ACTIVE_NODE_ID);
+                    }
+                });
+            };
+
+            var getMyParentScope = function getMyParentScope()
+            {
+                return angular.element($('#controller')).scope();
+            };
+        },
+        link: function(scope, element, attrs)
+        {
+            scope.$watchCollection(['staticNodes','dynamicNodes'], function()
+            {
+                var lhn = $compile(leftNavTemplate)(scope);
+                element.append(lhn);
+            });
+
+            scope.setupEventListening = function setupEventListening()
+            {
+                if (scope.listenerRemoveFunctions)
+                {
+                    for (var i = 0; i < scope.listenerRemoveFunctions.length; i++)
+                        scope.listenerRemoveFunctions[i]();
+                }
+
+                scope.listenerRemoveFunctions = [];
+
+                if (attrs.refreshEvents)
+                {
+                    var events = attrs.refreshEvents.split(',');
+
+                    if (events)
+                    {
+                        for (var i = 0; i < events.length; i++)
+                        {
+                            scope.listenerRemoveFunctions.push(scope.$on(events[i], scope.load));
+                        }
+                    }
+                }
+
+                //Default event used for setting active node class
+                //when a page change does not trigger an event that re-loads the left nav.
+                //Examples are customer experience and account summary.
+                scope.listenerRemoveFunctions.push(scope.$on('pageLoaded', scope.setActiveNode));
+            };
+
+            scope.setupEventListening();
+        }
+    }
+}]);
+
+appLeftNav.directive('raTreeview', ['$compile', function($compile)
+{
+    return {
+        restrict: 'A',
+        controller:function($rootScope, $scope)
+        {
+        },
+        link: function(scope, element, attrs)
+        {
+            var treeId = attrs.treeId;
+            var treeModel = attrs.treeModel;
+            var treeCss = attrs.treeCss;
+            var subTreeCss = attrs.subTreeCss || treeCss;
+            var treeNodeCss = attrs.treeNodeCss;
+            var subTreeNodeCss = attrs.subTreeNodeCss || treeNodeCss;
+            var treeNodeLinkCss = attrs.treeNodeLinkCss;
+            var subTreeNodeLinkCss = attrs.subTreeNodeLinkCss || attrs.treeNodeLinkCss;
+            var idAttrName = attrs.idAttrName || 'id';
+            var labelAttrName = attrs.nodeLabelAttrName || 'label';
+            var childrenAttrName = attrs.nodeChildrenAttrName || 'childNodes';
+            var cssAttrName = attrs.cssAttrName || 'cssClass';
+            var linkAttrName = attrs.linkUrlAttrName || 'linkUrl';
+            var disabledAttrName = attrs.disabledAttrName || 'disabled';
+            var collapsedAttrName = attrs.collapsedAttrName || 'collapsed';
+            var nodeClickActionAttrName = attrs.nodeClickActionAttrName || 'action';
+            var nodeClickActionOptsAttName = attrs.nodeClickActionOptsAttName || 'actionOpts';
+            var treeNodeGroupCss = attrs.treeNodeGroupCss;
+            var treeNodeGroupHeaderCss = attrs.treeNodeGroupHeaderCss;
+            var collapsibleAttrName = attrs.collapsibleAttrName || 'collapsible';
+
+            var template =
+                '<ul class="' + treeCss + '">' +
+                    '<li data-ng-repeat="node in ' + treeModel + '" class=" '+ treeNodeCss + '">' +
+                        '<a id="{{node.' + idAttrName + '}}" ng-hide="node.' + childrenAttrName + '.length" class="' + treeNodeLinkCss + '" ng-click="node.' +
+                                collapsedAttrName + ' = !node.' + collapsedAttrName + '; doHandleNodeClick($event, node.' +
+                                nodeClickActionAttrName + ', node.' + linkAttrName + ', node.' + collapsedAttrName + ', node.' + nodeClickActionOptsAttName + ');" gaig-anchor-disabled="node.' + disabledAttrName + '">' +
+                            '<span style="color:#999999;" class="gaig-left-nav-pill-icon not-started" title="Not Started" ng-show="node.state === 0"><span class="gaig-icon gaig-icon-unchecked"></span></span>' +
+                            '<span style="color:#ffd400;" class="gaig-left-nav-pill-icon has-errors" title="Incomplete" ng-show="node.state === 1">' +
+                                '<span class="gaig-icon gaig-icon-warning-sign"></span></span>' +
+                            '<span style="color:#6ec67c;" class="gaig-left-nav-pill-icon complete" title="Completed" ng-show="node.state === 2"><span class="gaig-icon gaig-icon-check"></span></span>' +
+                            '<span class="gaig-left-nav-pill-icon"><span class="{{node.' + cssAttrName + '}}"></span></span> {{node.' + labelAttrName + '}} ' +
+                        '</a>' +
+                        '<div class="' + treeNodeGroupCss + '" ng-show="node.' + childrenAttrName + '.length">' +
+                            '<span id="{{node.' + idAttrName + '}}"  class="' + treeNodeGroupHeaderCss + '" ng-click="node.' + collapsedAttrName + '= !node.' + collapsedAttrName + '; doHandleNodeClick($event, node.' +
+                                    nodeClickActionAttrName + ', node.' + linkAttrName + ', node.' + collapsedAttrName + ', node.' + nodeClickActionOptsAttName + ');" style="cursor:pointer">' +
+                                '<em ng-show="node.' + childrenAttrName + '.length && node.' + collapsibleAttrName +
+                                    ' && node.' + collapsedAttrName + '">&#43; </em>' +
+                                '<em ng-show="node.' + childrenAttrName + '.length && node.' + collapsibleAttrName +
+                                    ' && !node.' + collapsedAttrName + '">&#45; </em>' +
+                                '{{node.' + labelAttrName + '}}&nbsp;' +
+                                '<span style="color:#999999;" class="gaig-left-nav-pill-icon not-started" title="Not Started" ng-show="node.state === 0 && node.' + collapsibleAttrName + '"><span class="gaig-icon gaig-icon-unchecked"></span></span>' +
+                                '<span style="color:#ffff00;" class="gaig-left-nav-pill-icon has-errors" title="Incomplete" ng-show="node.state === 1 && node.'
+                                    + collapsibleAttrName + '">' +
+                                    '<span class="gaig-icon gaig-icon-warning-sign"></span></span>' +
+                                '<span style="color:#6ec67c;" class="gaig-left-nav-pill-icon complete" title="Completed" ng-show="node.state === 2 && node.' + collapsibleAttrName + '"><span class="gaig-icon gaig-icon-ok"></span></span>' +
+                            '</span>' +
+                            '<div ng-hide="node.' + collapsedAttrName + ' && node.' + collapsibleAttrName + '" ' +
+                                'ra-treeview="true" ' +
+                                'tree-id="node.' + treeId + '-' + idAttrName + '" ' +
+                                'tree-model="node.' + childrenAttrName + '" ' +
+                                'tree-css="' + subTreeCss + '" ' +
+                                'tree-node-css="' + subTreeNodeCss +'" ' +
+                                'tree-node-link-css="' + subTreeNodeLinkCss + '">' +
+                            '</div>' +
+                        '</div>' +
+                    '</li>' +
+                '</ul>';
+
+            element.html('').append($compile(template)(scope));
+        }
+    };
+}]);

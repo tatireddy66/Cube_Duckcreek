@@ -1,0 +1,308 @@
+(function () {
+
+    var manualCss = {
+        row: 'manual-entry__row',
+        field: 'manual-entry__field',
+        editButton: 'manual-entry__row--edit',
+        editingRow: 'manual-entry__row--editing',
+        editingField: 'manual-entry__field--editing'
+    };
+
+    var manualTemplates = {
+        editCell: 'manual-entry-edit-cell.html',
+        field: 'manual-entry-field.html',
+        emptyField: 'manual-entry-empty-field.html'
+    };
+
+    // HACK: added letter-tab classed div, directly, vs using letter-tab directive
+    //       the letter-tab directive does not seem to compile from within this directive
+    function manualEntryRun($templateCache, manualTemplates, manualCss) {
+        $templateCache.put(manualTemplates.editCell, [
+            '<td ng-if="manualRow.canEditRow()" class="ui-only ' + manualCss.editButton + '">',
+              '<div class="ui-only letter-tab"></div>' +
+              '<button type="button" class="btn btn-mini" ng-click="manualRow.edit()" field-id="edit" ng-if="!manualRow.isEditing">',
+                '<span class="gaig-icon gaig-icon-pencil"></span>',
+              '</button>',
+              '<button type="button" class="btn btn-mini btn-primary" ng-click="manualRow.save()" field-id="save" ng-if="manualRow.isEditing">',
+                '<span class="gaig-icon gaig-icon-ok"></span>',
+              '</button>',
+            '</td>'
+        ].join(''));
+
+        $templateCache.put(manualTemplates.field, [
+            '<span class="' + manualCss.field + '" ng-transclude></span>',
+        ].join(''));
+
+        $templateCache.put(manualTemplates.emptyField, '<span class="u--block u--darkened">-</span>');
+    }
+
+    function manualRowDirective($compile, $templateCache, manualTemplates, manualCss) {
+        return {
+            bindToController: true,
+            controllerAs: 'manualRow',
+            require: ['manualRow'],
+            restrict: 'A',
+            scope: {},
+            controller: function manualRowController($scope, $element) {
+                var manualRow = this;
+                var _manualFields = [];
+
+                manualRow.isEditing = false;
+
+                manualRow.registerField = function registerManualField(manualField) {
+                    _manualFields.push(manualField);
+                };
+
+                manualRow.edit = function editManualRow() {
+                    _manualFields.forEach(function (manualField) {
+                        manualField.edit();
+                    });
+
+                    $element.addClass(manualCss.editingRow);
+                    manualRow.isEditing = true;
+                };
+
+                manualRow.save = function saveManualRow() {
+                    _manualFields.forEach(function (manualField) {
+                        manualField.save();
+                    });
+
+                    $element.removeClass(manualCss.editingRow);
+                    manualRow.isEditing = false;
+                };
+
+                manualRow.canEditRow = function canEditManualRow() {
+                    var canEdit = false;
+                    var canOverrideList = [];
+                    _manualFields.forEach(function (manualField) {
+                        canOverrideList.push(manualField.canOverride);
+                    });
+                    if(canOverrideList.indexOf(true) > -1) {
+                        canEdit = true;
+                    }
+                    return canEdit;
+                };
+
+            },
+            link: function manualRowLink(scope, element, attr, controllers) {
+                var manualRow = controllers[0];
+                var editCell = $templateCache.get(manualTemplates.editCell);
+
+                element.addClass(manualCss.row);
+
+                $compile(editCell)(scope, function (clonedEditCell) {
+                    element.append(clonedEditCell);
+                });
+            }
+        }
+    }
+
+    function manualFieldDirective($filter, manualCss, $templateCache, manualTemplates) {
+        var formatCurrency, formatNumber, formatDate;
+
+        formatCurrency = $filter('currency');
+        formatNumber = $filter('number');
+        formatDate = $filter('date');
+
+        return {
+            bindToController: true,
+            controllerAs: 'manualField',
+            restrict: 'E',
+            require: ['^manualRow', 'manualField', '^ngModel'],
+            template: $templateCache.get(manualTemplates.field),
+            replace: true,
+            transclude: true,
+            scope: {
+                canOverride: '=',
+                ngModel: '=',
+                overridden: '=',
+                session: '=',
+                objectId: '=',
+                group: '=',
+                key: '=',
+                field: '=',
+                canRemove: '&',
+                removeAction: '&',
+                canAddToObject: '&',
+                addAction: '&'
+            },
+            controller: function manualFieldController($scope, $element, $attrs) {
+                var manualField = this;
+                var emptyField = $templateCache.get(manualTemplates.emptyField);
+                var object, objects, fieldObjects, session, fieldType;
+
+                manualField.isEditing = false;
+
+                manualField.edit = function editManualField() {
+                    if (manualField.canOverride) {
+                        $element.addClass(manualCss.editingField);
+                        $attrs.$set('contenteditable', true);manualField.isEditing = true;
+
+                        if (!manualField.ngModel.length) {
+                            $element.html('');
+                        }
+                    }
+
+                    fieldType = $attrs.fieldType || '';
+                    if (manualField.hasOwnProperty('canRemove') && manualField.canRemove()) {
+                        $element.parent().append('<br><br><button class="btn btn-mini remove-obj manual-button ui-only">Remove ' + fieldType + '</button>');
+                        $element.parent().find('button.remove-obj').on('click', function() {
+                            manualField.removeAction();
+                        });
+                    }
+
+                    if (manualField.hasOwnProperty('canAddToObject') && manualField.canAddToObject()) {
+                        $element.parent().append(' <button class="btn btn-mini add-to-obj manual-button ui-only">Add to ' + fieldType + '</button>');
+                        $element.parent().find('button.add-to-obj').on('click', function() {
+                            manualField.addAction();
+                        });
+                    }
+                };
+
+                manualField.save = function saveManualField() {
+                    $element.removeClass(manualCss.editingField);
+                    $attrs.$set('contenteditable', false);
+                    manualField.isEditing = false;
+
+                    if (!manualField.ngModel.length) {
+                        $element.html(emptyField);
+                    }
+
+                    if(manualField.group) {
+                        session = manualField.session;
+                        objects = manualField.group.rows;
+                        objects.forEach(function (row) {
+                            object = session.getObjectById(row.coverageRpmObjectId);
+                            fieldObjects = object.getValue(manualField.field);
+                            fieldObjects.forEach(function (fieldObject) {
+                                if(fieldObject.getValue(LETTER_LABEL) == manualField.key) {
+                                    fieldObject.getField(VALUE).setValue(manualField.ngModel);
+                                    fieldObject.getField(VALUE).traits[R_OVERRIDDEN] = manualField.overridden;
+                                }
+                            });
+                        });
+                    }
+
+                    if (manualField.canRemove || manualField.canAddToObject) {
+                        $element.parent().find('button, br').remove();
+                    }
+                };
+            },
+            link: function manualFieldLink(scope, element, attr, controllers) {
+                var manualRow = controllers[0];
+                var manualField = controllers[1];
+                var ngModel = controllers[2];
+                var type = attr.type;
+                var emptyField = $templateCache.get(manualTemplates.emptyField);
+
+                manualRow.registerField(manualField);
+                ngModel.$parsers.push(parse);
+                ngModel.$render = render;
+
+                element.on('focus', function() {
+                    if (ngModel.$modelValue) {
+                        // removes commas and $ from numbers and money in the model data
+                        if (['currency','currencyWithoutDecimal','number','dynamic','dynamicWithoutDecimal'].indexOf(type) > -1) {
+                            element.html(ngModel.$modelValue.replace(/[$,]/g, ''));
+                        }
+                        else if(type === 'percentage'){
+                            element.html(ngModel.$modelValue.replace(/(,|%$)/g, ''));
+                        }
+                        else if(type === 'percentVacant'){
+                            element.html(ngModel.$modelValue.replace(/% Vacant$/, ''));
+                        }
+                    }
+                });
+
+                element.on('blur', function () {
+                    // removes commas and $ from numbers and money in the model data before setting the value
+                    if (['currency','currencyWithoutDecimal','number','dynamic','dynamicWithoutDecimal'].indexOf(type) > -1) {
+                        element.html(this.innerHTML.replace(/[$,]/g, ''));
+                    }
+
+                    var value = $('<div>' + this.innerHTML.replace(/\<br\s*\/?\>/gi, '\n') + '</div>').text().trim();
+                    ngModel.$setViewValue(value);
+                    manualField.overridden = true;
+                    render();
+                });
+
+                function render() {
+                    var emptyValue = attr.contenteditable ? '' : emptyField;
+                    if (!ngModel.$viewValue) {
+                        ngModel.$setViewValue('');
+                    }
+                    element.html(ngModel.$modelValue.length ? format(ngModel.$modelValue) : emptyValue);
+                }
+
+                function format(value) {
+                    var ret = value;
+                    if (!ret) {
+                        return '';
+                    }
+
+                    switch (type) {
+                        case 'currency':
+                            ret = formatCurrency(ret);
+                            break;
+                        case 'currencyWithoutDecimal':
+                            ret = formatCurrency(ret, '$', 0);
+                            break;
+                        case 'number':
+                            ret = formatNumber(ret);
+                            break;
+                        case 'percentage':
+                            ret = formatNumber(ret, 0) + '%';
+                            break;
+                        case 'percentVacant':
+                            ret = ret + '% Vacant';
+                            break;
+                        case 'list':
+                            ret = '- ' + ret;
+                            break;
+                        case 'date':
+                            ret = formatDate(ret, "M/d/yyyy");
+                            break;
+                        case 'string':
+                            break;
+                        case 'dynamic':
+                            if (!isNaN(parseFloat(ret)) && isFinite(ret)) {
+                                ret = formatCurrency(ret);
+                            }
+                            break;
+                        case 'dynamicWithoutDecimal':
+                            if (!isNaN(parseFloat(ret)) && isFinite(ret)) {
+                                ret = formatCurrency(ret, '$', 0);
+                            }
+                            break;
+                    }
+                    return ret;
+                }
+
+                function parse(value) {
+                    var ret = value;
+
+                    switch (type) {
+                        case 'currency':
+                            ret = Number(value.replace(/[^0-9\.]+/g, ""));
+                            break;
+                        case 'list':
+                            if (value.length) {
+                                ret = value.substr(2);
+                            }
+                            break;
+                    }
+
+                    return ret;
+                }
+            }
+        }
+    }
+
+    angular.module('manualEntry', [])
+        .constant('manualCss', manualCss)
+        .constant('manualTemplates', manualTemplates)
+        .directive('manualRow', manualRowDirective)
+        .directive('manualField', manualFieldDirective)
+        .run(manualEntryRun);
+
+})();

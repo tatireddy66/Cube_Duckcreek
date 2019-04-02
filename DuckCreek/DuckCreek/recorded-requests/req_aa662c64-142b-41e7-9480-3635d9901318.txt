@@ -1,0 +1,15 @@
+POST https://cubeshsdev.td.afg:443/UwdRefApp/dispatch/NavigationController.doBuildNavigation HTTP/1.1
+Host: cubeshsdev.td.afg
+Connection: keep-alive
+Content-Length: 234
+Accept: application/json, text/javascript, */*; q=0.01
+Origin: https://cubeshsdev.td.afg
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Content-Type: application/json
+Referer: https://cubeshsdev.td.afg/UwdRefApp/dyn/html/main
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: BIGipServerudratcdev.td.afg-http-pool=3454349834.20480.0000; SMSESSION=er+yqbeYzTISm7x4a0CVIITT1SoudbULf5ZxlBpVsKePz1imNJACF9tvyArAsrgLOd9nxMY85p++JZlttgdxlPn9aiukhODKXiy2yPlgqV3En2sF0wRMTLLJq+/FvhvOOpcVNmJb4guEw2Xefjg1TuRhLDDgqmx5OScCDTmqIbqNHmcG82+K+PjIXVt52UMIXBZ0q7M0gNv1QZK2HPb8rC+DQFTzQtg8+cyBsU+uHyrm0/nXNyq89TSlkMRlhNKYmPUxE3+ME7+UdaYWfHLIw1SmMqCIGatH9Jktr1vOObrIqSLX4lqjeuJ42j4dQLvGr6eBEfYO9kXpqsHIvITyQkzDQTDOiUiFRnKdWTa6asvSI9DaUsIj7vep/kbHcYLhb8UXiNeGKbE4eH1uX083UvjntWvERSSpFJwY9JQzLK8r+3/vwvz5gl9SiUgRcSFl0PL0Cy6wb2tQvXL2qgsIZFkLdCzeL3U/Y2Sj/bpPguS+Q6bUi1vuHVFQ3IY1izKZdQt3FiDJc4/Nm5j2L5CwxOcykixdop7rtYkmppht4HOHKeqcw+Y44qO6rdzbfAVXV4C951Y8Auy4+ErdTxeaOkGXYIoGld1rbZtICd83QGAGF4p1mz8AjNvVw8Gokpd7UPOtsz9pI5eBlw9Eh4aISqsd62QYEAbvsspa7BIEGcBZPQSQHGvm83BeJVeb4TPodsAGyP4B2UXmjSt5OxRpSSO0i95QnGArA3LVkDVFkvxV5Or8zozoU5hT+C4jEVopledggKwJRzxKrDoSzxgy1AcRBQpMhrkRlABptJjWgSj1fpvpoQD1AG1P11nkyOi7cieQo0eAEmVfDI9gxG2PMep9Mhm1qgjCVC+Tp2IS+tTSByF4dXHusI/xBAb0AQ5sM5iEsSfMU3nQHF/gv6194LEEmUBrplEM67/4GVB8eVeBusxYj/eGzM+6xponieER63qEP4witJmQoI0VrWSc/lr0VNChh2KzyEMocM2UooEX2YY6GKjIczoSO0+PCjdMzveyf/JEZTyHu3s0/fTJ+OPBCrLT8xRNNb+7soBnkhYnVwBcvQ9Acw7cQOq4Txr5SrkP9cnIZ1V2hleXhr6j893WsYvKG/kPqE7CYjYrzyrb6wRiWbO6KtUjvHRnpLSkWkIDiJ2rl5HjkEWIJqmemgUEWYvQCBKGEcvECfi3ckv/4gvgnt1RUfV13UcJwORAy6xDDdvRkfEEkzo/J3Axg96JEq285T+A; businessUnit=; SMUSER=trefapp2; BuildingAndLocation=; USER=trefapp2; JSESSIONID=A59A30FB87A6B644460488E06E31E26D; cookiemonster=!IBL5s0BU0iQQS93LribCdTwr0MqXU/SPYeEMt+7HBwuw6BlIntZu9HrHZ0MYCsLF7vWQqjdXYe3smCXB/DmP29cx7visnjNQoOYPVyzQbJ2MDz1T94ReGp7gdFbOlJwSBO9zzKR9mYYDcpzrJkvXjwH4Q6oOJpBnz+JuABToGn83zlbA0SE6Ey2zLydQbTO3n/OYXNM+bib/QMYdh/eUeEmcMI2kL1tF9fN7DFl9pSPGjSuTSvTmHWwdWe7uBDL5J0nrncEdJw==; dtCookie=1E325FAC59E2C00F6762ABE28AC25BEC|Y3ViZXNoc2Rldi50ZC5hZmd8MQ; dtSa=-; dtLatC=4; dtPC=439930313_723h5
+
+{"NavigationController.doBuildNavigation":{"submissionId":"13477871","quoteId":null,"selectedQuoteId":null,"viewOnlyMode":null,"~loggingArgs~":{"policyNumber":"AG68458","submissionId":"13477871","quoteId":null,"screen":"submission"}}}

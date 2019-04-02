@@ -1,0 +1,15 @@
+POST https://uncd63.duckcreekondemand.com:443/Policy/default.aspx?_windowGuid=4411e9b9-7975-450d-b80c-0e75e12c3df3 HTTP/1.1
+Host: uncd63.duckcreekondemand.com
+Connection: keep-alive
+Content-Length: 1711
+Origin: https://uncd63.duckcreekondemand.com
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept: */*
+Referer: https://uncd63.duckcreekondemand.com/Policy/default.aspx
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: ASP.NET_SessionId=ufgjwvs3cnvtcavuq5zqwruq
+
+_popUp=false&_sortColumn=&_sortDirection=&_targetPage=&_submitAction=&_action=a_lC768D85A6CE84492AB68E057AE7413E5296_3_1&_pageSet=&_fieldChanged=0&_autoSaveState=1&_stateID=447816df-397f-4669-946d-3594cf8c61da&_focusField=lC768D85A6CE84492AB68E057AE7413E5296_3_1&_prevFocusField=&_previewXSL=&_currentPageID=025064C9254F4C5BB989F1B23946B814&_parentGroupIsPaged=&_hiddenFormatNumMask=!.%2C-%24&_secure=&_hiddenFormatDtMask=m%2Fd%2Fyyyy&_hiddenExtJsDateformat=n%2Fj%2FY&_hiddenExtJsDateTimeformat=n%2Fj%2FY%20h%3Ai%20A&_windowGuid=4411e9b9-7975-450d-b80c-0e75e12c3df3&_newTabOpened=&_duplicateWindow=0&_sectionStates=&_debugMode=0&_clientChanges=%3CAjaxRequest%3E%3Caction%3EnoAction%3C%2Faction%3E%3CcurrentPageID%3E025064C9254F4C5BB989F1B23946B814%3C%2FcurrentPageID%3E%3CpopUp%3Efalse%3C%2FpopUp%3E%3CclientChanges%3E%7B%22items%22%3A%5B%7B%22path%22%3A%22%2F%40value%22%2C%22id%22%3A%22_action%22%2C%22value%22%3A%22a_lC768D85A6CE84492AB68E057AE7413E5296_3_1%22%2C%22type%22%3A%22change%22%7D%2C%7B%22path%22%3A%22%2F%40value%22%2C%22id%22%3A%22_fieldChanged%22%2C%22value%22%3A%220%22%2C%22type%22%3A%22change%22%7D%5D%7D%3C%2FclientChanges%3E%3C%2FAjaxRequest%3E&_currentAction=Carrier_CommercialAuto_Pages_US_10_17_0_0_MainInterview_RiskSchedule&_PortfolioID=&_UsingPortfolio=0&_ClientID=508ACFA295061101&_QuoteID=16595&_taskId=&_SuppressAutoSave=&string_271=__cacheINDEX%3A0&f_l589864DA017641268819B3ADB23028C5271_3_1-inputEl=Primary%20Location%2C%204776%20Lake%20Rd%2C%20MONTICELLO%2C%20FL%20%2032344&string_293=Truck&f_lC768D85A6CE84492AB68E057AE7413E5293_3_1-inputEl=Truck&footerImageComboHidden=en-US&footerImageComboInputId-inputEl=English&devToolbarSystemDate-inputEl=&jsField=&classField=&ajax=true

@@ -1,0 +1,45 @@
+var worksheetApp = angular.module('refAppDirectivesFieldCell', []);
+
+worksheetApp.directive("fieldCell", function () {
+
+    return {restrict: 'E',
+        replace: true,
+        scope: {
+            name: "=",
+            fieldId: "=",
+            viewOnly: "=ngDisabled",
+            model: "=ngModel",
+            type: "="
+
+        },
+        template: '<div ng-switch on="type" class="field-cell-container">' +
+            '<div class="form-cell field-cell" ng-switch-when="Amount">' +
+            '  <label for="{{fieldId}}" class="small"><span>{{name}}</span></label>' +
+            '  <input type="text" id="{{fieldId}}"' +
+            '    class="input-mini2point5 gaig-currency"' +
+            '    ng-disabled="viewOnly" maxlength="10" onKeyPress="RA.UI.allowOnlyNumerics(event)"' +
+            '    ng-model="$parent.model"/>' +
+            '</div>' +
+            '<div class="form-cell field-cell" ng-switch-when="Duration">' +
+            '  <label for="{{fieldId}}" class="small"><span>{{name}}</span></label>' +
+            '  <input type="text" id="{{fieldId}}"' +
+            '    class="input-mini2point5 alignRight duration"' +
+            '    ng-disabled="viewOnly" maxlength="10" onKeyPress="RA.UI.allowOnlyNumerics(event)"' +
+            '    ng-model="$parent.model"/><span>days</span>' +
+            '</div>' +
+            '<div class="form-cell field-cell" ng-switch-when="Percentage">' +
+            '  <label for="{{fieldId}}" class="small"><span>{{name}}</span></label>' +
+            '  <input type="text" id="{{fieldId}}"' +
+            '    class="input-mini2point5padded alignRight"' +
+            '    ng-disabled="viewOnly" maxlength="3" onKeyPress="RA.UI.allowOnlyNumerics(event)"' +
+            '    ng-model="$parent.model"/><span>%</span>' +
+            '</div>' +
+            '<div class="form-cell field-cell" ng-switch-default>' +
+            '  <label for="{{fieldId}}" class="small"><span>{{name}}</span></label>' +
+            '  <input type="text"' +
+            '    class="input-mini2point5"' +
+            '    disabled="disabled"/> ' +
+            '</div>' +
+            '</div>'
+    };
+});

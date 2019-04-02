@@ -1,0 +1,21 @@
+Ext.define('DCT.LanguageComboField2', {
+	override: 'DCT.LanguageComboField',
+	/* BEGIN BIS code: Adjust language dropdown width. */
+	minWidth: 85,
+	maxWidth: 85,
+	setTemplate: function (config) {
+		/* This is one of those cases where for some reason, the config settings you override are lost
+		   when the constructor calls its parent. This is the quick 'n dirty fix. */
+		var me = this; // guarantee local use
+		config.minWidth = me.minWidth;
+		config.maxWidth = me.maxWidth;
+		/* END BIS code */
+		config.tpl = Ext.create('Ext.XTemplate', 
+			'<tpl for=".">',
+				'<li role="option" unselectable="on" class="x-boundlist-item languageItem" data-qclass="listcombotip" data-qtip="{display:htmlEncode}">',
+					'<div class="languageComboCaption">{display}</div><div class="languageComboImage" style="background-image: url({[DCT.imageDir]}\icons\/{file});"></div>',
+				'</li>',
+			'</tpl>'
+		);
+	}
+});

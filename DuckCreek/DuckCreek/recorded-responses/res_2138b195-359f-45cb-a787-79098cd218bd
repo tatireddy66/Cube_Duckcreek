@@ -1,0 +1,1901 @@
+var app = angular.module('refAppDirectives',['submissionServices','presentationServices','searchServices','loggingServices', 'notesServices','accountServices','activityServices','navigationServices','dashboardServices','reportServices','renewalServices','adminServices','quoteServices','issuanceServices','letterServices','formsServices','oosServices','rpmServices','productServices']);
+
+/*********************
+ *  This module is because angular catches javascript messages, and doesn't rethrow them.
+ *  This will call the window.onerror, which triggers the errorCatcher (assuming
+ *  the directive was added to the page <div error-catcher></div>)
+ *********************/
+
+/****************************
+ * errorCatcher
+ ****************************/
+app.directive('errorCatcher', function($window, $rootScope, Logging) {
+    return  {
+        restrict: 'A',
+          link: function(scope, element, attrs) {
+
+            $window.onerror = function onErrorFunction(msg, url, line){
+                try
+                {
+                    // send the details to the message tracker
+                    var message = msg + "\n" + url + ":" + line || "--";
+                    if (msg && msg == "Uncaught Highcharts error #13: www.highcharts.com/errors/13")
+                    {
+                        // don't display the pink error
+                    }
+                    else
+                    {
+                        // display a generic message on the screen.
+                        scope.errorMessages = [{"context":"Unexpected Error","type":MESSAGE_ERROR,"text": GENERIC_ERROR_MESSAGE}];
+                        scope.displayErrorMessages = true;
+                        var currentUserHid = scope.currentUser ? scope.currentUser.createHid : RA.Session.getCurrentUserHid();
+
+                        // THIS CONSOLE.LOG is intentionally added here.  Since we are now catching the javascript messages, we
+                        // still want them to display in the console.  This DOES work in chrome and IE 10
+                        console.log(message);
+                    }
+
+                    Logging.logMyInfo(currentUserHid, message, line, function (result)
+                    {
+                        RA.Service.handleServiceResult(result, scope);
+                    });
+                    // scroll up to see the message.
+                    if (scope.scrollTop)
+                    {
+                        scope.scrollTop();
+                    }
+
+                    // remove the layover page
+                    $rootScope.hidePageLoading();
+                    scope.pageLoaded = 'YES';
+                }
+                catch(exception)
+                {
+                    alert (GENERIC_ERROR_MESSAGE);
+                }
+            } ;
+        }
+    }
+});
+
+app.directive('treeModel', function($compile, $sce, $rootScope) {
+    return {
+        restrict: 'A',
+        link: function ( scope, element, attrs ) {
+            //tree id
+            var treeId = attrs.treeId;
+
+            //tree model
+            var treeModel = attrs.treeModel;
+
+            //node id
+            var nodeId = attrs.nodeId || 'id';
+
+            //node label
+            var nodeLabel = attrs.nodeLabel || 'label';
+
+            //node prefix
+            var nodePrefix = attrs.nodePrefix || 'prefix';
+
+            //node className
+            var nodeClassName = attrs.nodeClassName || 'className';
+
+           //node isRepeat
+            var nodeIsRepeat = attrs.nodeIsRepeat || 'isRepeat';
+
+            //children
+            var nodeChildren = attrs.nodeChildren || 'children';
+
+            var rpmSession = attrs.rpmSession;
+            var quoteSession = attrs.quoteSession;
+            var watSession = attrs.watSession;
+
+            var objectId;
+
+            //tree template
+            var template =
+                '<ul>' +
+                '<li data-ng-repeat="node in ' + treeModel + '">' +
+                '<i class="collapsed" data-ng-show="node.' + nodeChildren + '.length && node.collapsed" data-ng-click="' + treeId + '.selectNodeHead(node)"></i>' +
+                '<i class="expanded" data-ng-show="node.' + nodeChildren + '.length && !node.collapsed" data-ng-click="' + treeId + '.selectNodeHead(node)"></i>' +
+                '<i class="normal" data-ng-hide="node.' + nodeChildren + '.length"></i> ' +
+                '<span data-object-id="{{node.roleId}}" data-toggle="tooltip" title="{{node.' + nodeClassName + '}}" data-ng-class="node.selected" data-ng-click="' + treeId + '.selectNodeLabel(node)">{{node.' + nodePrefix + '}}: {{node.' + nodeLabel + '}}</span><span ng-show="{{' + nodeIsRepeat + '}}">...</span>' +
+                '<div data-ng-hide="node.collapsed" data-tree-id="' + treeId + '" data-tree-model="node.' + nodeChildren + '" data-node-id=' + nodeId + ' data-node-label=' + nodeLabel + ' data-node-prefix=' + nodePrefix + ' data-node-is-repeat=' + nodeIsRepeat +' data-node-children=' + nodeChildren + '></div>' +
+                '</li>' +
+                '</ul>';
+
+
+            //check tree id, tree model
+            if( treeId && treeModel ) {
+
+                //root node
+                if( attrs.angularTreeview ) {
+
+                    //create tree object if not exists
+                    scope[treeId] = scope[treeId] || {};
+
+                    //if node head clicks,
+                    scope[treeId].selectNodeHead = scope[treeId].selectNodeHead || function( selectedNode ){
+
+                            //Collapse or Expand
+                            selectedNode.collapsed = !selectedNode.collapsed;
+                        };
+
+                    //if node label clicks,
+                    scope[treeId].selectNodeLabel = scope[treeId].selectNodeLabel || function( selectedNode ){
+
+                            //remove highlight from previous node
+                            if( scope[treeId].currentNode && scope[treeId].currentNode.selected ) {
+                                scope[treeId].currentNode.selected = undefined;
+                            }
+
+                            //set currentNode
+                            scope[treeId].currentNode = selectedNode;
+                            objectId = selectedNode['roleId'];
+
+                            //set highlight to selected node
+                            $('.selected').removeClass('selected');
+                            $('span[data-object-id="' + objectId + '"]').addClass('selected');
+                        };
+                }
+
+                scope.$watch(function(){ return objectId; }, function(newValue) {
+                    if (newValue) {
+                        var html = '';
+                        var rpmObject;
+                        rpmObject = getObjectFromSession(newValue, rpmSession);
+                        if (!rpmObject) {
+                            rpmObject = getObjectFromSession(newValue, quoteSession);
+                        }
+                        if (!rpmObject) {
+                            rpmObject = getObjectFromSession(newValue, watSession);
+                        }
+                        if (rpmObject) {
+                            var scopeItemsHtml = '';
+                            var scopeItems = rpmObject.rpmClass.scope.scope;
+                            var scopeKeys = Object.keys(scopeItems);
+                            scopeKeys.sort();
+                            for (var i = 0, keysLength = scopeKeys.length; i < keysLength; i++) {
+                                var scopeKey = scopeKeys[i]
+                                if (scopeKey.substring(0,1) !== '@') {
+                                    scopeItemsHtml += '<tr><td class="row-label">' + scopeKey + '</td><td>' + scopeItems[scopeKey] + '</td></tr>';
+                                }
+                            }
+                            var classTraitsHtml = '';
+                            var classTraits = rpmObject.rpmClass.fields["CLASS_TRAITS"]
+                            var classTraitKeys
+
+                            if(classTraits !== undefined) {
+                                classTraits = rpmObject.rpmClass.fields["CLASS_TRAITS"].traits;
+                                classTraitKeys = Object.keys(classTraits);
+                                classTraitKeys.sort();
+                                for (var i = 0, keysLength = classTraitKeys.length; i < keysLength; i++) {
+                                    var classTraitKey = classTraitKeys[i]
+                                    if (classTraitKey.substring(0, 1) !== '@') {
+                                        classTraitsHtml += '<tr><td class="row-label">' + classTraitKey + '</td><td>' + classTraits[classTraitKey] + '</td></tr>';
+                                    }
+                                }
+                            }
+
+                            var primitiveFieldHtml = '';
+                            var relationshipFieldHtml = '';
+                            var fields = rpmObject.fields;
+                            var keys = Object.keys(fields);
+                            keys.sort();
+                            var scopeDetailSectionName = 'sessionTreeDetailScope';
+                            var primitiveDetailSectionName = 'sessionTreeDetailPrimitive';
+                            var relationshipDetailSectionName = 'sessionTreeDetailPrimitiveRelationship';
+                            for (var i = 0, keysLength = keys.length; i < keysLength; i++) {
+                                var field = fields[keys[i]];
+                                var fieldName = field.name;
+                                var fieldValue = field.getValue();
+                                if (field.isPrimitive()) {
+                                    var tr, printValue;
+                                    if (fieldValue === undefined)
+                                    {
+                                        printValue = null;
+                                    }
+                                    else
+                                    {
+                                        if (field.getType() === 'string')
+                                        {
+                                            printValue = '"' + fieldValue + '"';
+                                        }
+                                        else
+                                        {
+                                            printValue = fieldValue;
+                                        }
+                                    }
+                                    primitiveFieldHtml += '<tr><td class="row-label">' + fieldName + '</td><td>' + printValue + '</td></tr>';
+                                }
+                                else
+                                {
+                                    var relCount;
+                                    if (fieldValue == undefined)
+                                    {
+                                        relCount = 0;
+                                    }
+                                    else if (fieldValue.length==undefined){
+                                        relCount = 1;
+                                    }
+                                    else {
+                                        relCount = fieldValue.length;
+                                    }
+                                    relationshipFieldHtml += '<tr><td class="row-label">' + fieldName + '</td><td>' + relCount + '</td></tr>';
+                                }
+                            }
+
+                            html += '<div class="row-form" data-tree-item-detail="true">';
+                            html += '<table class="table data-table" >';
+                            html += '<tr><th colspan="2">Class Scope and Fields Detail</th></tr>';
+                            html += '<tr><td>Scoped Name</td><td>' + rpmObject.rpmClass.getScopedName() + '</td></tr>';
+                            html += '<tr><td>Effective Name</td><td>' + rpmObject.rpmClass.getEffectiveName() + '</td></tr>';
+                            html += '<tr><td>Class Name</td><td>' + rpmObject.rpmClass.name + '</td></tr>';
+                            html += '<tr><td>Rpm Object ID</td><td>' + rpmObject.id + '</td></tr>';
+                            html += '<table class="table gaig-table">';
+                            html += '<tr><th colspan="2">Scope</th></tr>';
+                            html += scopeItemsHtml;
+                            html += '<tr><th colspan="2">Class Traits</th></tr>';
+                            html += classTraitsHtml;
+                            html += '<tr><th colspan="2">Primitive Fields</th></tr>';
+                            html += primitiveFieldHtml;
+                            html += '<tr><th colspan="2">Relationship Fields</th></tr>';
+                            html += relationshipFieldHtml;
+                            html += '</table></div>';
+                        }
+                        scope[treeId].context = $sce.trustAsHtml(html);
+                        $rootScope.showTreeContext = true;
+                    }
+                });
+                var getObjectFromSession = function(id, session) {
+                    if (session) {
+                        session = scope.$eval(session);
+                        var rpmSession = new Dynamis.RpmSession(session);
+                        return rpmSession.getRpmObjectById(id);
+                    }
+                };
+                //Rendering template.
+                element.html('').append( $compile( template )( scope ) );
+            }
+        }
+    };
+});
+
+/****************************
+ * footer - common on all pages
+ ****************************/
+app.directive('footer', function() {
+    return {
+        restrict: 'E',
+        transclude: true,
+        scope: true,
+        controller: function($rootScope, $scope, Presentation)
+        {
+            if(sessionStorage.currentUser)
+            {
+                $rootScope.currentUser = JSON.parse(sessionStorage.currentUser);
+            }
+
+            Presentation.doGetFooterData(function(result)
+            {
+                var data = RA.Service.handleServiceResult(result, $scope);
+
+                if (result.status && data != null)
+                {
+                    $scope.buildMe(data);
+                    $rootScope.currentUser = data;
+                    sessionStorage.currentUser = JSON.stringify(data);
+                }else{
+                    location.reload(true);
+                }
+            });
+            Presentation.doGetSoftwareVersions(function(result)
+            {
+                var data = RA.Service.handleServiceResult(result, $scope);
+                if (result && result.data['PresentationController.findSoftwareVersions'])
+                {
+                    var versionsData = result.data['PresentationController.findSoftwareVersions'].data;
+                    if (versionsData) {
+                        $rootScope.nCubeBranchInfo = versionsData.nCubeBranch;
+                        $rootScope.nCubeInfo = versionsData.nCubeVersion + "-" + versionsData.nCubeStatus;
+                        $rootScope.cdnInfo = versionsData.cdnVersionStatus;
+                        $rootScope.resourceDetails =
+                            'dynamicUI: ' + versionsData.dynamicUIVersion + '\n' +
+                            "dynamis: " + versionsData.dynamisVersion + '\n' +
+                            'entApp: ' + versionsData.entApp + '\n' +
+                            'nCubeLibrary: ' + versionsData.nCubeLibrary + '\n' +
+                            'pdcAdmin: ' + versionsData.pdcAdmin + '\n' +
+                            'uiBootstrap: ' + versionsData.uiBootstrapVersion;
+                    }
+                }
+            });
+        },
+        template: '<div class="footer" gaig-footer ng-cloak>' +
+        '<div class="container-fluid">' +
+        '<label>User:</label> {{name}} &nbsp;&nbsp;  <label>Last Accessed:</label>  {{last}}' +
+        '<div class="footer-right">' +
+        '<div ng-include="\'build.html\'"></div>' +
+        '</div>' +
+        '</div>' +
+        '</div>',
+        link: function(scope, element, attrs)
+        {
+            scope.buildMe = function(user)
+            {
+                if(user !== null)
+                {
+                    scope.name = user.userName;
+                    scope.last = RA.UI.doMakeDateMMDDYYYY(user.lastAccessedDate, true);
+                }
+            };
+        }
+    }
+});
+
+/****************************
+ * gaiFieldsetGrey
+ ****************************/
+app.directive('gaigFieldsetGrey', function() {
+    return {
+        restrict: 'A',
+        scope: true,
+        compile: function(tElement, tAttrs, transclude) {
+            var legendElement = tElement.find('legend').first(),
+                legendSpan = angular.element('<span></span>'),
+                collapsibleContent = tElement.children().not(legendElement),
+                toggleBtn = angular.element('<a href="#" class="twisty twisty-open"></a>');
+
+            var legendStyleClass = legendElement.find('class');
+
+            tElement.addClass('gaig-fieldset-grey');
+
+            if(legendStyleClass != null && legendStyleClass.length > 0){
+                legendElement.css('cursor', 'pointer')
+                    .attr('ng-click', 'toggle($event)')
+                    .addClass(legendStyleClass.first());
+            }
+            else{
+                legendElement.css('cursor', 'pointer')
+                    .attr('ng-click', 'toggle($event)')
+                    .addClass('gaig-fieldset-legend-grey');
+            }
+
+            legendSpan.css({
+                paddingLeft: '20px'
+            });
+
+            tElement.css({
+                'position': 'relative'
+            });
+
+            tElement.addClass('gaig-fieldset');
+            tElement.prepend(toggleBtn);
+
+            legendSpan.html(legendElement.html());
+            legendElement.empty().append(legendSpan);
+
+            collapsibleContent.wrapAll('<div class="gaig-fieldset-content-grey" />');
+            collapsibleContent.wrapAll('<div class="gaig-fieldset-content-inner-grey" />');
+
+            return function(scope, element, attrs) {
+                var legendElement = element.find('legend').first(),
+                    toggleBtn = element.find('.twisty'),
+                    fieldsetContent = element.find('.gaig-fieldset-content-grey');
+
+                var legendTitleElement = legendElement.find('.gaig-fieldset-legend-title').first();
+                if(legendTitleElement != null && legendTitleElement.length > 0) {
+                    legendTitleElement.click(function(e) {
+                        toggle(e);
+                    });
+                }
+                else {
+                    legendElement.click(function(e) {
+                        toggle(e);
+                    });
+                }
+                toggleBtn.click(function(e) {
+                    toggle(e);
+                });
+
+                var toggle = function(e) {
+                    e.preventDefault();
+                    fieldsetContent.toggle();
+                    if (toggleBtn.hasClass('twisty-open')) {
+                        toggleBtn.removeClass('twisty-open').addClass('twisty-closed');
+                    } else {
+                        toggleBtn.removeClass('twisty-closed').addClass('twisty-open');
+                    }
+                }
+            }
+        },
+        controller: function($rootScope){
+
+            $rootScope.expandFieldSet = function(element){
+                if(element != null){
+                    var legendElement = element.find('legend').first(),
+                        toggleBtn = element.find('.twisty'),
+                        fieldsetContent = element.find('.gaig-fieldset-content-grey');
+
+                    if (toggleBtn != null && toggleBtn.hasClass('twisty-closed')) {
+                        toggleBtn.removeClass('twisty-closed').addClass('twisty-open');
+                        fieldsetContent.toggle();
+                    }
+                }
+            };
+
+            $rootScope.collapseFieldSet = function(element){
+                if(element != null){
+                    var legendElement = element.find('legend').first(),
+                        toggleBtn = element.find('.twisty'),
+                        fieldsetContent = element.find('.gaig-fieldset-content-grey');
+
+                    if (toggleBtn != null && toggleBtn.hasClass('twisty-open')) {
+                        toggleBtn.removeClass('twisty-open').addClass('twisty-closed');
+                        fieldsetContent.toggle();
+                    }
+                }
+            };
+
+            $rootScope.isExpanded = function(element){
+                if(element != null){
+                    var legendElement = element.find('legend').first(),
+                        toggleBtn = element.find('.twisty'),
+                        fieldsetContent = element.find('.gaig-fieldset-content-grey');
+
+                    if (toggleBtn != null && toggleBtn.hasClass('twisty-open')) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+        }
+    }
+});
+
+
+/****************************
+ * messages - display success and info messages on the page. (use validation panel for error messages)
+ ****************************/
+app.directive('messages', function()
+{
+    return {
+        restrict: 'E',
+        transclude:true,
+        scope:
+        {
+            errorMessages:'=error',
+            successMessages:'=success',
+            infoMessages:'=info',
+            validationMessages:'=validation'
+        },
+        template: '<div class="container-fluid">' +
+            // REMOVE Validation messages from logic
+            //'<div class="alert alert-error" ng-show="(errorMessages != null && errorMessages.length > 0) || (validationMessages != null && validationMessages.length > 0)" ng-cloak> ' +
+            '<div class="alert alert-error" ng-show="(errorMessages != null && errorMessages.length > 0)" ng-cloak> ' +
+            '<ul>' +
+            '<li ng-repeat="message in errorMessages">' +
+            '{{message.context}}: {{message.text}}' +
+            '</li>' +
+            // THIS HAS BEEN MOVED TO THE raValidationPanel directive
+            //'<li ng-repeat="message in validationMessages">' +
+            //	'{{message.text}}' +
+            //'</li>' +
+            '</ul>' +
+            '</div>' +
+            '<div class="alert alert-success" ng-show="successMessages != null && successMessages.length > 0" ng-cloak>' +
+            '<ul>' +
+            '<li ng-repeat="message in successMessages">' +
+            '{{message.text}}' +
+            '</li>' +
+            '</ul>' +
+            '</div>' +
+            '<div class="alert alert-info" ng-show="infoMessages != null && infoMessages.length > 0" ng-cloak>' +
+            '<div>' +
+            '<ul>' +
+            '<li ng-repeat="message in infoMessages">' +
+            '<b>' + '{{message.heading}}' + '</b>' + ' {{message.text}}' +
+            '</li>' +
+            '</ul>' +
+            '</div>' +
+            '</div>' +
+            '</div>'
+    }
+});
+
+
+/****************************
+ * messagesModal - display success and info messages on the page. (use validation panel for error messages)
+ ****************************/
+app.directive('messagesModal', function()
+{
+    return {
+        restrict: 'E',
+        transclude:true,
+        scope:
+        {
+            errorMessages:'=error',
+            successMessages:'=success',
+            infoMessages:'=info',
+            validationMessages:'=validation'
+        },
+        template: '<div class="container-fluid">' +
+            '<div class="alert alert-error" ng-show="(validationMessages != null && validationMessages.length > 0)" ng-cloak> ' +
+            "<div class='errorMessageHeading'><h6>The following error(s) has been detected:</h6><div>" +
+            '<ul class="no-bullets2">' +
+            '<li ng-repeat="message in validationMessages">' +
+            '<i class="icon icon-error"></i> {{message.text}}' +
+            '</li>' +
+            '</ul>' +
+            '</div>' +
+            '</div>'
+    }
+});
+
+/****************************
+ * ngModalOnblur - capture the onblue event for anything except radio, checkbox
+ ****************************/
+app.directive('ngModelOnblur', function () {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        priority: 1,
+        link: function (scope, element, attrs, ngModelCtrl) {
+            if (attrs.type === 'radio' || attrs.type === 'checkbox') { return; }
+            var update = function () {
+                scope.$apply(function () {
+                    ngModelCtrl.$setViewValue(element.val().trim());
+                    ngModelCtrl.$render();
+                });
+            };
+            element.off('input').off('keydown').off('change').on('focus', function () {
+                scope.$apply(function () {
+                    ngModelCtrl.$setPristine();
+                });
+            }).on('blur', update).on('keydown', function (e) {
+                    if (e.keyCode === 13) {
+                        update();
+                    }
+                });
+        }
+    };
+});
+
+/****************************
+ * producerLookupTable (no search, no next/prev)
+ ****************************/
+app.directive('producerLookupTable', function($compile)
+{
+    return  {
+        //require:'?ngModel',
+        scope:true,
+        link: function(scope, element, attrs, controller)
+        {
+            element.addClass("table-striped");
+
+            var producer = {};
+		  	var CLOSED_CLASS = "icon icon-chevron-right makeThisWhite";
+		  	var OPENED_CLASS = "icon icon-chevron-down makeThisWhite";
+            var twistyDisplayed = false;
+
+            if (attrs.useTwisty && attrs.useTwisty == "YES") {
+            	twistyDisplayed = true;
+            }
+
+            // datatable elements
+            var options = {
+                // function which creates the producer object when the first column is clicked on
+                "fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+                    $(nRow).css('color', 'black');
+
+                    $('td:eq(0)',nRow).on ('click', function() {
+                            producer = {"producerCode": aData[2], "agencyName": aData[11], "profitCenter": aData[7],
+                                    "territory":aData[8], "field": aData[9], "status": aData[10]};
+                    });
+                    $('td:eq(1)',nRow).on ('click', function() {
+                        producer = {"producerCode": aData[3], "agencyName": aData[12], "profitCenter": aData[8],
+                                "territory":aData[9], "field": aData[10], "status": aData[11]};
+                    });
+                },
+                bFilter: false,
+                bPaginate: false,
+                bSortClasses: false
+            };
+
+            options["sDom"] = '<""i>rtS';
+
+            options["oLanguage"] = {"sSearch": "",
+                "sInfo": "&nbsp;&nbsp;_TOTAL_ Record(s)",
+                "sInfoEmpty" : "&nbsp;&nbsp;0 Records",
+                "sInfoFiltered" : "&nbsp;",
+                "sSearch" : "&nbsp;"};
+
+            // adding the column headings to the element
+            options["aoColumns"] = scope.$eval(attrs.headings);
+
+            if (twistyDisplayed)
+            	options["aaSorting"] = [[1,'asc']];
+            else
+            	options["aaSorting"] = [[0,'asc']];
+
+            // add the column definitions, if any
+            if (attrs.columnDefs) {
+                options["aoColumnDefs"] = scope.$eval(attrs.columnDefs);
+            }
+
+            // declaring the dataTable element
+            var dataTable = element.dataTable(options);
+
+
+            dataTable.on('click', function(e) {
+                var myTarget = e.target ? e.target : e.srcElement;
+                var theCellId = myTarget.id;
+		  		var theClassName = myTarget.className;
+
+                if (myTarget instanceof HTMLAnchorElement) {
+                    scope.selectAgencyFromList(e, producer.producerCode, producer.agencyName, producer.profitCenter,
+                        producer.territory, producer.field, producer.status);
+                    scope.$apply();
+                } else {
+                	var nTr = myTarget.parentElement.parentElement;
+
+                	if (CLOSED_CLASS == theClassName) {
+                	   scope.showPageLoading();
+  				       async.auto(
+			             {
+			               teamAssignmentData:  function(callback)
+			               {
+			            	   scope.doDisplayProducerDetailsData(theCellId, callback);
+			               },
+			               afterNotesAsyncMethodCalls: ['teamAssignmentData', function(callback)
+			               {
+			  				    dataTable.fnOpen(nTr,$compile(scope.producerDetailsHtml)(scope), "infoRow");
+		                		myTarget.className = OPENED_CLASS;
+		                		scope.hidePageLoading();
+			               }]
+			             });
+
+                	} else if (OPENED_CLASS == theClassName) {
+                		dataTable.fnClose(nTr);
+                		myTarget.className = CLOSED_CLASS;
+                	}
+
+                }
+            });
+
+            // setting the data on the table
+            scope.$watch(attrs.data, function(value) {
+                var val = value || null;
+                if (val) {
+                    dataTable.fnClearTable();
+                    dataTable.fnAddData(scope.$eval(attrs.data));
+                }
+            });
+        }
+    }
+
+});
+
+
+
+app.directive('billingAccountLookupTable', function($compile)
+{
+    return  {
+        scope:true,
+        link: function(scope, element, attrs, controller)
+        {
+            element.addClass("table-striped");
+
+            var CLOSED_CLASS = "icon icon-chevron-right makeThisWhite";
+            var OPENED_CLASS = "icon icon-chevron-down makeThisWhite";
+
+            var options = {bFilter: false, bPaginate: false, bSortClasses: false, bAutoWidth: false, bInfo: false};
+            options["aoColumns"] = scope.$eval(attrs.headings);
+            options["aaSorting"] = [[1,'asc']];
+
+            var dataTable = element.dataTable(options);
+            dataTable.on('click', function(e)
+            {
+                var myTarget = e.target ? e.target : e.srcElement;
+                var theCellId = myTarget.id;
+                var theClassName = myTarget.className;
+
+                if (myTarget instanceof HTMLAnchorElement)
+                {
+                    scope.toggleBillingLookupOpen();
+                    scope.doApplySearchResults(theCellId);
+                    scope.$apply();
+                }
+                else
+                {
+                    var nTr = myTarget.parentElement.parentElement;
+                    if (CLOSED_CLASS === theClassName)
+                    {
+                        scope.showPageLoading();
+                        var params = {table: dataTable, compiler: $compile, eTarget: nTr};
+                        scope.findMasterProducerDetails(theCellId, params);
+                        myTarget.className = OPENED_CLASS;
+                    }
+                    else if (OPENED_CLASS === theClassName)
+                    {
+                        dataTable.fnClose(nTr);
+                        myTarget.className = CLOSED_CLASS;
+                    }
+                }
+            });
+
+            scope.$watch(attrs.data, function(value)
+            {
+                var val = value || null;
+                if (val)
+                {
+                    dataTable.fnClearTable();
+                    dataTable.fnAddData(scope.$eval(attrs.data));
+                }
+            });
+        }
+    }
+
+});
+
+/****************************
+ * productSelection - Product selection section on the submission page
+ ****************************/
+app.directive('productSelection', function()
+{
+    var selected = new Array();
+    var codes = new Array();
+    var obj =
+    {
+        restrict:'E',
+        transclude:true,
+        // replace:true,
+        scope:
+        {
+            products:'=products',
+            setSymbols:'&symbols',
+            isDisabled:'=isDisabled'
+        },
+        template:'<div id="productInfo-id" class="row-form" ng-repeat="prod in products" ng-transclude>' +
+            '<legend>'+
+            '	<label id="products-id" class="checkbox normalize">' +
+            '		<input type="checkbox" onchange="toggleProducts(this)" ng-click="setSymbols()" value="{{prod.productCode}}" ng-show="true" ng-disabled="isDisabled" ng-model="productModel"/>' +
+            '		{{prod.productDescription}}' +
+            '	</label>' +
+            '</legend>'+
+            '</div>',
+        controller: function($rootScope)
+        {
+            $rootScope.getSelectedProducts = function()
+            {
+                return selected;
+            };
+
+            $rootScope.getSelectedCodes = function(list)
+            {
+                return codes;
+            };
+
+            $rootScope.refreshProducts = function(list)
+            {
+                $('#productSelection :input').attr('checked', false);
+                for(var dto in list)
+                {
+                    var code = list[dto].productCode;
+                    $.each($('#productSelection :input'), function()
+                    {
+                        if($(this).prop('checked'))
+                        {
+                            return true;
+                        }
+                        $(this).prop('checked', $(this).attr('value') === code);
+                        toggleProducts(this);
+                    });
+                }
+            }
+        }
+    };
+
+    toggleProducts = function(box)
+    {
+        if(box.checked)
+        {
+            var code = box.value;
+            var desc = box.innerHTML;
+            selected.push({"productCode":code, "productDescription":desc});
+            $(box).focus();
+        }
+        else
+        {
+            for(var i = 0; i < selected.length; i++)
+            {
+                if(selected[i].productCode === box.value)
+                {
+                    selected.splice(i, 1);
+                }
+            }
+            $(box).focus();
+        }
+
+        if(selected)
+        {
+            codes = new Array();
+            for(var i = 0; i < selected.length; i++)
+            {
+                if($.inArray(selected[i].productCode, codes) === -1)
+                {
+                    codes.push(selected[i].productCode);
+                }
+            }
+        }
+        return selected;
+    };
+    return obj;
+});
+
+
+/****************************
+ * raModal - modal pane widget
+ ****************************/
+app.directive('raModal', function() {
+    return {
+        restrict: 'E',
+        transclude: true,
+        scope:
+        {
+            isOpen:'=toggle',
+            opener:'&func',
+            buttons:'=buttons',
+            extra:'=extra',
+            disabled: '=ngDisabled',
+            dynatrace: '=dynatrace',
+            cancel: '&cancelFunction'
+        },
+        template:  '<a href="#" id="{{modalId}}" class="{{modalClass}}" ng-click="doOpener($event)" data-toggle="modal" ng-show="showAnchor" ng-disabled="disabled" title="{{openBtnTitle}}">{{openBtnLabel}}<i class="{{icon}}"></i></a>' +
+            '<div class="modal-refapp {{size}}" ng-show="isOpen" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">' +
+            '<div class="modal-header-refapp2" ng-show="isOpen">' +
+            '<button type="button" id="closeModalXButton" class="close" ng-click="cancel()">x</button>' +
+            '<span class="modal-header-refapp">{{displayTitle}} {{extra}}</span>' +
+            '</div>' +
+            '<div class="{{modalBodyClass}}" ng-transclude></div>' +
+            '<div ng-show="!customFooter">' +
+            '<div class="modal-footer-refapp" ng-show="!showCloseOnly">' +
+                '<span ng-if="!showDynatrace"><button ng-repeat="button in buttons" id="{{button.id}}" class="{{button.class}}" ng-click="button.function()" data-dismiss="modal" aria-hidden="true"  >{{button.label}}</button></span>' +
+                '<span ng-if="showDynatrace"> <button ng-repeat="button in buttons" id="{{button.id}}" class="{{button.class}}" ng-click="button.function()" data-dismiss="modal" aria-hidden="true" data-dtName="{{button.dynatrace}}">{{button.label}}</button></span>' +
+            '</div>' +
+            '<div class="modal-footer-refapp" ng-show="showCloseOnly">' +
+            '<button class="btn" id="closeButton" ng-click="opener()" data-dismiss="modal" aria-hidden="true">{{closeBtnLabel}}</button>' +
+            '</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="modal-backdrop-refapp" ng-show="isOpen" data-dismiss="modal" aria-hidden="true"></div>',
+        link: function(scope, element, attrs) {
+            scope.openBtnLabel = (attrs.openBtnLabel) ? attrs.openBtnLabel : '';
+            scope.openBtnTitle = (attrs.openBtnTitle) ? attrs.openBtnTitle : '';
+            scope.closeBtnLabel = (attrs.closeBtnLabel) ? attrs.closeBtnLabel : 'Close';
+            scope.icon = (attrs.iconClass) ? attrs.iconClass : '';
+            scope.size = (attrs.modalSize) ? attrs.modalSize : '';
+            scope.hasTitle = attrs.displayTitle;
+            scope.displayTitle = attrs.displayTitle;
+            scope.closeFunctionName = (attrs.closeFunctionName) ? attrs.closeFunctionName : '';
+            scope.modalClass = (attrs.modalClass) ? attrs.modalClass : '';
+            scope.modalId = (attrs.modalId) ? attrs.modalId : '';
+            scope.modalBodyClass = (attrs.turnOffScroll) ? '' : 'modal-body-refapp';
+            scope.showAnchor = scope.openBtnLabel != '' || scope.icon != '';
+            scope.showCloseOnly = (attrs.buttons == null);
+            scope.headerStyle = attrs.headerStyle ? attrs.headerStyle : '';
+            scope.customFooter = (attrs.customFooter != null);
+            scope.showDynatrace = (attrs.dynatrace != null);
+            scope.doOpener = function doOpener(event)
+            {
+                if (angular.isDefined(event)) {
+                    event.preventDefault();
+                }
+                if (!scope.disabled) scope.opener();
+            };
+        }
+    }
+});
+
+/****************************
+ * raModalCustom - modal pane widget with Ok and Cancel buttons
+ ****************************/
+app.directive('raModalCustom', function() {
+    return {
+        restrict: 'E',
+        transclude: true,
+        scope:
+        {
+            isOpen:'=toggle',
+            openFn:'&openFunc',
+            cancelFn:'&cancelFunc',
+            showOpener: '=showOpenBtn',
+            titlex:'=titlex',
+            buttons:'=buttons',
+            disabled: '=ngDisabled'
+        },
+        template:  '<a href="#" ng-show="showOpener" id="{{modalId}}" class="{{modalClass}}" ng-click="openFn()" data-toggle="modal" ng-disabled="disabled">{{openBtnLabel}}<i class="{{icon}}"></i></a>' +
+            '<div class="modal-refapp {{size}}" ng-show="isOpen" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">' +
+            '<div class="modal-header-refapp2" ng-show="isOpen">' +
+            '<button type="button" class="close" ng-click="cancelFn()">x</button>' +
+            '<h3 class="modal-header-refapp">{{title}} {{titlex}}</h3>' +
+            '</div>' +
+            '<div class="modal-body-refapp" ng-transclude></div>' +
+            '<div ng-show="!customFooter">' +
+            '<div class="modal-footer-refapp" ng-show="!showCloseOnly">' +
+            '<button ng-repeat="button in buttons" id="{{button.id}}" class="{{button.class}}" ng-click="button.function()" ng-disabled="{{button.disabled}}" data-dismiss="modal" aria-hidden="true">{{button.label}}</button>' +
+            '</div>' +
+            '<div class="modal-footer-refapp" ng-show="showCloseOnly">' +
+            '<button class="btn" ng-click="cancelFn()" data-dismiss="modal" aria-hidden="true">{{closeBtnLabel}}</button>' +
+            '</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="modal-backdrop-refapp" ng-show="isOpen" data-dismiss="modal" aria-hidden="true"></div>',
+        link: function(scope, element, attrs) {
+            scope.openBtnLabel = (attrs.openBtnLabel) ? attrs.openBtnLabel : '';
+            scope.icon = (attrs.iconClass) ? attrs.iconClass : '';
+            scope.size = (attrs.modalSize) ? attrs.modalSize : '';
+            scope.hasTitle = attrs.title;
+            scope.title = attrs.title;
+            scope.closeFunctionName = (attrs.closeFunctionName) ? attrs.closeFunctionName : '';
+            scope.modalClass = (attrs.modalClass) ? attrs.modalClass : '';
+            scope.showCloseOnly = (attrs.buttons == null);
+            scope.closeBtnLabel = (attrs.closeBtnLabel) ? attrs.closeBtnLabel : 'Close';
+            scope.customFooter = (attrs.customFooter != null);
+            scope.modalId = (attrs.modalId) ? attrs.modalId : '';
+        }
+    }
+});
+
+app.directive('softDeleteLabel', function()
+{
+    return {
+        restrict:'E',
+        scope:
+        {
+            label:'@label',
+            comp:'@for',
+            code:'=code',
+            actionable:'=actionable'
+        },
+        transclude:true,
+        controller:function($rootScope, $scope)
+        {
+            $scope.isActionableType = function()
+            {
+                return $scope.code != 'NBS' || $scope.code != 'REN';
+            };
+
+            $scope.hasActionClass = function()
+            {
+                return $('#' + $scope.comp).hasClass('soft-delete');
+            };
+        },
+        template: '<label for="{{comp}}" ng-show="!isActionableType() || !hasActionClass()">{{label}}</label>' +
+            '<div class="row-form" ng-show="isActionableType() && hasActionClass()">' +
+            '<div class="row-fluid">' +
+            '<div class="form-cell" ng-transclude>' +
+            '<span style="float:left; margin-left: -10px; margin-bottom: 2px;font-size: 8pt;line-height: 14px;color: #222;font-weight: 700;">{{label}}</span>' +
+            '<button style="float:right" class="btn btn-mini" ng-click="unDelete()">Un-Delete</button>' +
+            '</div>' +
+            '</div>' +
+            '</div>',
+        link:function(scope, element, attrs)
+        {
+            scope.unDelete = function()
+            {
+                $('#' + scope.comp).removeClass('soft-delete');
+            };
+
+            scope.$watch(scope.actionable, function()
+            {
+                var obj = scope.$eval(scope.actionable);
+                if(obj)
+                {
+                    if(obj.actionRefCode == 'D')
+                    {
+                        $('#' + scope.comp).addClass('soft-delete');
+                    }
+                }
+            });
+        }
+    };
+});
+
+app.directive('softDelete', function()
+{
+    return {
+        restrict:'E',
+        scope:true,
+        template:
+            '<fieldset gaig-fieldset ng-cloak ng-show="rpmCollectionsInactive[\'partyrole.MoreNamedInsured.Parties\']">'+
+                '<legend style="font-size: 11px">Removed ({{removedList.length}} {{numberOfRecords(removedList)}})</legend>'+
+                    '<table class="table gaig-table table-striped" id="removedTable">'+
+                        '<thead>'+
+                        '</thead>'+
+                        '<tbody>'+
+                            '<tr ng-repeat="object in rpmCollectionsInactive[\'partyrole.MoreNamedInsured.Parties\']">'+
+                                '<td class="actionColumn">'+
+                                    '<gaig-context-menu ng-hide="submission.transactionTypeRefCode === \'CANC\'">'+
+                                        '<button class="btn dropdown-toggle" ng-disabled="viewOnlyMode || doCheckInsuredPartyNameDisabled()">'+
+                                            '<span class="caret"></span>'+
+                                        '</button>'+
+                                        '<ul>'+
+                                            '<li><a href="#" ng-click="doRestoreRemoved(object,$event)">Restore</a></li>'+
+                                        '</ul>'+
+                                    '</gaig-context-menu>'+
+                                '</td>'+
+                                '<td class="legalEntityColumn">'+
+                                    '<rpm-field object-id="object.getId()" field="legalEntity" type="select" session="submission.rpmSession" ' +
+                                                'id="moreNamedLegalEntity{{$index + 1}}" class="input-large" data-placeholder="--Select--" ' +
+                                                'list="legalEntityList" ng-model="ignored" listen="moreNamedLoaded" ng-disabled="true" ' +
+                                                'ng-change="doChangeMoreNamedLegalType($index)"></rpm-field>' +
+                                '</td>'+
+                                '<td class="nameColumn" ng-show="object.fields[\'legalEntity\'].traits[\'r:value\'] !== \'IND\'">' +
+                                    '<rpm-field object-id="object.getId()" field="fullName" type="input" session="submission.rpmSession"' +
+                                               'id="moreNamedInsuredFullName" class="input-xlarge" maxlength="35" listen="moreNamedLoaded"' +
+                                               'ng-disabled="true"></rpm-field>' +
+                                '</td>' +
+                                '<td class="nameColumn" ng-show="object.fields[\'legalEntity\'].traits[\'r:value\'] === \'IND\'">' +
+                                    '<rpm-field object-id="object.getId()" field="firstName" type="input" session="submission.rpmSession"' +
+                                               'id="moreNamedInsuredFullName" class="input-mini" maxlength="14" listen="moreNamedLoaded"' +
+                                               'ng-disabled="true" placeholder="first name"></rpm-field>' +
+                                    '<rpm-field object-id="object.getId()" field="middleInitial" type="input" session="submission.rpmSession"' +
+                                               'id="moreNamedInsuredFullName" class="input-nano" maxlength="1" listen="moreNamedLoaded"' +
+                                               'ng-disabled="true"></rpm-field>' +
+                                    '<rpm-field object-id="object.getId()" field="lastName" type="input" session="submission.rpmSession"' +
+                                               'id="moreNamedInsuredFullName" class="input-mini2point5" maxlength="18" listen="moreNamedLoaded"' +
+                                               'ng-disabled="true" placeholder="last name"></rpm-field>' +
+                                '</td>' +
+                                '<td class="dbaColumn">' +
+                                    '<rpm-field object-id="object.getId()" field="dbaName" type="input" session="submission.rpmSession"' +
+                                               'id="moreNamedInsuredDba" class="input-xlarge" maxlength="35" listen="moreNamedLoaded"' +
+                                               'ng-disabled="true"></rpm-field>' +
+                                '</td>' +
+                            '</tr>'+
+                        '</tbody>'+
+                    '</table>'+
+                    '</fieldset>'
+    }
+});
+
+app.directive('raScreenCommands', function($timeout)
+{
+    var INPUT_ELEMENT = "INPUT";
+    var obj =
+    {
+        restrict:'A',
+        scope:true,
+        link:function(scope,element,attrs)
+        {
+            scope.$watch(attrs.commands, function(value)
+            {
+                processScreenCommands(value);
+            });
+
+            function processScreenCommands(commands)
+            {
+                if (commands) {
+                    var disable = commands.disable;
+                    var enable = commands.enable;
+                    var hide = commands.hide;
+
+                    var gaigMain = $('.gaig-main');
+                    if(disable && disable.length > 0)
+                    {
+                        for(var d in disable)
+                        {
+                            var model = disable[d];
+                            if(model == '*')
+                            {
+                                gaigMain.find('input').prop('disabled', true);
+                                gaigMain.find('textarea').prop('disabled', true);
+                                gaigMain.find('select').prop('disabled', true);
+
+                                /*
+                                 This is a HACK until someone gets around to rewriting enable/disable logic to use angular instead of jquery.
+
+                                 The disabled attribute and ng-disabled on the transaction premium input were interfering with each other
+                                 so I'm removing the disabled attribute and letting ng-disabled(=scope.disableCurrencyTransactionPremium)
+                                 do all the work. So far we haven't found any issues with the quoted, bound, or issued premium inputs,
+                                 so I'll leave those alone for now.
+
+                                 This is further complicated by the gaig-currency directive creating two input elements, only one of which
+                                 has an ID, hence the two calls to .find().
+                                 */
+                                gaigMain.find('[ng-model="policyPremiums.TOTAPRPPremium"]').prop('disabled', false);
+                                gaigMain.find('#transactionPremiumTxt').prop('disabled', false);
+
+                                scope.disableCurrencyTransactionPremium = true;
+                                scope.disableCurrencyQuotedPremium = true;
+                                scope.disableCurrencyBoundPremium = true;
+                                scope.disableCurrencyIssuedPremium = true;
+
+                                $timeout(function()
+                                {
+                                    gaigMain.find('#moreNamedInsuredTable').find('input').prop('disabled', true);
+                                    gaigMain.find('#moreNamedInsuredTable').find('select').attr('disabled', true);
+                                },100);
+                            }
+                            else if(model === 'productModel')
+                            {
+                                $timeout(function()
+                                {
+                                    gaigMain.find('#editProductsButton').prop('disabled', true);
+                                    // FOR IE10
+                                    scope.disableEditProducts = true;
+                                },100);
+
+
+                            }
+                            else if(model === 'submission.wholesaleRetailRefCode')
+                            {
+                                $timeout(function()
+                                {   // FOR IE 10
+                                    gaigMain.find('[ng-model="submission.wholesaleRetailRefCode"]').attr('disabled', true);
+                                    gaigMain.find('[ng-model="submission.wholesaleRetailRefCode"]').children().attr('disabled', true);
+                                    gaigMain.find('[ng-model="submission.wholesaleRetailRefCode"]').children().off();
+                                },100);
+                            }
+
+                            // for now, we have special logic for DATE fields.  For the gaig-date directive, we have to disable it and it's children.
+                            // for other directives, disabling it's children prevents it from getting populated (like the gaig-select directives).
+                            // Also .. I tried to put these 2 dates entries into a common function and pass in the model (like the bottom else condition)
+                            // but for whatever reason, that wouldn't work that way.  I have no clue why not.
+                            else if (model === 'submission.submissionEffectiveDate')
+                            {
+                                $timeout(function()
+                                {
+
+                                    gaigMain.find('[ng-model="submission.submissionEffectiveDate"]').attr('disabled', true);
+                                    gaigMain.find('[ng-model="submission.submissionEffectiveDate"]').children().attr('disabled', true);
+                                    gaigMain.find('[ng-model="submission.submissionEffectiveDate"]').children().off();
+                                },10);
+                            }
+                            else if (model === 'submission.submissionExpirationDate')
+                            {
+                                $timeout(function()
+                                {
+
+                                    gaigMain.find('[ng-model="submission.submissionExpirationDate"]').attr('disabled', true);
+                                    gaigMain.find('[ng-model="submission.submissionExpirationDate"]').children().attr('disabled', true);
+                                    gaigMain.find('[ng-model="submission.submissionExpirationDate"]').children().off();
+                                },10);
+                            }
+                            // Temporary Solution needed until disable function correctly binds with Currency Widget
+                            // Used for transactionPremium, quotedPremium, boundPremium, and issuedPremium
+                            else if (model === 'submission.transactionPremium') {
+                                scope.disableCurrencyTransactionPremium = true;
+                            }
+                            else if (model === 'submission.quotedPremium') {
+                                scope.disableCurrencyQuotedPremium = true;
+                            }
+                            else if (model === 'submission.boundPremium') {
+                                scope.disableCurrencyBoundPremium = true;
+                            }
+                            else if (model === 'submission.issuedPremium') {
+                                scope.disableCurrencyIssuedPremium = true;
+                            }
+                            else
+                            {
+                                gaigMain.find('[ng-model="' + model + '"]').prop('disabled', true);
+                            }
+                        }
+                    }
+
+                    if(enable && enable.length > 0)
+                    {
+                        for(var d in enable)
+                        {
+                            var model = enable[d];
+                            if(model == '*')
+                            {
+                                gaigMain.find('input').prop('disabled', false);
+                                gaigMain.find('textarea').prop('disabled', false);
+                                gaigMain.find('select').prop('disabled', false);
+
+                                scope.disableCurrencyTransactionPremium = false;
+                                scope.disableCurrencyQuotedPremium = false;
+                                scope.disableCurrencyBoundPremium = false;
+                                scope.disableCurrencyIssuedPremium = false;
+                                break;
+                            }
+                            else if (model === 'submission.transactionPremium') {
+                                scope.disableCurrencyTransactionPremium = false;
+                            }
+                            else
+                            {
+                                gaigMain.find('[ng-model="' + model + '"]').prop('disabled', false);
+                                gaigMain.find('[ng-model="' + model + '"]').children('input').prop('disabled', false);
+
+                                //IE doesn't recognize the child elements of the select2-search for enabling
+                                //automatically. The logic below was added to account for these children and
+                                //enable them in the case that the select2-search boxes are also enabled.
+                                //This addition doesn't effect Chrome as it continues to work correctly.
+                                var select2SearchElements = $(".select2-search");
+
+                                for (var x = 0; x < select2SearchElements.length; x++){
+                                    var element = select2SearchElements[x];
+                                    var elementChildren;
+                                    if (element){
+                                        elementChildren = element.childNodes;
+                                        if (elementChildren){
+                                            for (var y = 0; y < elementChildren.length; y++){
+                                                if (INPUT_ELEMENT == elementChildren[y].nodeName){
+                                                    elementChildren[y].disabled = false;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if(hide && hide.length > 0)
+                    {
+                        for(var h in hide)
+                        {
+                            gaigMain.find('[ng-model="' + hide[h] + '"]').hide();
+                        }
+                    }
+                }
+            }
+        }
+    };
+    return obj;
+});
+
+app.directive('raDisabled', function()
+{
+    var obj =
+    {
+        restrict:'A',
+//        scope:true,
+        controller:function($rootScope, $scope)
+        {
+            $scope.isDisabled = function isDisabled(model)
+            {
+                var func = $rootScope.raDisabledCheck;
+                if(func)
+                {
+                    return func(model);
+                }
+                return false;
+            }
+        },
+        link:function(scope,element,attrs)
+        {
+            scope.$watch(attrs.raDisabled, function()
+            {
+                element.prop('ng-disabled',scope.isDisabled(attrs.ngModel));
+            });
+        }
+    };
+    return obj;
+});
+
+app.directive('raHref', function()
+{
+    var obj =
+    {
+        restrict:'A',
+        scope:true,
+        controller:function($rootScope, $scope)
+        {
+            $scope.findCancelFunction = function findCancelFunction()
+            {
+                var func = $rootScope.raDirtyCheck;
+                return func ? func() : true;
+            };
+        },
+        link:function(scope,element,attrs)
+        {
+            element.click(function()
+            {
+                if(!element.attr('disabled'))// && scope.findCancelFunction())
+                {
+                    if (scope.applyLayout)
+                        scope.applyLayout(attrs.raHref);
+                    else
+                        (function(){sessionStorage.setItem('mainDisplayPage', attrs.raHref); RA.UI.doNavigation('/UwdRefApp/dyn/html/main');})();
+                }
+            });
+        }
+    };
+    return obj;
+});
+
+gaigUi.app.directive('uicontrol', ['$compile', function($compile) {
+
+    var textInputTemplate = '<input type="text" />';
+    var textareaTemplate = '<textarea></textarea>';
+    var dropdownTemplate = '<select></select>';
+
+    var getTemplate = function(type) {
+        var template = '';
+
+        switch(type.toLowerCase()) {
+            case 'textbox':
+                template = textInputTemplate;
+                break;
+            case 'textarea':
+                template = textareaTemplate;
+                break;
+            case 'dropdown':
+                template = dropdownTemplate;
+                break;
+            default:
+                template = textInputTemplate;
+                break;
+        }
+
+        return template;
+    };
+
+    var link = function(scope, element, attrs) {
+        var rpmObject = attrs.rpmObject;
+        var rpmField = attrs.rpmField;
+        var rpmTrait = attrs.rpmTrait;
+
+        var type = rpm.field[rpmObject][rpmField].getTrait('ui:type');
+        var el = angular.element(getTemplate(type));
+        var model = 'rpm.field' + '.' + rpmObject + '.' + rpmField + '.traits["' + rpmTrait + '"]';
+
+        if (type === 'Dropdown') {
+            var options = rpm.field[rpmObject][rpmField].getTrait('v:enum').getFields();
+            for (var option in options) {
+                el.append('<option value="'+options[option].traits["r:desc"]+'">' + options[option].traits["r:desc"] + '</option>');
+            }
+        }
+
+        el.attr('ng-model', model);
+
+        $compile(el)(scope);
+        element.append(el);
+
+    };
+
+    return {
+        restrict: 'E',
+        replace: true,
+        link: link
+    };
+
+}]);
+
+/****************************
+ * raClick
+ ****************************/
+app.directive('raClick', [
+    function raClick() {
+        function raClickLinker($scope, $element, $attrs) {
+            $element.on('click', doClickHandler);
+            function doClickHandler(event){
+                event.preventDefault();
+                var eval = $scope.$eval($attrs.raClick);
+                if(typeof eval !== 'function')
+                {
+                    $scope.$eval(eval); // could be binding to string sent in from external source(i.e. n-cube)
+                }
+            }
+        }
+        return {
+            link: raClickLinker,
+            restrict: 'A'
+        };
+    }
+]);
+
+app.directive('raBanner', function()
+{
+    var obj =
+    {
+        restrict: 'E',
+        transclude: true,
+        scope:
+        {
+            type: '=type'
+        },
+        controller: function($scope, $rootScope, $timeout, Presentation)
+        {
+            $rootScope.bannerRefresh = function bannerRefresh()
+            {
+                load();
+            }
+
+            function setDefault() {
+                $scope.bannerTopData = [{key: 'Insured Name', value: '--'}, {key: 'Agency Name', value: '--'}, {key: 'Policy Term', value: '--'}, {key: 'TRN Eff. Date', value: '--'}, {key: 'TRN Type', value: 'New Business'}, {key: 'TRN Status', value: 'New'}];
+                $scope.bannerBottomData = [{key: 'Submission ID', value: 'New Business'}, {key: 'Producer Code', value: '--'}, {key: 'Quote ID/Status', value: '--'}, {key: 'Customer #', value: '--'}, {key: 'TRN Subtype', value: 'New Business'}, {key: 'Description', value: '--'}];
+            }
+
+            function load()
+            {
+                var func, params, useDefault;
+                switch($scope.type)
+                {
+                    case 'account':
+                        func = Presentation.findAccountBanner;
+                        params = RA.Session.getCustomerNumber();
+                        break;
+                    case 'policy':
+                        $scope.collapse = true;
+                        func = Presentation.findPolicyBanner;
+                        //Take selected quote if there is one. Otherwise take the main Quote
+                        params = parseInt(RA.Session.getSelectedQuoteId());
+                        break;
+                    case 'submission':
+                        $scope.collapse = true;
+                        func = Presentation.findSubmissionBanner;
+                        params = parseInt(RA.Session.getQuoteId()) || 0;
+                        if (params === 0) {
+                            setDefault();
+                            return;
+                        }
+                        useDefault = true;
+                        break;
+                    case undefined:
+                    case '':
+                        return;
+                    default:
+                        throw('IllegalArgumentException: ' + $scope.type + ' is not a valid type. Only account and submission type attributes are supported at this time.');
+                }
+
+                func(params, function(result)
+                {
+                    $scope.bannerTopData = [];
+                    $scope.bannerBottomData = [];
+                    var data = RA.Service.handleServiceResult(result, $scope);
+                    if(data && data.order)
+                    {
+                        if (data["Insured Name"]) {
+                            RA.Session.addInsuredName(data["Insured Name"]);
+                        }
+                        var order = data.order.split('|');
+                        for(var i = 0; i < order.length; i++)
+                        {
+                            var label = order[i].trim();
+                            if(i < 6) // banner goes 6 columns wide
+                            {
+                                $scope.bannerTopData.push({key: label, value: data[label]});
+                            }
+                            else
+                            {
+                                $scope.bannerBottomData.push({key: label, value: data[label]});
+                            }
+                        }
+                    }
+                    else if(useDefault)
+                    {
+                        setDefault();
+                    }
+                    $timeout(angular.noop);
+                    $timeout(function ()
+                    {
+                        $rootScope.$broadcast('bannerChanged');
+                    });
+                });
+            }
+
+            $scope.$watch('type', function()
+            {
+                    load();
+            });
+
+            var events = ['submissionSaved', 'submissionLoaded', 'pageSubmitted','updateLHN'];
+            for(var e in events)
+            {
+                $scope.$on(events[e], function()
+                {
+                    load();
+                })
+            }
+        },
+        template: '<div class="details-panel">' +
+            '    <div class="details-panel-inner">' +
+            '        <div class="row-fluid" ng-cloak>' +
+            '            <div class="control-group span2" ng-repeat="topMap in bannerTopData track by topMap.key">' +
+            '                <div ng-hide="topMap.value.indexOf(\'~~\') > -1">' +
+            '                    <label>{{topMap.key}}</label>' +
+            '                    <gaig-ellipsis max-lines="2">{{topMap.value || \'--\'}}</gaig-ellipsis>' +
+            '                </div>' +
+            '                <div ng-show="topMap.value.indexOf(\'~~\') > -1">' +
+            '                    <label>{{topMap.key}}</label>' +
+            '                    <gaig-ellipsis max-lines="1">{{topMap.value.substring(0,topMap.value.indexOf(\'~~\'))}}</gaig-ellipsis>' +
+            '                    <gaig-ellipsis max-lines="1">{{topMap.value ? topMap.value.substring(topMap.value.indexOf(\'~~\') + 2) : \'--\'}}</gaig-ellipsis>' +
+            '                </div>' +
+            '            </div> ' +
+            '        </div>' +
+            '        <div class="row-fluid">' +
+            '            <div class="control-group span2" ng-repeat="bottomMap in bannerBottomData track by bottomMap.key" ng-show="collapse">' +
+            '                <label>{{bottomMap.key}}</label>' +
+            '                <gaig-ellipsis max-lines="2">{{bottomMap.value || \'--\'}}</gaig-ellipsis>' +
+            '            </div> ' +
+            '        </div>' +
+            '    <a class="expand-details-panel" id="expandDetailsPanel" ng-click="collapse = !collapse" ng-show="type != \'account\'">' +
+            '        <i class="icon" ng-class="{true: \'icon-double-chevron-up\', false: \'icon-double-chevron-down\'}[collapse]"></i>' +
+            '    </a>' +
+            '    </div> ' +
+            '</div>'
+    };
+    return obj;
+});
+
+app.directive('pageManager', function()
+{
+    var MAIN_DISPLAY_PAGE = 'mainDisplayPage';
+    var MAIN_DISPLAY_CONFIG = 'mainDisplayConfig';
+
+    var obj =
+    {
+        restrict: 'E',
+        controller: function($scope, $rootScope, $timeout, Navigation)
+        {
+            $scope.mainDisplay = {show:{content:''}, type:{banner:''}};
+
+            function init()
+            {
+                var key = sessionStorage[MAIN_DISPLAY_PAGE] || 'dashboard';
+                var config = sessionStorage[MAIN_DISPLAY_CONFIG];
+                sessionStorage[MAIN_DISPLAY_PAGE] = key;
+                if(config)
+                {
+                    $timeout(function()
+                    {
+                        $scope.mainDisplay = JSON.parse(config)[key];
+                    });
+                }
+                else
+                {
+
+                    Navigation.findPageLayout(function(result)
+                    {
+                        var data = RA.Service.handleServiceResult(result, $scope);
+                        if (data === null || data === 'timeout' || data === CALLBACK_ERROR) {
+                            console.log("error calling Navigation.findPageLayout:", data);
+                            $rootScope.hidePageLoading();
+                            return;
+                        }
+                        $scope.mainDisplay = data[key];
+                        sessionStorage[MAIN_DISPLAY_CONFIG] = JSON.stringify(data);
+                        $scope.$apply();
+                    });
+                }
+                $rootScope.charms = {charmsList: undefined};
+                $rootScope.showPageLoading();
+            }
+
+            $scope.applyLayout = function applyLayout(key)
+            {
+                $scope.mainDisplay.show.content = '';
+                RA.Session.addPreviousPage(key);
+
+                if ($('#searchReplace:visible').length > 0)
+                {
+                    $('#globalSearch').val('');
+                    $('#searchReplace').dropdown('toggle');
+                    $('#searchReplace').replaceWith('<ul id="searchReplace" class="search-query" style="width:0px"/>');
+                    $('#searchButton').attr('disabled', true);
+                }
+
+                sessionStorage[MAIN_DISPLAY_PAGE] = key;
+                $rootScope.charms = {charmsList: undefined};
+                $rootScope.showPageLoading();
+
+                killWorkers();
+                // run this code last because it causes the browser to navigate to a new page
+                RA.UI.doNavigation('/UwdRefApp/dyn/html/main');
+            };
+
+            $scope.$watch('isPageLoading', function(newValue, oldValue) {
+                if (!newValue) {
+                    window.isInitialLoad = false;
+                    if (dtMainAction !== null) {
+                        dynaTrace.leaveAction(dtMainAction);
+                        dtMainAction = null;
+                        dynaTrace.signalOnLoadEnd();
+                    }
+                }
+            });
+
+            // initial load of page...use session storage to hold page name for browser refresh
+            init();
+        }
+    };
+    return obj;
+});
+
+app.directive('leftOther', function()
+{
+    var obj =
+    {
+        restrict: 'A',
+        scope: true,
+        link: function(scope, element)
+        {
+            $('#leftOther').append(element).attr('style', 'margin-top:10px; 0');
+        }
+    };
+    return obj;
+});
+
+app.directive('raLocations', function($timeout)
+{
+    var obj =
+    {
+        restrict: 'E',
+        transclude: true,
+        scope:
+        {
+            limit: '@limit',
+            locations: '=locations'
+        },
+        template: '<label>Location # Used ({{locations.length}} total locations)</label>' +
+                  '<div ng-repeat="loc in locations" class="form-cell" ng-show="loc.locationNumber && $index < 10">' +
+                  '    <a ng-init="initTooltip()" id="{{loc.locationNumber}}" data-toggle="tooltip" style="background: black; color: white; padding: 3px; padding-left: 3px; padding-right: 3px">{{loc.locationNumber}}</a>' +
+                  '</div>',
+        link: function(scope)
+        {
+            scope.initTooltip = function()
+            {
+                $timeout(function()
+                {
+                    for(var l in scope.locations)
+                    {
+                        var loc = scope.locations[l];
+                        var html = loc.address1 + '<br/>' + loc.city + ' ' + loc.state + ', ' + loc.postalCode;
+                        if(loc.county)
+                            html += '<br/>' + loc.county;
+
+                        if(loc.taxLocationCode)
+                            html += '<br/>' + loc.taxLocationCode;
+
+                        if(loc.occupancy)
+                            html += '<br/>' + loc.occupancy;
+
+                        $('#' + loc.locationNumber).tooltip({html:true, placement: 'bottom', title: html});
+                    }
+                });
+            };
+        }
+    };
+    return obj;
+});
+
+app.directive('dynamic', function ($compile) {
+    return {
+        restrict: 'A',
+        replace: true,
+        link: function (scope, ele, attrs) {
+            scope.$watch(attrs.dynamic, function(html) {
+                ele.html(html);
+                $compile(ele.contents())(scope);
+            });
+        }
+    };
+});
+
+// Common directive for Focus of an input field
+app.directive('focus',
+    function($timeout) {
+        return {
+            scope : { trigger : '@focus'  },
+            link : function(scope, element) {
+                scope.$watch('trigger', function(value) {
+                    if (value === "true") {
+                        $timeout(function() {  element[0].focus();  });
+                    }
+                });
+            }
+        };
+    }
+);
+app.directive('raHelp', function()
+{
+    var id = 1;
+    var obj =
+    {
+        restrict: 'A',
+        link: function(scope, element, attrs)
+        {
+            var icon = $('<div>').attr({id: id + '_help', class: 'gaig-icon gaig-icon-question-sign', 'data-toggle': 'tooltip'});
+
+            element.append('&nbsp;&nbsp;&nbsp;&nbsp;');
+            element.append(icon);
+
+            $('#' + id + '_help').tooltip({placement: 'right', title: attrs.helpText});
+            id++;
+        }
+    };
+    return obj;
+});
+
+app.directive('raHelpTooltip', function()
+{
+    var id = 1;
+    return {
+        restrict: 'A',
+        link: function (scope, element, attrs)
+        {
+            var icon = $('<div>').attr({
+                id: id + '_help',
+                class: 'gaig-icon gaig-icon-info-sign',
+                'data-toggle': 'tooltip',
+                'data-trigger': 'click'
+            });
+
+            element.append('&nbsp;&nbsp;');
+            element.append(icon);
+
+            $('#' + id + '_help').tooltip({placement: 'right', title: attrs.helpText});
+            id++;
+        }
+    };
+});
+
+app.directive('raFileButton', function()
+{
+    var obj =
+    {
+        scope:
+        {
+            fileId: '@',
+            ngDisabled: '='
+        },
+        link: function(scope, element, attrs)
+        {
+            var elem = angular.element(element);
+            var children = elem.children();
+
+            if(children && children.length == 1)
+            {
+                var button = children[0];
+                elem.css({position: 'relative', overflow: 'hidden', width: button.offsetWidth, height: button.offsetHeight});
+
+                var input = angular.element('<input id="' + scope.fileId + '" type="file" accept=".xlsx,.xls"/>');
+                input.bind('change', function(event){
+                    scope.$parent.doSubmitBinaryData(event.target.files);
+                });
+                if(scope.ngDisabled)
+                {
+                    input.prop('disabled', true);
+                }
+                input.css({position: 'absolute', top: 0, left: 0, 'z-index': '2', width: '100%', height: '100%', opacity: '0', cursor: 'pointer'});
+                elem.append(input);
+            }
+        }
+    };
+    return obj;
+});
+
+app.directive('richeditor', function() {
+    return {
+        require: '?ngModel',
+        link: function(scope, elm, attr, ngModel) {
+            var i, element;
+            CKEDITOR.disableAutoInline = true;
+            for(i=0; element = elm[i]; i++){
+                initCk(element);
+            }
+
+            function initCk(element) {
+
+                $(element).attr('contenteditable', 'true');
+
+                var letterToolBar =
+                [
+                    { name: 'clipboard', items : [ 'Cut','Copy','Paste','PasteText','PasteFromWord','-','Undo','Redo' ] },
+                    { name: 'colors', items : [ 'TextColor','BGColor' ] },
+                    '/',
+                    { name: 'basicstyles', items : [ 'Bold','Italic','Underline','-'] },
+                    { name: 'paragraph', items : [ 'NumberedList','BulletedList','-','Outdent','Indent','-',
+                    '-','JustifyLeft','JustifyCenter','JustifyRight','JustifyBlock','-'] },
+                    { name: 'insert', items : [ 'PageBreak'] },
+                ];
+
+                CKEDITOR.config.floatSpaceDockedOffsetY = 5;
+                CKEDITOR.config.toolbar = letterToolBar;
+                var ck = CKEDITOR.inline(element);
+
+                if (!ngModel) return;
+
+                ck.on('instanceReady', function() {
+                    ck.setData(ngModel.$viewValue);
+                });
+
+                ck.on('change', updateModel(ck));
+
+                ngModel.$render = function() {
+                    ck.setData(ngModel.$viewValue);
+                };
+            }
+
+            function updateModel(ck) {
+                return update;
+
+                function update() {
+                    ngModel.$setViewValue(ck.getData());
+                }
+            }
+        }
+    };
+});
+
+app.directive('binder', ["$compile", "$parse", function($compile, $parse) {
+    return {
+        restrict: 'A',
+        link: function($scope, element, attr) {
+            var parse = $parse(attr.ngBindHtml);
+            function value() { return (parse($scope) || '').toString(); }
+
+            $scope.$watch(value, function() {
+                $compile(element, null, -9999)($scope);
+            });
+        }
+    }
+}]);
+
+app.filter('orderByTrait', function()
+{
+    return function(rpmFields)
+    {
+        if(!rpmFields)
+        {
+            return [];
+        }
+
+        var cleaned = [];
+        var sorted = [];
+        for(var fieldName in rpmFields)
+        {
+            var rpmField = rpmFields[fieldName];
+            var order = rpmField.getTraits()['v:order'];
+            if(order)
+            {
+                sorted[order] = rpmField;
+            }
+        }
+
+        for(var i = 0; i < sorted.length; i++)
+        {
+            var s = sorted[i];
+            if(s)
+            {
+                cleaned.push(s);
+            }
+        }
+        return cleaned;
+    }
+});
+
+app.filter('toTitleCase', function() {
+    return function(input) {
+        return RA.UI.toTitleCase(input);
+    }
+});
+
+app.filter('inactiveTemplates', function () {
+    return function (templateList, existingTemplates) {
+        var inactiveTemplates = $.extend(true, {}, templateList);
+        var existingTemplateName;
+
+        angular.forEach(existingTemplates, function (existingTemplate) {
+            existingTemplateName = existingTemplate.getValue('templateName');
+
+            angular.forEach(templateList, function (template) {
+                if (template.name === existingTemplateName) {
+                    delete inactiveTemplates[existingTemplateName];
+                }
+            });
+        });
+
+        return inactiveTemplates;
+    }
+});
+
+app.filter('emptyLabels', function()
+{
+    return function(items)
+    {
+        return !items || !(items instanceof Array) ? [] : items.filter(function(it){return !!it.label;})
+    }
+});

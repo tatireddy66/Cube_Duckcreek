@@ -1,0 +1,8 @@
+GET https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/fonts/glyphicons-halflings-regular.woff HTTP/2.0
+origin: https://cubeshsdev.td.afg
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+accept: */*
+referer: https://cdn.gaic.com/cdn/ui-bootstrap/0.78.3/css/gaig-bootstrap.css
+accept-encoding: gzip, deflate, br
+accept-language: en-US,en;q=0.9
+

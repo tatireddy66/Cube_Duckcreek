@@ -1,0 +1,79 @@
+Ext.define('DCT.ComboField2', {
+	override: 'DCT.ComboField',
+
+	setComboWidth: function (config) {
+		var me = this;
+		var value, tempValue, dropdownLength;
+		var minimumWidth = 0;
+		config.size = 0;
+		
+		/* BEGIN code for BIS: Allow product nav to stretch or shrink to fit its
+		   contents. The "right" way to do this would be to remove the width of 180
+		   from the XSL that generates it, but that would require a MUCH larger override. */
+		if(config.id == "productNavSelect") {
+			config.width = undefined;
+		}
+		/* END code for BIS */
+		
+		if (!Ext.isDefined(config.ctCls) && !Ext.isDefined(config.width)) {
+			config.grow = true;
+			var dataStore = config.store.config.data;
+			if (dataStore != null && dataStore.length > 0) {
+				dropdownLength = dataStore.length;
+				value = dataStore[0][1];
+				for (var i = 1; i < dropdownLength; i++) {
+					tempValue = dataStore[i][1];
+					if (tempValue.length < value.length && tempValue.length > 1 && !Ext.isEmpty(tempValue))
+						value = tempValue;
+				}
+				minimumWidth = Ext.util.TextMetrics.measure('innerBody', value).width;
+				config.growMin = me.growMin + minimumWidth;
+			 }
+			 else {
+				config.growMin = me.growMin;
+			}
+			
+			/* BEGIN code for BIS - compensate for field left padding */
+			// The footer language dropdown doesn't need this. A bit hackish, sorry.
+			if(config.id != 'footerImageComboInputId') {
+				// Default is W, we need to add just a little more.
+				config.growAppend = "Wo";
+			}
+			/* END code for BIS */
+			
+			if (!Ext.isEmpty(config.dctMaxSize)) {
+				config.growMax = Number(config.dctMaxSize);
+			}
+		}
+	},
+	
+	initialHover: function (combo) {
+		var comboTip = Ext.getCmp(combo.id + 'tooltip');
+		if (!Ext.isEmpty(comboTip)){comboTip.destroy();}
+		var tip = Ext.create('Ext.tip.ToolTip', {
+			id: combo.id + 'tooltip',
+			dctControl: true,
+			target: combo,
+			trackMouse: true,
+			listeners: {
+				beforeshow: function updateTipBody(tip) {
+					var selectedRecord = combo.getSelectedRecord();
+					var displayText = '';
+					
+					/* BEGIN code for BIS: prevent having 2 overlapping hover tips. DCT-00017754 */
+					if(combo.getActiveErrors().length > 0) {
+						// returning false stops the "show()" from running
+						return false;
+					}
+					/* END code for BIS */
+					
+					if (selectedRecord){
+						displayText = selectedRecord.get('display');
+					}
+					tip.update(Ext.util.Format.htmlEncode(displayText));
+				}
+			}
+		});
+	}
+	
+});

@@ -1,0 +1,60 @@
+Ext.apply(DCT.Grid, {
+	
+	openRowActionsRenderer: function (dataValue, cellMetaData, extRecord, rowIndex, colIndex, extDataStore, extView) {
+		var lob = extRecord.data['LOB'];
+		var showDeleted = extRecord.data['deleted'];
+		var duplicateQuotePriveledges = Ext.DomQuery.selectNode('state/user/privileges/privilege[@name="DuplicatePolicy"]', extRecord.store.proxy.reader.rawData);
+		var deleteQuotePriveledges = Ext.DomQuery.selectNode('state/user/privileges/privilege[@name="DeleteQuotes"]', extRecord.store.proxy.reader.rawData);
+		//var status = extRecord.get('status');
+		var security = Ext.DomQuery.selectValue('state/@securityLevel', extRecord.store.proxy.reader.rawData);
+		var IsReadOnly = DCT.IsReadOnly;
+		var show360 = Ext.DomQuery.selectValue('state/EnableParty360', extRecord.store.proxy.reader.rawData);
+		var policyNumber = extRecord.data['policyNumber'];
+		var rowActionsHTML = '<a href="javascript:;" id="quoteListLoadQuoteA" onclick="DCT.Submit.actOnQuote(\'load\',\'' + extRecord.id + '\',\'' + lob + '\');"><img width="16" alt="' + DCT.T('ViewPolicy') + '" title="' + DCT.T('ViewPolicy') + '" src="' + DCT.imageDir + 'icons\/magnifier.png"/></a>';
+		rowActionsHTML = rowActionsHTML + '<a href="javascript:;" onclick="DCT.Submit.gotoPageForQuote(\'policy\',\'' + extRecord.id + '\');"><img width="16" alt="' + DCT.T('ViewPolicyDetails') + '" title="' + DCT.T('ViewPolicyDetails') + '" src="' + DCT.imageDir + 'icons\/application_view_list.png"/></a>';
+		if (!IsReadOnly) {
+			if (deleteQuotePriveledges ) {
+				if (showDeleted != '1')
+					rowActionsHTML = rowActionsHTML + '<a href="javascript:;" onclick="DCT.Submit.setGridAction(\'open\', \'delete\');DCT.Submit.actOnQuote(\'delete\',\'' + extRecord.id + '\');"><img width="16" alt="' + DCT.T('Delete') + '" title="' + DCT.T('Delete') + '" src="' + DCT.imageDir + 'icons\/delete.png"/></a>';
+				else
+					rowActionsHTML = rowActionsHTML + '<a href="javascript:;" onclick="DCT.Submit.setGridAction(\'open\', \'delete\');DCT.Submit.actOnQuote(\'delete\',\'' + extRecord.id + '\');"><img width="16" alt="' + DCT.T('Undelete') + '" title="' + DCT.T('Undelete') + '" src="' + DCT.imageDir + 'icons\/undelete.png"/></a>';
+			}
+			if (showDeleted != '1' ) {
+				if (duplicateQuotePriveledges || (security >= 8))
+				{
+					rowActionsHTML = rowActionsHTML + '<a href="javascript:;" onclick="DCT.Submit.setGridAction(\'open\', \'duplicate\');DCT.Submit.actOnQuote(\'duplicate\',\'' + extRecord.id + '\');"><img width="16" alt="' + DCT.T('Duplicate') + '" title="' + DCT.T('Duplicate') + '" src="' + DCT.imageDir + 'icons\/page_white_copy.png"/></a>';
+				}
+				rowActionsHTML = rowActionsHTML + '<a href="javascript:;" onclick="DCT.Submit.actOnQuote(\'download\',\'' + extRecord.id + '\');"><img width="16" alt="' + DCT.T('DownloadXML') + '" title="' + DCT.T('DownloadXML') + '" src="' + DCT.imageDir + 'icons\/disk_download.png"/></a>';
+				rowActionsHTML = rowActionsHTML + '<a href="javascript:;" onclick="DCT.Submit.downloadSubmissionPolicy(\'submissionDownloadPolicy\',\'' + extRecord.id + '\' );"><img width="16" alt="' + DCT.T('DownloadPolicy') + '" title="' + DCT.T('DownloadPolicy') + '" src="' + DCT.imageDir + 'icons\/download_policy.png"/></a>';
+			}
+		}
+		if (show360 == '1')
+			/* BEGIN change for BIS - use an icon and localization. Base bug DCT-00016643 */
+			rowActionsHTML = rowActionsHTML + '<a onclick="{DCT.Util.popUpPartyCommon(\'partyStart:party360\',\'[&quot;_partyReturnStructure:none&quot;,&quot;_partyReturnAction:none360&quot;,&quot;_objectId360:' +
+			                 extRecord.id + '&quot;,&quot;_objectReference360:' + policyNumber + '&quot;,&quot;_objectTypeCode360:POL&quot;,&quot;_page360:Party360Participants&quot;]\');}" name="name_Party360" id="id_Party_360" href="javascript:;">' +
+			                 '<img width="16" alt="' + DCT.T('Party360') + '" title="' + DCT.T('Party360') + '" src="' + DCT.imageDir + 'fa-binoculars.png"/></a>';
+			/* END change for BIS - use an icon and localization */
+		return rowActionsHTML;
+	},
+	
+	clientRowActionsRenderer: function(dataValue, cellMetaData, extRecord, rowIndex, colIndex, extDataStore, extView){
+		var showDeleted = extRecord.data['deleted'];
+		var show360 = Ext.DomQuery.selectValue('state/EnableParty360', extRecord.store.proxy.reader.rawData);
+		var rowActionsHTML = '<a href="javascript:;" onclick="DCT.Submit.setGridAction(\'open\', \'deleteClient\');DCT.Submit.actOnClient(\'deleteClient\',\'' + extRecord.id + '\');"><img ';
+		var	imageHTML;
+		if (showDeleted == '1')
+				imageHTML = ' src="' + DCT.imageDir + 'icons\/undelete.png" alt="' + DCT.T('UndeleteClient') + '" title="' + DCT.T('UndeleteClient') + '"/></a>';
+		else
+			imageHTML = ' src="' + DCT.imageDir + 'icons\/delete.png" alt="' + DCT.T('DeleteClient') + '" title="' + DCT.T('DeleteClient') + '"/></a>';
+		if (show360 == '1')
+			/* BEGIN change for BIS - use an icon and localization. Base bug DCT-00016643 */
+			rowActionsHTML = rowActionsHTML + imageHTML + '<a onclick="{DCT.Util.popUpPartyCommon(\'partyStart:party360\',\'[&quot;_partyReturnStructure:none&quot;,&quot;_partyReturnAction:none360&quot;,&quot;_objectId360:' + 
+			                 extRecord.id + '&quot;,&quot;_objectTypeCode360:PTY&quot;,&quot;_page360:ParticipantDetail&quot;]\');}" name="name_Party360" id="id_Party_360" href="javascript:;">' +
+			                 '<img width="16" alt="' + DCT.T('Party360') + '" title="' + DCT.T('Party360') + '" src="' + DCT.imageDir + 'fa-binoculars.png"/></a>';
+			/* END change for BIS - use an icon and localization */
+		else
+		    rowActionsHTML = rowActionsHTML + imageHTML;
+		return rowActionsHTML;
+	}
+	
+});

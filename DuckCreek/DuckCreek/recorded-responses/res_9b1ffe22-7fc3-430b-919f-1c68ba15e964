@@ -1,0 +1,169 @@
+// messages displayed on the screen
+var AGENCY_NAME_PRODUCER_REQUIRED_MESSAGE 	= "At least one search criteria (Agency Name or Producer Code) must be entered to perform a search.";
+var AGENCY_PRODUCER_REQUIRED_MESSAGE		= "Producer Code or Agency name is required to conduct a search.";
+var CHANGE_PRODUCER_TYPE_MESSAGE			= "This will change the Producer Type and delete any entered information.  Do you want to continue?";
+var DELETE_CONFIRMATION_LOSS_DETAILS		= "Do you want to proceed with Loss Details delete?";
+var NOTES_ACCESS_SCREEN						= "You have attempted to access the Notes screen.  The existing Notes screen will be replaced.  Any unsaved Notes changes on existing screen will be lost.  Would you like to proceed?";
+var NOTES_LEAVE_SCREEN						= "You have attempted to leave the Ref App Customer Experience page.  Leaving this page will also close the Notes screen.  Any unsaved Notes changes will be lost.  Would you like to proceed?";
+var NUMERIC_SUBMISSION_REQUIRED_MESSAGE		= "You must enter a numeric Submission ID to search by.";
+var PRODUCER_3_DIGITS_MESSAGE				= "Producer Code Lookup requires a minimum of 3-characters to initiate the search.";
+var REMOVE_ALT_MAILING_MESSAGE				= "Are you sure you want to remove the Alternate Mailing Address information?";
+var WEBSITE_ADDRESS_REQUIRED_MESSAGE		= "Please enter a Website Address.";
+var ZIPCODE_MUST_BE_NUMERIC					= "Zip Code must be numeric when the country is United States.";
+var ZIPCODE_MUST_BE_5_OR_9					= "Zip Code must be 5 digits or 9 digits when the country is United States.";
+var US_ZIP_CODE_MUST_BE_5_OR_10				= "Zip Code must be 5 digits (NNNNN) or length of 10 (NNNNN-NNNN) when the country is United States.";
+var NON_US_POSTAL_CODE_MUST_BE_7 			= "Postal Code must be length of 7 (ANA NAN) when the country is not United States.";
+var LOSSES_PRIOR_CARRIER					= "losses associated with this carrier.  Deleting this carrier will delete all of these losses. Click OK to delete the carrier and the losses or click Cancel to keep the carrier and the losses.";
+var LOSSES_PRIOR_CARRIER_ONE_CLAIM			= "loss associated with this carrier.  Deleting this carrier will delete this loss. Click OK to delete the carrier and the loss or click Cancel to keep the carrier and the loss.";
+var LOSSES_PRIOR_CARRIER_NO_CLAIMS			= "Click OK to delete the carrier or click Cancel to keep the carrier.";
+var REPORT_SELECT_REQUIRED					= "Please select a report to delete.";
+var CONFIRM_DELETE_SELECTED_1				= "Are you sure you want to delete the selected ";
+var CONFIRM_DELETE_SELECTED_2				= " report(s)?";
+var REPORT_NAME_REQUIRED					= "You must provide a report name.";
+var UNIQUE_REPORT_NAME_REQUIRED				= "A filter cannot have the same name as an existing filter. Please change the name of this filter before saving.";
+var SELECT_EXISTING_REPORT					= "You must select an existing report.";
+var UNSAVED_CHANGES_NAV_CONFIRM				= "You have not saved the data on this screen.  Do you still want to Cancel and return to the previous screen?";
+var RENEWAL_SEARCH_EXCEEDS_MAX				= "A maximum of " + SEARCH_RESULT_MAX + " renewal records can be displayed. Additional records may exist. Please refine your search and try again.";
+var CONFIRM_DELETE_CONTACT_TYPE             = "Are you sure you want to delete this Contact?"
+
+// date messages
+var EFFECTIVE_DATE_3_MONTHS_IN_FUTURE_WARN	= "<b>Warning:</b><br /> The Effective Date is more than 3 months in the future.";
+var EFFECTIVE_DATE_6_MONTHS_IN_FUTURE		= "The Effective Date is invalid.  The date entered cannot be more than 6 months in the future.";
+var EFFECTIVE_DATE_3_MONTHS_IN_PAST_WARN	= "The Effective Date is more than 3 months in the past.";
+var EFFECTIVE_DATE_18_MONTHS_IN_PAST		= "The Effective Date is invalid.  The date entered cannot be older than 18 months from the Current Date";
+var EFFECTIVE_DATE_18_MONTHS_IN_PAST_CUC	= "Warning: The Effective date is more than 18 months in the past.";
+var EMPTY_RESULTS_MESSAGE					= "No result data available to export.";
+var EXPIRATION_DATE_GREATER_EFFECTIVE_DATE	= "Expiration Date must be greater than Effective Date.";
+var EXPIRATION_DATE_3_YEARS_IN_FUTURE_WARN	= "<b>Warning:</b><br /> Expiration Date is more than 3 years greater than the effective date.";
+var EXPIRATION_DATE_30_YEARS_IN_FUTURE		= "Expiration Date is invalid.  It cannot be more than 30 years after the Submission Effective Date.";
+var QUOTE_NEED_BY_DATE_6_MONTHS_IN_FUTURE	= "Need By Date is invalid -- cannot be greater than 6 months in the future.";
+var RECEIVED_DATE_3_MONTHS_IN_PAST_WARN     = "The Received Date is more than 3 months in the past.";
+var RECEIVED_DATE_GREATER_THAN_TODAY		= "Received Date is invalid -- it must be today's date or earlier.";
+var AGENT_BOUND_PREMIUM						= "Agent Bound Premium must be numeric.";
+var EFFECTIVE_FROM_GREATER_EFFECTIVE_TO     = "From Date Must Be Less Than To Date";
+var EXPIRATION_FROM_GREATER_EXPIRATION_TO   = "From Date Must Be Less Than To Date";
+var EFFECTIVE_FROM_GREATER_EQUAL_EFFECTIVE_TO      = "Effective From Date must be equal or less than To Date";
+var EXPIRATION_FROM_GREATER_EQUAL_EXPIRATION_TO    = " Expiration From Date must be equal or less than To Date";
+var REPORT_EFFECTIVE_FROM_GREATER_EQUAL_EFFECTIVE_TO   = "Effective From Date must be equal or less than Effective To Date";
+var REPORT_EXPIRATION_FROM_GREATER_EQUAL_EXPIRATION_TO = "Expiration From Date must be equal or less than Expiration To Date";
+var REPORT_PREMIUM_FROM_GREATER_EQUAL_PREMIUM_TO     = "Premium From must be equal or less than Premium To";
+var REPORT_RECAPTURE_FROM_GREATER_EQUAL_RECAPTURE_TO   = "Recapture Review From Date must be equal or less than Recapture Review To Date";
+var REPORT_RECEIVED_FROM_GREATER_EQUAL_RECEIVED_TO     = "Received From Date must be equal or less than Received To Date";
+var RENEWAL_EFFECTIVE_DATE_NOT_VALID		= "The Date entered must be equal to the current date minus 120 days through the current date plus 185 date.";
+var RENEWAL_EXPIRATION_FROM_4_MONTHS_PAST   = "Expiration From Date is invalid -- Must be less than 4 months in the past."
+var RENEWAL_EXPIRATION_TO_6_MONTHS_FUTURE   = "Expiration To Date is invalid -- Must be less than 6 months in the future."
+var NEED_BY_FROM_GREATER_EQUAL_EFFECTIVE_TO = "Need By From Date must be equal or less than To Date";
+var REVIEW_DATE_BEFORE_EFFECTIVE_DATE       = "Review Date must be on or after the Transaction Effective Date.";
+
+// dashboard messages
+var DUPLICATES_REMOVED_MESSAGE              = "Matching criteria in the filters run caused some submission to be return multiple times.  The duplicate submissions have been removed from the Activity table below.";
+var DUPLICATES_REMOVED_HEADING              = "Duplicates Removed.";
+var PEOPLE_REQUIRED_MESSAGE					= "Please select one or more people from the list.";
+var FILTER_REQUIRED_MESSAGE					= "A Filter Name is required to save.";
+var FILTER_SELECTION_REQUIRED				= "You must first select a filter.";
+var FILTER_NAME_EXISTS						= "A filter cannot have the same name as an existing filter.  Please change the name of this filter before saving.";
+var FILTER_DELETE_CONFIRM1					= "Are you sure you want to delete the: ";
+var FILTER_DELETE_CONFIRM2					= " filter?";
+var MORE_THAN_1000_FILTER_RESULTS_EXIST     = ' search results have been returned.  Additional matches do exist.';
+var MORE_THAN_1000_FILTER_RESULTS_FOR_MULTI_FILTERS_EXIST1     = ' search results have been returned for the following filters: ';
+var MORE_THAN_1000_FILTER_RESULTS_FOR_MULTI_FILTERS_EXIST2     = '. Additional matches do exist. All results have been returned for the selected filters not listed above';
+
+// issuance messages
+var SIC_NAICS_MUST_BE_NUMBERIC				= "SIC Code/NAICS Code must be numeric to perform Search.";
+
+
+// notes messages
+var UNSAVED_DATA_MESSAGE					= "You are attempting to close the window with an unsaved Note. If you continue your entry will be lost.";
+
+// --CHECK THESE WORK BEFORE COMMITING--
+var BU_SELECT								= "Please select a Business Unit.";
+
+// notes messages
+var NOTES_PAGE_OPEN							= "You have attempted to access the Notes screen.  The existing Notes screen will be replaced.  Any unsaved Notes changes on existing screen will be lost.  Would you like to proceed?";
+
+// submission messages
+var LEAVE_SUBMISSION_PAGE					= "You have attempted to leave the Ref App Submission page.  Leaving this page will also close the Notes screen.  Any unsaved Notes changes will be lost.  Would you like to proceed?";
+var SUBMISSION_COPY_ERROR					= "An error occurred while performing copy. Please verify any data returned.";
+var PRODUCER_CODE_ERROR						= "Producer is invalid. Please select a valid producer code before requesting agency detail information.";
+var MORE_NAMED_INSURED_DELETE               = "Are you sure you want to delete this party?";
+
+// search messages
+var PRODUCER_SERVICE_DOWN					= "The producer service is currently down.  Click OK to continue to copy this submission, otherwise click Cancel.";
+
+// services messages
+var SUB_ID_SEARCH_MESSAGE					= "You must enter a submission id to search by.";
+
+//activity messages
+var LOCKED_SUB_CANNOT_UPDATE                = "A submission selected is locked to another user and cannot be updated at this time.";
+var DELETE_CANCELLATION                     = "Are you sure you want to delete this submission? The related New Business/Rewrite or Renewal/Rewrite activity will also be deleted. Any documents attached to this submission should be refiled in MyFile before deleting.";
+var DELETE_SUBMISSION_RELATED_CANCELLATION  = "Are you sure you want to delete this submission?  The related cancellation activity will also be deleted. Any documents attached to this submission should be refiled in MyFile before deleting.";
+var DELETE_SUBMISSION_RELATED_ACTIVITES     = "Are you sure you want to delete the submission and all associated activities? Any documents attached to these submissions should be refiled in MyFile before deleting.";
+var DELETE_SUBMISSION_NUMBERED_ACTIVITIES1  = "The submission you are about to delete has ";
+var DELETE_SUBMISSION_NUMBERED_ACTIVITIES2  = " activities associated with it. Are you sure you want to delete this submission? The related New Business/Rewrite or Renewal/Rewrite activity will also be deleted. Any documents attached to these submissions should be refiled in MyFile before deleting.";
+
+//generic javascript error message
+var GENERIC_ERROR_MESSAGE                   = "The system does not seem to be working as expected. The error has been logged to technical support. If the problem persists, please contact Customer Care.";
+
+//quote messages
+var CONFIRM_QUOTE_DELETE					= "You are about to delete this quote and all associated information. Are you sure you want to Continue?";
+
+//letter messages
+
+var SELECTED_TO_SAVE                         = "At least one quote must be selected to save.";
+
+var LDAP_INVALID_CRM                         = "Invalid user from Salesforce: ";
+
+//forms messages
+
+var CONFIRM_RESET_DATA                      = "You are about to reset all common data fields for all attached forms.  Are you sure you want to continue?";
+var FORM_DATA_RESET_SUCCESSFUL              = "Default data for all forms has been successfully reset";
+
+var INFO_ALL_COMMON_FIELDS                  = "This will update all of the following common fields for all Manual Forms with the same data on the current Submission Information screen.";
+var INFO_COMMON_FIELDS                      = "This will update all of the following common fields of this form with the same data on the current Submission Information screen.";
+var COMMON_FIELDS_LIST                      = '<div style="width: 303px;text-align:left;"><div style="width: 150px;display:inline-block;"><ul><li>Policy Symbol</li><li>Policy Number</li><li>Policy Module</li><li>Renewal Symbol</li><li>Insured Name</li><li>Insured Second Line</li><li>Insured Third Line</li></ul></div><div style="width: 150px;display:inline-block;"><ul><li>City, State Zip</li><li>Producer Full Name</li><li>Producer Street</li><li>Producer City, State Zip</li><li>Effective Date</li><li>Expiration Date</li><li>Company Name</li></ul></div></div>';
+
+
+
+
+RA.Messages.addInfoMessage = function addInfoMessage( $scope, messageText )
+{
+    var message = {context: RA.Messages.MESSAGE_TYPE_INFO, text: messageText, type: RA.Messages.NO_MESSAGE_CONTEXT};
+    $scope.infoMessages.push( message);
+}
+
+RA.Messages.removeInfoMessage = function removeInfoMessage( $scope, messageText )
+{
+    angular.forEach($scope.infoMessages, function( message )
+    {
+        if( message.test === messageText )
+        {
+            $scope.infoMessages.pop( message );
+            return false;
+        }
+    });
+
+}
+
+//Removes all info messages from the scope that contain the given message text
+//Returns true if at least one message was removed, false otherwise
+RA.Messages.removeInfoMessageMultiple = function removeInfoMessageMultiple( $scope, messageText )
+{
+    var removed = false;
+    var keepMessages = [];
+
+    angular.forEach($scope.infoMessages, function(message)
+    {
+        if(message.text.indexOf(messageText) > -1)
+        {
+            removed = true;
+        }
+        else
+        {
+            keepMessages.push(message);
+        }
+    });
+
+    $scope.infoMessages = keepMessages;
+    return removed;
+};
+

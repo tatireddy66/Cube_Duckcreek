@@ -1,0 +1,17 @@
+Ext.require('Ext.chart.*');
+
+/* Several places in the DCT JS do something like this:
+		Ext.ComponentMgr.each(function (key, item, itself) {
+			if (Ext.isDefined(item.getXType()) && !Ext.isEmpty(item.dctControl)) {
+   Basically, iterating through all Components and checking their xtypes. The problem is,
+   this picks up items that are Ext.Widget items, which are lightweight Components and
+   do not have the getXType() method, so the JS errors out. An example is the numeric axis
+   component of a chart. In Platform 6.2.1.1491, this leaves the user unable to use the top nav
+   from the Dashboard (where charts are present).
+   It seems that the most lightweight solution would be to define getXType for widgets.
+*/
+Ext.override(Ext.Widget, {
+	getXType: function() {
+		return "widget"; // hope this is OK. See http://docs.sencha.com/extjs/6.2.1/classic/Ext.enums.Widget.html
+	}
+});

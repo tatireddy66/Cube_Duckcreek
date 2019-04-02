@@ -1,0 +1,64 @@
+function obsoleteSubmController($rootScope, $scope, Admin) {
+    $scope.open = null;
+    $scope.obsoleteSubmissions = {"submissionIds" : EMPTY_STRING};
+
+    $scope.requiredInputMsg = {
+        "type": MESSAGE_ERROR,
+        "context": "Error",
+        "text": "You must supply at least one Submission ID."
+    };
+
+    $scope.clearForm = function() {
+        $scope.obsoleteSubmissions.submissionIds = EMPTY_STRING;
+        RA.UI.doClearMessages($scope);
+    };
+
+    $scope.doObsoleteSubmissions = function()
+    {
+        RA.UI.doClearMessages($scope);
+        if (!$scope.obsoleteSubmissions.submissionIds) {
+            $scope.errorMessages.push($scope.requiredInputMsg);
+            return;
+        }
+        var arraySubIds = RA.UI.getListFromDelimitedText($scope.obsoleteSubmissions.submissionIds);
+        var submissionIds = RA.UI.formattedTextFromList(arraySubIds, ', ');
+        $scope.obsoleteSubmissions.submissionIds = submissionIds;
+        if (confirm('Obsolete the following submission(s)?\n\nSubmission IDs: "' + submissionIds + '"\n\nPlease verify all associated cancellations / reminders are handled correctly.')) {
+
+            $rootScope.showPageLoading();
+
+            var arrayLength = arraySubIds.length;
+            for (var i = 0; i < arrayLength; i++) {
+                Admin.doAdminDeleteSubmission(arraySubIds[i], function (result) {
+                    RA.Service.handleServiceResult(result, $scope);
+                    $rootScope.hidePageLoading();
+                });
+            }
+        }
+    };
+
+    $scope.doUnObsoleteSubmission = function()
+    {
+        RA.UI.doClearMessages($scope);
+        if (!$scope.obsoleteSubmissions.submissionIds) {
+            $scope.errorMessages.push($scope.requiredInputMsg);
+            return;
+        }
+        var arraySubIds = RA.UI.getListFromDelimitedText($scope.obsoleteSubmissions.submissionIds);
+        var submissionIds = RA.UI.formattedTextFromList(arraySubIds, ', ');
+        $scope.obsoleteSubmissions.submissionIds = submissionIds;
+
+        if (confirm('Un-Obsolete the following submission(s)?\n\nSubmission IDs: "' + submissionIds + '"')) {
+
+            $rootScope.showPageLoading();
+
+            var arrayLength = arraySubIds.length;
+            for (var i = 0; i < arrayLength; i++) {
+                Admin.doAdminUnDeleteSubmission(arraySubIds[i], function (result) {
+                    RA.Service.handleServiceResult(result, $scope);
+                    $rootScope.hidePageLoading();
+                });
+            }
+        }
+    };
+}

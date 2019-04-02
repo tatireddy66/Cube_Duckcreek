@@ -1,0 +1,15 @@
+POST https://cubeshsdev.td.afg:443/UwdRefApp/dispatch/SubmissionController.doGetSystemDate HTTP/1.1
+Host: cubeshsdev.td.afg
+Connection: keep-alive
+Content-Length: 45
+Accept: application/json, text/javascript, */*; q=0.01
+Origin: https://cubeshsdev.td.afg
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Content-Type: application/json
+Referer: https://cubeshsdev.td.afg/UwdRefApp/dyn/html/main
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: BIGipServerudratcdev.td.afg-http-pool=3454349834.20480.0000; businessUnit=; SMUSER=trefapp2; BuildingAndLocation=; USER=trefapp2; JSESSIONID=54E2E6868B3DBCDFB3C22851BB1A4325; cookiemonster=!izvhJZsJC300W/fLribCdTwr0MqXU7fk+l38jY4+gDHR4SjcuMmmAhi4mLGAXqCx6gUAZUyVuEPExPCJi0u4MKeMqNK2I2TXZYvC5eU5ierS1MbdzRLGlRAsMIQlzAVHf01wGG4ScgwcnDDNi4KlPyt1X5WN5oL4kCEmoWxMC/+gZfTMY0/oRkBJGpNS7nnKZsPiFgVmh2+79Cf+AHAwMzBmfu6djnWZog4C7Du4dCu3mG8/iG6kS0FT6H3BvLVitEZDq0Uf6Q==; SMSESSION=S5JcbWMvJcm8tgc60SAUiBG6JQVGEPx5Tb9vqSIglR77kP0D/N+bzG1iL4+PiNNp6iuIOJf87lNeajQoLk/O7f5+kNwpdMQXvJBbqOTFEkUXQROOyg2Tv+3QmCk5El6Divp2dwksvmIi9UrfTC6oElvTzhChOs+sDlro6cVc+21UJKT+RbyTMyiT8fzSuokH3i8a3T/siXlL0g//g10ONOdELEQe9xm/hw/q4azsyssnYuVmxs0sx64aj+xAp61HQDgA12Tyw6Rk1zY7fRbGpaOt6R8iiL8Txckf1Q8DRhdSmNmedSDcZBBJr1mzZ79Mpxz7srxpJTkxciKMfZy0V3m+RyLsYJY/5NJFS6O63RfsiGA2f7FtW+O7ieydvKcRz68twKWpGCJmKG+XwEZfoQOLTT0PPJtBPPnAX8gYmYmhNb+290C8JYkDHM24M5X3SgB/IS3tETHYk6SPhkS0ibHGsE6bdVUmMOm1PhkocG10tPwi7hDdOckQgOwbGhwB+nfvzxj3MjwJVor2wqG3LTGSSSZs9Wgt8qJrFTpe5U6xOWVftsWmLY2CDlqZOfJxCiKXO3skNOHqAI+PnkreDHtlIVoMFMbBfHLT9kejv9HGHQpcMz4g9TNeUY+F8FT5XfsR4vXnN+DNB6qB7H06AD2ZKxuu8NcajFL6on7WD3Cu9R2zOisE9gH+208cA35YL71k+AzFC99TwFF3E34qZAld0bU1x4g84Z3KPlsd7Aw0m7UTdi1MjJgH7CufMjDrp7ujn/u1QiqmH/smPL3x1Mx3AT6dbtsDj3dPQZT+O9JUlrOzP/t0irbomHV1Kg5+Rv0Sm7oX4bQaBhmGYm1ONliIH3/T2L4oYq571J258msMVTP4iR+G4Y/H48DwP10AazVQ4EjwjTMpU8oDSMIql3Ga5fK0hFwBtqByyzBatjr4PtHQi1c7UkHmSgwlaCZthxbAujttPRFrCABf5MUlzZ/0ZjvKOlJZSiUXTOoSwqUuS8SCZs6iLTLEI0qSZd1Odd+p9wmwVED4WFqymXoR2jtVXpmXJkUJgeWWL53sta1iS16iAFFaLAgDTONXfjJ0nXHarcbqBbhc90lPf0kkXe+dSB6JI1ch9m2BBPKLuwjdH5BztbbOLHD24Tlprr8QZwNP05/2SQll1l9DwIE6zriCvlutnLjv2akOV7C4WwRR5X7SsWAja9kp3B81EGP7Q5SMwPLRV2+gW/JD9wU1nPYQeKX8damk; dtCookie=E72BBDA1EF49E6206CFB99410E4E3CB6|Y3ViZXNoc2Rldi50ZC5hZmd8MQ; dtSa=-; dtLatC=5; dtPC=335592390_254h24
+
+{"SubmissionController.doGetSystemDate":null}

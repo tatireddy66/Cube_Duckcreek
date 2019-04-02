@@ -1,0 +1,111 @@
+.taskbar {}
+.tskbr-msgbox { z-index: 999999999 !important; overflow:visible;}
+.tskbr-group {}
+.tskbr-g-menu {position:fixed !important;overflow:visible;}
+.tskbr-g-menu ul.x-menu-list {
+	/* overrides default Ext styling*/
+	padding:0px;
+	overflow:visible;
+}
+.tskbr-g-menu div.x-toolbar {
+	/* overrides default Ext styling*/
+	background-image:none;
+}
+
+.tskbr-g-m-wrapper {overflow:visible;}
+
+.tskbr-g-m-flyout {padding:3px; overflow:visible;}
+
+.tskbr-g-m-panel {padding:3px;overflow:visible;}
+.tskbr-g-m-panel .x-panel-header-text {}
+.tskbr-g-m-panel .x-panel-header-text img {
+	margin-right: 3px;
+	vertical-align: middle;	
+}
+.tskbr-g-m-panel .x-panel-header-text span {}
+
+.taskbr-dropdown {overflow:visible;}
+.tskbr-g-m-item {
+	/* overrides default Ext styling*/
+	white-space: normal;
+	background-image: none;
+	padding: 3px 0px 3px 0px;
+	border-bottom: 1px dotted #868686;
+}
+.tskbr-g-m-item:hover {
+	background: #ffffff !important;
+	cursor: pointer;
+}
+
+.tskbr-g-m-item-invalid {
+	/* overrides default Ext styling*/
+	white-space: normal;
+	background-image: none;
+	padding: 3px 0px 3px 0px;
+	border-bottom: 1px dotted #868686;
+}
+
+
+.tskbr-g-m-i-wrapper {
+	white-space: normal;
+	padding:3px;
+	color:#868686;
+	font-size: 9px;	
+	overflow:visible;
+}
+.tskbr-g-m-i-wrapper div {
+	padding: 0 0 2px 0;
+	overflow:visible;
+}
+
+.tskbr-g-m-i-primary {
+	color:#434343; 
+	font-size: 11px;	
+}
+
+.tskbr-g-m-i-primarydetails, .tskbr-g-m-i-primarydetailslink , .tskbr-g-m-i-primarydetails td{
+	color:#434343; 
+	font-size: 11px;	
+	padding:5px;	
+}
+
+.tskbr-g-m-i-primarydetails tr{
+	vertical-align: text-top;
+}
+
+.tskbr-g-m-i-primarydetailswrap{
+	width:140px;
+	word-wrap: break-word;
+}
+
+.tskbr-g-m-i-primarydetailsimage{
+	display:inline-block;
+	vertical-align:middle;
+}
+
+.tskbr-g-m-i-primarydetailslink {
+	text-decoration:underline;
+}
+
+.tskbr-g-m-i-primarydetailslink:hover {
+	background: #ffffff !important;
+	cursor: pointer;
+}
+
+.tskbr-g-m-i-secondary {}
+.tskbr-g-m-i-secondaryleft {
+	width:50%;
+	float:left;
+}
+.tskbr-g-m-i-secondaryright {
+	width:50%;
+	text-align:right;
+	float:right;
+}
+
+.tskbr-g-m-i-header {
+	color:#434343; 
+	font-size: 14px;	
+	font-weight: bold;
+	text-align: center;
+}

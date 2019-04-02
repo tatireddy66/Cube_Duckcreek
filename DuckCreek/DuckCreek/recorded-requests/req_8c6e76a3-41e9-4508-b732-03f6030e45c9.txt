@@ -1,0 +1,14 @@
+POST https://cubeshsdev.td.afg:443/UwdRefApp/dispatch/NotificationsController.findMessages HTTP/1.1
+Host: cubeshsdev.td.afg
+Connection: keep-alive
+Content-Length: 51
+Origin: https://cubeshsdev.td.afg
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Content-Type: application/json
+Accept: */*
+Referer: https://cubeshsdev.td.afg/UwdRefApp/dyn/js/loadMessages
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: BIGipServerudratcdev.td.afg-http-pool=3454349834.20480.0000; businessUnit=; SMUSER=trefapp2; BuildingAndLocation=; USER=trefapp2; JSESSIONID=05963B7F43D05D64949DD1204F57FDC2; cookiemonster=!CouO1p1EIp0cON/LribCdTwr0MqXU9zNO5zFyJcGndp+ZCb6J0x7X2TC5DrFIG8iYhC8a+VZryc50WXXO3lzORwb+GRych6o78d/1M73Uk7Hxih8cRBQU4qW3TDs3CII6Q6QobhtMRODQbppbieaDFEGZMmxYgaVULiypjAhr8QxjWzwCZwnFp94uUMLrmT/BUAX1qcfJ/uuWlfrwAbZZRu02fjW4R2ULQ2kZ0aSPVnNxPUWMQOwS41QP2C4vB43BJcqkCbupg==; dtSa=-; dtLatC=9; dtPC=-; dtCookie=1BB22DC8E9FBEBB199257506906B8F1A|Y3ViZXNoc2Rldi50ZC5hZmd8MQ; SMSESSION=JxFdUo1M6Z6rP/179ArOChgWBEA896aJhMQGstZBW5Evhd0ig3uhWOBxdiDeRWOg8gsn9WfowsM3/2CuTV+GXSxupRxyjNHfanuuEiaSy6EgrfeVLYuDux6z7grX8YGUapQ8VgG7196vNWvHf0eroFDhsz81W5d3LxOWCbk8CVkjjXKKASkdG+LwfroFdJLbI+7ahsMCL8gjbUfEZ9PFUYJwD4IYtYkNP7GVCb8Kfl3X/xU/2eu8LdXb8z+F5r0kKyF/8oze+OJVOUyPWmnZsop4Erzw0crFHBnKFJXvm0YLsKdSlQL8HVbm2jXC9QwyQZEKxh9wNMwN0HPUQrgHhxC+iIpX1lgxx3fMCxOxJcvSTVV3Ct8KcG4lKzc8G0/1Jv7uYDEjOwYcBIPh0a466RZh2YCZ/ufU+U1DEVNlnn+vJHMaU3y2HHKeBJVyc7S4F6GFzBWDLXxoP5lzwfLUYfDNsKBMlhdz59OOf4v6ODo7dwwceoM3J1mtVCnVqsJwfGfwCpkrjlfzmRgmknAnHNnj8EHNRhq5AECNw2IdKjI16vChbzg+a8v7QctCHKY7PSsNn4iuw3ZLqJMv/GZTporeIKT2Im2O/MvatemNlGpr9GiGgxqhPNUu/3bwXGdpIAs38wT1oFUFIFblNQncR6bxy+SXRk7lwADrZ4h2tgfFdFL4jlENPF+0Ov7Q4LF2IxiApHEcc57ETqANEzDzCLth69AgnQicMuEetEbgGXneWNYAoJv4oKdDzbmxC/yy7oTA5HCGqVLORBAwyng3e4mdDhggKpT7lxEIaruNOtY81tSlXtBuByW2I4r9iE02YJ6kH30kngUkIjqjIhapCMnqXMHTzhhWd79txN0whnCqkTq6p8U2JJvxt5aCu5c3vI7xh/XQ3ts/uUY3zRbLRNG0/ABUVyTtjN5+r9Ca3gD91/G8cLRrjyILqC/baIez3MEvDBn2LXC4wFZLbKIY9pQo0t9AHNBX0bUIxPsQNcaHjeH6eveti249N8YGJrwv3O38q0/xl6T7NxzIIBYWhLn5u8T+T5eW71JpoooMhqhzfVlPrJAWnmkaSw0St0v1x6G+pX8R5mAf3DAhur9rUUML4eZWAV9du9XMZ0c4R4Ynoj0H9dX+h/EH4aNPzBRO4MvCTKz73UynlpXti1Un3MmaYmsio8RIojVUtS745k9KO5i9j0UdOC+PV0i+cKwKJAhcLOFuvOAaVh+c0CBo9UneOVWyJTm7
+
+{"NotificationsController.findMessages":{"hid":{}}}

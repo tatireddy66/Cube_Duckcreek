@@ -1,0 +1,6 @@
+GET https://www.google.com/complete/search?client=chrome-omni&gs_ri=chrome-ext-ansg&xssi=t&q=AG7354&oit=1&cp=6&pgcl=4&gs_rn=42&psi=rR1rk3WNkvdoFmwM&sugkey=AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw HTTP/2.0
+x-client-data: CI62yQEIorbJAQjEtskBCKmdygEIqKPKAQixp8oBCL+nygEI4qjKARj5pcoB
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+accept-encoding: gzip, deflate, br
+accept-language: en-US,en;q=0.9
+

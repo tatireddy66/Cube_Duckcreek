@@ -1,0 +1,118 @@
+var reportsApp = angular.module('refAppDirectivesSubPolReports',['submissionServices','presentationServices','searchServices',
+                         'notesServices','accountServices','activityServices','navigationServices','dashboardServices','reportServices','renewalServices']);
+
+/****************************
+ * reportResultsTable (search, no next/prev)
+ ****************************/
+reportsApp.directive('reportResultsTable', function() {
+    return  {
+    	//require:'?ngModel',
+        scope:true,
+    	link: function(scope, element, attrs, controller) {
+    		element.addClass("table-striped");
+		  	// datatable elements
+		  	var options = {
+		  		// function which navigates to manage activities when the first column is clicked on
+		  		"fnRowCallback": function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+		  			$('td:eq(0)',nRow).on ('click', function() {
+		  				var policyInfo = aData[1].replace(/<br\/>/g, ' ');
+		  				var dates = aData[7].split('-')
+		  				var effDate = RA.UI.doMakeDateMMDDYYYY(dates[0]);
+		  				var expDate = RA.UI.doMakeDateMMDDYYYY(dates[1]);
+                        RA.Session.addSubmissionId( aData[11]);
+
+		  				sessionVars = RA.Session.buildSelectedPolicyObject( effDate, expDate, aData[2], aData[10],aData[13], aData[14], aData[12], aData[15] );
+		  			});
+		  		},
+				bFilter: true,
+				bPaginate: false,
+				bSortClasses:false,
+				oLanguage: { "sInfo": "&nbsp;&nbsp;_TOTAL_ Records" , "sInfoEmpty": "&nbsp;&nbsp;0 Record(s)" , "sSearch": "&nbsp;" , "sInfoFiltered": "&nbsp;"},
+				sDom:'<"reportsFilter"f><i>'
+		  	};
+
+		  	// adding the column headings to the element
+		  	options["aoColumns"] = scope.$eval(attrs.headings);
+
+		  	// add the column definitions, if any
+		  	if (attrs.columnDefs) {
+		  		options["aoColumnDefs"] = scope.$eval(attrs.columnDefs);
+		  	}
+
+		  	jQuery.fn.dataTableExt.oSort['policy-term-asc']  = function(term1, term2) {
+
+		    	var a = term1.split('-');
+		    	var b = term2.split('-');
+
+		    	if(a.length > 0 && b.length > 0){
+		    		var d1 = new Date(a[0]);
+		    		var d2 = new Date(b[0]);
+
+		    		return ((d1 < d2) ? -1 : ((d1 > d2) ?  1 : 0));
+		    	}
+		    	return 0;
+
+		    };
+
+		    jQuery.fn.dataTableExt.oSort['policy-term-desc']  = function(term1, term2) {
+
+		    	var a = term1.split('-');
+		    	var b = term2.split('-');
+
+		    	if(a.length > 0 && b.length > 0){
+		    		var d1 = new Date(a[0]);
+		    		var d2 = new Date(b[0]);
+
+		    		return ((d1 < d2) ? 1 : ((d1 > d2) ?  -1 : 0));
+		    	}
+		    	return 0;
+
+		    };
+
+		  	// declaring the dataTable element
+		  	var dataTable = element.dataTable(options);
+
+		  	dataTable.on('click', function(e) {
+		  		 var myTarget = e.target ? e.target : e.srcElement;
+		  		 if (myTarget instanceof HTMLAnchorElement) {
+		  			scope.doLinkManageActivities(sessionVars);
+		  		 }
+		  	});
+
+		    $('.dataTables_filter input').attr("placeholder", "search table...");
+
+		    // setting the headings on the table
+	        scope.$watch(attrs.headings, function(value) {
+	            var val = value || null;
+	            var newColumnNames = scope.$eval(attrs.headings);
+
+	            // Assign New Column Names to Jquery Table
+	            if (val) {
+	               var theColumnNode = EMPTY_STRING;
+	               // Need to set ID for each Column before changing Column Name Value (Use DOM)
+	               for(col = 0; col < dataTable.fnSettings().aoColumns.length; col++) {
+	            	   theColumnNode = dataTable.fnSettings().aoColumns[col].nTh;
+	                   theColumnNode.setAttribute('id','ResultColumn'+ col);
+	                   // Assign New Column Name to Table (BU Configurable)
+	                   if(newColumnNames.length > col) {
+	                     	document.getElementById('ResultColumn'+ col).innerHTML = newColumnNames[col].sTitle;
+	                   }
+                   }
+	            }
+	        });
+
+			// setting the data on the table
+	        scope.$watch(attrs.data, function(value) {
+	            var val = value || null;
+	            if (val) {
+	                dataTable.fnClearTable();
+	                dataTable.fnFilter(EMPTY_STRING);
+	            	dataTable.fnAddData(scope.$eval(attrs.data));
+	            }
+	        });
+	   	}
+    }
+
+});
+
+

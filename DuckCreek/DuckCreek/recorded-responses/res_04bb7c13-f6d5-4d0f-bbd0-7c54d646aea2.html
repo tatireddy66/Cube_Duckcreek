@@ -1,0 +1,803 @@
+<link rel="stylesheet" href="dyn/css/manage-activities">
+
+<div id="controller" ng-controller="ManageActivitiesController" class="with-bg" >
+	<div ng-show="showMainContent">
+      	<!-- Stage - main content presentation area -->
+      	<div class="gaig-loading" ng-show="pageLoaded == null">
+      	</div>
+
+        	    <form>
+
+				<br />
+
+				<gaig-validation-panel ng-model="validationMessages"></gaig-validation-panel>
+				<messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+				<div error-catcher></div>
+
+					<div class="row-form">
+						<div class="row-fluid padLeftMinus5">
+							<div class="span12">
+								<div class="gaig-table-topper">
+									<div class="pull-left">
+										<h3 class="table-title">Policies&nbsp;&nbsp;&nbsp;&nbsp;</h3>
+										<div class="pull-right-selectedPolicyDates">{{selectedPolicyEffectiveDate}} - {{selectedPolicyExpirationDate}}</div>
+									</div>
+									<div class="pull-right-manageActivitiesPolicies">
+										<br />
+										<input id="policyTermTableFilter1" type="text" onKeyUp="filterTable('policyTermTable', this.value)"
+											   onblur="filterTable('policyTermTable', this.value)" placeholder="search table..." />
+									</div>
+								</div>
+								<table id="policyTermTable" class="table gaig-table table-striped">
+									<thead>
+										<tr>
+											<th colspan="10" style="padding:0px">
+												<div class="gaig-table-info" id="policyTermTableInfo">
+                                                    <div class="filter-bar">
+														<div class="btn-bar" ng-show="isPolicyFloating">
+															<button id="refreshButton" class="btn" type="button" ng-click="doRefresh()" listen="isPolicyFloatingNow">Refresh</button>
+														</div>
+                                                        <gaig-radio-buttons id="policyFilterOptions" options="policyFilterList"
+                                                                            ng-model="policyFilter" on-change="doFilterPolicies()"
+                                                                            ng-disabled="viewOnlyMode" class="maButtons">
+                                                        </gaig-radio-buttons>
+                                                    </div>
+													<div class="btn-bar">
+														<!--button ng-show="!isViewMod" id="hideAllModsButton" class="btn" type="submit" ng-click="hideMods()">Hide Mods / Versions</button>
+                                                        <button ng-show="isViewMod" id="viewAllModsButton" class="btn" type="submit" ng-click="viewModsForMultiplePolicies()">View All Mods/Versions</button-->
+														<button id="viewAllModsButton" class="btn" type="submit" ng-click="viewModsForMultiplePolicies()">View/Hide All Mods/Versions</button>
+														<button id="viewActivitiesButton" class="btn" type="submit" ng-click="findActivitiesForPolicy()" >View Activities</button>
+														<button id="createActivityButton" class="btn" type="submit" ng-click="toggleCreateSelectModal()" >Create Activity</button>
+													</div>
+												</div>
+											</th>
+										</tr>
+										<tr>
+										    <th></th>
+											<th><input id="policyAll" type="checkbox" ng-model="allPolicies" ng-click="selectAll('policyAll', 'policyAll')" /></th>
+											<th ng-repeat="name in policyHeaderNames">{{name}}</th>
+										</tr>
+									</thead>
+									<tbody id="policyTableBody">
+									</tbody>
+									<tfoot id="policyTableFooter">
+										<tr>
+											<td colspan="10">
+											</td>
+										</tr>
+									</tfoot>
+								</table>
+							</div>
+						</div>
+					</div>
+
+					<br/>
+					<br/>
+
+					<div class="row-form" ng-show="showActivitiesTable">
+						<div class="row-fluid padLeftMinus5">
+							<div class="span12" ng-show="showActivitiesTable">
+								<div class="gaig-table-topper">
+									<div class="pull-left">
+										<h3 class="table-title">Activity Details</h3>
+									</div>
+									<div id="activitySearch" class="pull-right-tableToppers">
+										<input id="activityDetailsTableFilter1" type="text" onKeyUp="filterTable('activityDetailsTable', this.value)"
+											   onblur="filterTable('activityDetailsTable', this.value)" ng-model="activitySearchSubmissionId" placeholder="search table..." />
+									</div>
+								</div>
+								<table id="activityDetailsTable" class="table gaig-table table-striped">
+									<thead>
+										<tr>
+											<th colspan="13" style="padding:0px">
+								<div class="gaig-table-info" id="activityDetailsTableInfo">
+									<div class="filter-bar">
+										<label>Transaction Filter</label>
+										<gaig-radio-buttons id="filterOptions" options="transactionFilterList"
+															ng-model="transactionFilter" on-change="doFilterActivities()"
+															ng-disabled="viewOnlyMode" class="maButtons">
+										</gaig-radio-buttons>
+									</div>
+									<div class="filter-bar-Activities" ng-show="isActivityFloating">
+										<button id="refreshButtonActivities" class="btn" type="button" ng-click="doRefresh()" listen="isActivityFloatingNow">Refresh</button>
+									</div>
+									<div class="btn-bar">
+										<button id="changeDetailsButton" class="btn" type="submit" ng-click="toggleActivityDetailsModal()" >Change Details</button>
+										<button id="setTRNStatus" class="btn" type="submit" ng-click="doToggleTRNStatusModal()" >Set TRN Status</button>
+										<button id="unlockButton" class="btn" type="submit" ng-click="unlockActivities()" >Unlock</button>
+									</div>
+								</div>
+											</th>
+										</tr>
+										<tr>
+											<th></th>
+											<th><input id="activityAll" type="checkbox" ng-model="allActivities" ng-click="selectAll('activityAll', 'activityAll')" /></th>
+											<th ng-repeat="name in activityHeaderNames">{{name}}</th>
+										</tr>
+									</thead>
+									<tbody id="activityTableBody">
+									</tbody>
+									<tfoot>
+										<tr>
+											<td colspan="10">
+											</td>
+										</tr>
+									</tfoot>
+								</table>
+							</div>
+						</div>
+					</div>
+
+					<br /><br />
+
+					<div id="changeActivityModal">
+						<gaig-modal
+								modal-id="dashboardChangeDetails"
+								title="Change Activity Details"
+								ng-model="isActivityDetailsOpen"
+								modal-css="gaig-modal-full"
+								on-cancel="doChangeActivitiesCancel"
+								on-save="saveActivityDetails"
+								save-button-id="detailSave"
+								cancel-button-id="detailCancel"
+								close-button-id="detailClose"
+								close-btn-label="Cancel"
+								footer-buttons="detailsButtons"
+								dynatrace="true"
+								save-button-dt-name="changeDetailsSaveMA"
+								cancel-button-dt-name="changeDetailsCancelMA"
+						>
+						<div class="container-fixed">
+							<div class="row-form">
+								<div class="row-fluid">
+									<messages-modal validation="validationMessages"></messages-modal>
+									<messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+
+									The changes you make below will affect the activities in this table. Fields left blank will not change data in the selected activities.
+									<table id="changeActivityTable" class="table gaig-table table-striped">
+										<thead>
+                                            <tr>
+                                                <th></th>
+                                                <th>Policy</th>
+                                                <th>Policy Term</th>
+                                                <th>Activity Category</th>
+                                                <th>Explanation</th>
+                                                <th>TRN Effective Date</th>
+                                                <th>TRN Status</th>
+                                                <th>TRN Premium</th>
+                                                <th></th>
+                                            </tr>
+										</thead>
+										<tbody>
+											<tr ng-repeat="rows in table">
+                                                <td><img ng-src="{{rows.valid}}" ng-cloak/></td>
+												<td>{{rows.policy}}</td>
+												<td>{{rows.polTrnEffDt}} - {{rows.polTrnExpDt}}</td>
+												<td>{{rows.type}}</td>
+												<td><div class="singleLineEllipsis" title="{{rows.reason}}">{{rows.reason}}</div></td>
+												<td>{{rows.date}}</td>
+												<td>{{rows.status}}</td>
+												<td>{{rows.premium}}</td>
+												<td class="centerColumn"><button type="button" class="redClose" ng-click="removeRow($index, toggleActivityDetailsModal, 'activityDetailsTable');checkActivityTypes();">X</button></td>
+											<tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+
+							<div class="row-form">
+								<div class="row-fluid">
+									<div class="spanDetailsCol1">
+										<label for="assignTo">Assign To</label>
+
+                                        <select id="assignTo" class="input-large"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.assignToHid"
+                                                ng-disabled="viewOnlyMode || disableUpdate"
+                                                data-placeholder="  ">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in assignToList" value="{{item.hid}}">{{item.lastName}}, {{item.firstName}}</option>
+                                        </select>
+
+
+									</div>
+									<div class="spanDetailsCol2">
+										<label for="assignmentReason">Assignment Reason</label>
+										<div ng-hide="isSingleInActivityDetails">
+											<label class="clearCheckbox" >
+												<input type="checkbox" ng-model="clearFields.assignmentReason"> Clear
+											</label>
+										</div>
+                                        <select id="assignmentReason" class="input-large"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.assignmentReasonCode"
+                                                ng-disabled="viewOnlyMode || disableUpdate || clearFields.assignmentReason">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in assignmentReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+									</div>
+									<div class="spanDetailsCol3">
+										<label for="referralStatus">Referral Status</label>
+
+                                        <select id="referralStatus" class="input-medium"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.referralStatusRefCode"
+                                                ng-disabled="viewOnlyMode || activityDetails.assignmentReasonCode != 'REFERRAL' || disableUpdate">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in referralStatusList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+									</div>
+									<div class="form-cell">
+										<label for="pendingDate">Pending Date</label>
+											<!--[if !IE]><!-->
+											<div class="dateTopMargin">
+											<!--<![endif]-->
+												<div class="pull-left topMargin4">
+													<gaig-datepicker id="pendingDate"
+														ng-model="activityDetails.pendingDate"
+														ng-disabled="viewOnlyMode || disableUpdate"
+														on-select="validatePendingDate()">
+													</gaig-datepicker>
+												</div>
+												<div class="pull-right">
+													&nbsp;<button id="unpendButton" ng-click="unpend()" class="btn" ng-disabled="disablePendingDate || disableUpdate">Unpend</button>
+												</div>
+											<!--[if !IE]><!-->
+											</div>
+											<!--<![endif]-->
+									</div>
+								</div>
+								<br />
+								<div class="row-fluid">
+									<div class="spanDetailsCol1">
+										<label for="premiumTier">Premium Tier</label>
+										<div ng-hide="isSingleInActivityDetails">
+											<label class="clearCheckboxMedium" >
+												<input type="checkbox" ng-model="clearFields.premiumTier"> Clear
+											</label>
+										</div>
+                                        <select id="premiumTier" class="input-medium"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.premiumTierRefCode"
+                                                ng-disabled="viewOnlyMode || disableUpdate || clearFields.premiumTier">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in premiumTierList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+									</div>
+									<div class="spanDetailsCol1">
+										<label for="priority">Priority</label>
+										<div ng-hide="isSingleInActivityDetails">
+											<label class="clearCheckboxMedium" >
+												<input type="checkbox" ng-model="clearFields.priority"> Clear
+											</label>
+										</div>
+                                        <select id="priority" class="input-medium"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.priorityRefCode"
+                                                ng-disabled="viewOnlyMode || disableUpdate || clearFields.priority">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in priorityList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+									</div>
+									<div class="spanDetailsCol3">
+										<label for="needByDate">Need By Date</label>
+										<div ng-hide="isSingleInActivityDetails">
+											<label class="clearCheckboxMedium" >
+												<input type="checkbox" ng-model="clearFields.needByDate"> Clear
+											</label>
+										</div>
+										<!--[if !IE]><!-->
+										<div class="dateTopMargin">
+										<!--<![endif]-->
+										<div class="topMargin5">
+											<gaig-datepicker id="needByDate"
+												ng-model="activityDetails.needByDate"
+												ng-disabled="viewOnlyMode || disableUpdate || clearFields.needByDate">
+											</gaig-datepicker>
+										</div>
+										<!--[if !IE]><!-->
+										</div>
+										<!--<![endif]-->
+									</div>
+									<div class="form-cell" ng-show="table.length == 1">
+										<label for="transEffDate">TRN Effective Date</label>
+										<!--[if !IE]><!-->
+										<div class="dateTopMargin">
+										<!--<![endif]-->
+										<div class="topMargin5">
+											<gaig-datepicker id="transEffDate"
+												ng-model="activityDetails.transactionEffectiveDate"
+                                                on-select="validateTRNDate()"
+												ng-disabled="viewOnlyMode || disableUpdate || disableTrnUpdate || disableTrnEffDateFieldOnly"><!--Need requirements for this-->
+											</gaig-datepicker>
+										</div>
+										<!--[if !IE]><!-->
+									</div>
+									<!--<![endif]-->
+								</div>
+							</div>
+						</div>
+
+						<div class="row-form">
+							<div class="form-cell">
+								<label id="underwriterMessage">Changing the Underwriter for a transaction will affect the activities listed above and it will be copied to future transactions for these policies if they are issued.</label>
+							</div>
+						</div>
+						<div class="row-form">
+							<div class="row-fluid">
+								<div class="spanDetailsCol1">
+									<label for="underwriter">Underwriter</label>
+									<select id="underwriter" class="input-large"
+											gaig-select="{'allowClear': false}"
+											ng-model="activityDetails.underwriterHid"
+											ng-disabled="viewOnlyMode || disableUpdate || disabledFields.underwriter">
+										<option value=""></option>
+										<option ng-repeat="person in underwriterSelectList" value="{{person.hid}}">{{person.lastName}}, {{person.firstName}}</option>
+									</select>
+								</div>
+							</div>
+						</div>
+
+						<div class="row-form">
+							<div class="row-fluid">
+								<div class="span11">
+									<div ng-show="!reminderOnly && !hasReminders">
+										<div class="add-info">
+											<label for="explanation">Explanation / Description</label>
+											</div>
+											<div class="add-info">
+												<img src="dyn/images/info.jpeg" alt="Information"/>
+												<div class="infoDesc">
+													<p>Text entered in this field is editable within the Change Activity Details window and may be deleted prior to Issuance. This text is displayed on the Dashboard and Manage Activities screen.</p>
+												</div>
+											</div>
+											<textarea rows="4" id="explanation" class="span12"
+												ng-model="activityDetails.activityReasonComments" maxlength="4000" ng-disabled="viewOnlyMode || disableUpdate"
+												gaig-maxlength="4000"></textarea>
+										</div>
+										<div ng-show="reminderOnly">
+											<div class="add-info">
+												<label for="description">Explanation / Description</label>
+											</div>
+											<div class="add-info">
+												<img src="dyn/images/info.jpeg" alt="Information"/>
+												<div class="infoDesc">
+													<p>Text entered in this field is editable within the Change Activity Details window and may be deleted prior to Issuance. This text is displayed on the Dashboard and Manage Activities screen.</p>
+												</div>
+											</div>
+											<textarea rows="4" id="description" class="span12"
+												ng-model="activityDetails.activityReasonComments" maxlength="4000" ng-disabled="viewOnlyMode || disableUpdate"
+												gaig-maxlength="4000"></textarea>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="row-form">
+								<div class="row-fluid">
+									<div id="changeDetailComments" class="span11">
+										<div class="add-info">
+										<label for="commentsRemarks" ng-hide="viewOnlyMode || disableUpdate">Comments</label>
+										</div>
+										<div class="add-info">
+											<img src="dyn/images/info.jpeg" alt="Information"/>
+											<div class="infoDesc">
+												<p>Text entered in this field is permanent within the Change Activity Details window and will display in the "Show All Comments" section.</p>
+											</div>
+										</div>
+										<textarea rows="4" id="commentsRemarks" class="span12"
+											ng-model="activityDetails.userComments" maxlength="4000" ng-disabled="viewOnlyMode || disableUpdate"
+                                            ng-hide="viewOnlyMode || disableUpdate"
+											gaig-maxlength="4000"></textarea>
+									</div>
+								</div>
+							</div>
+
+							<div class="row-form" ng-show="endorsementOnly">
+								<div class="row-fluid">
+									<div class="form-cell">
+										<label for="type" class="required">Type</label>
+
+                                        <select id="type" class="input-xlarge2"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.endorsementTypeRefCode"
+                                                ng-disabled="disableUpdate">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in endorsementTypeList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+									</div>
+									<div class="form-cell">
+										<label for="subType" class="required">Sub-Type</label>
+
+                                        <select id="subType" class="input-large"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.endorsementSubTypeRefCode"
+                                                ng-disabled="disableUpdate">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in endorsementSubTypeList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+									</div>
+								</div>
+							</div>
+
+							<div class="row-form" ng-show="cancellationOnly">
+								<div class="row-fluid">
+									<div class="form-cell">
+										<label for="type" class="required">Reason</label>
+
+                                        <select id="type" class="input-xlarge2"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.reasonRefCode"
+                                                ng-disabled="disableUpdate || isRewrite">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in cancellationReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+									</div>
+									<div class="form-cell" ng-hide="hasBothCancelTypes">
+										<label for="subType">Type</label>
+
+                                        <select id="cancellationSubType" class="input-xlarge"
+                                                gaig-select="{'allowClear': false}"
+                                                ng-model="activityDetails.reasonTypeCode"
+                                                ng-disabled="disableUpdate || disableCancel">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in cancellationTypeListMain" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+									</div>
+								</div>
+							</div>
+
+                            <div class="row-form" ng-show="reinstatementOnly">
+                                <div class="row-fluid">
+                                    <div class="form-cell">
+                                        <label for="type" class="required">Reason</label>
+
+                                        <select id="type" class="input-xlarge2"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.reasonRefCode"
+                                                ng-disabled="disableUpdate">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in reinstatementReasonList" value="{{item.itemCode}}">{{item.itemDescriptionLong}}</option>
+                                        </select>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row-form" ng-show="cancelRewriteOnly">
+                                <div class="row-fluid">
+                                    <div class="form-cell">
+                                        <label for="type" class="required">Reason</label>
+
+                                        <select id="type" class="input-xlarge2"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.reasonRefCode"
+                                                ng-disabled="disableUpdate">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in rewriteReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row-form" ng-show="nonRenewalOnly || nonRenewalReasonChangeOnly">
+                                <div class="row-fluid">
+                                    <div class="form-cell">
+                                        <label for="type" class="required">Reason</label>
+
+                                        <select id="type" class="input-xlarge2"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.reasonRefCode"
+                                                ng-disabled="disableUpdate">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in nonRenewalReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row-form" ng-show="cancelReasonChangeOnly">
+                                <div class="row-fluid">
+                                    <div class="form-cell">
+                                        <label for="type" class="required">Reason</label>
+
+                                        <select id="type" class="input-xlarge2"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.reasonRefCode"
+                                                ng-disabled="disableUpdate">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in cancellationReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row-form" ng-show="renewalOnly">
+                                <div class="row-fluid">
+                                    <div class="form-cell">
+                                        <label for="type" class="required">Type</label>
+
+                                        <select id="type" class="input-xlarge2"
+                                                gaig-select="{'allowClear': true}"
+                                                ng-model="activityDetails.reasonRefCode"
+                                                ng-disabled="disableUpdate">
+                                            <option value=""></option>
+                                            <option ng-repeat="item in renewalProcessingTypeList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                                        </select>
+
+                                    </div>
+                                </div>
+                            </div>
+
+							<a id="showCommentLink" ng-click="toggleShowComments()" ng-show="showCommentsLink">{{showCommentsLabel}}&nbsp;({{commentCount}})</a><br/>
+							<div id ="commentSection" contentEditable="false" ng-show="showComments"><br/>
+								<div ng-repeat="comment in activityComments" ng-show="comment.commentCategoryRefCode == 'USERCOMMNT'">
+								{{comment.createName}}&nbsp;{{comment.createDate | date:'MM/dd/yyyy HH:mm:ss'}}
+								<br/>
+								<div id="commentSectionText">
+								{{comment.activityCommentText}}<br/><br/>
+								</div>
+								</div>
+							</div>
+						</div>
+					</gaig-modal>
+					</div>
+
+					<ra-modal modal-class="btn" modal-size="mini"
+                              display-title="Create New Activity" ng-cloak
+						toggle="isCreateSelectOpen"
+						func="toggleCreateSelectModal()"
+						turn-off-scroll="true"
+						close-btn-label="Cancel"
+						header-style="font-family:Arial;font-size:14px;font-weight:normal;font-style:normal;text-decoration:none;color:#990000;"
+                        cancel-function="toggleCreateSelectModal()">
+		      			<div class="container-fixed">
+							<div class="row-form">
+								<div class="row-fluid">
+								<table class="table gaig-table table-striped">
+									<thead>
+                                        <tr>
+										    <th>Policy</th>
+										    <th>Policy Term</th>
+										    <th>Status</th>
+										    <th></th>
+                                        </tr>
+									</thead>
+									<tbody>
+										<tr ng-repeat="rows in table">
+											<td>{{rows.policy}}</td>
+											<td>{{rows.term}}</td>
+											<td>{{rows.type}}</td>
+											<td class="centerColumn"><button type="button" class="redClose" ng-click="removeRow($index, toggleCreateSelectModal, 'policyTermTable');" >X</button></td>
+										<tr>
+									</tbody>
+								</table>
+								</div>
+							</div>
+								 <div class="row-form">
+                                     <div class="row-fluid">
+									Activity Type<br/>
+
+                                     <select id="typeSelect" class="input-large"
+                                             gaig-select="{'allowClear': true}"
+                                             ng-model="selectedTypeHolder.selectedType"
+                                             data-placeholder="--Select--"
+                                             on-change="toggleActivityForm('typeSelect')">
+                                         <option value=""></option>
+                                         <option ng-repeat="item in activityTypes" value="{{item.value}}">{{item.label}}</option>
+                                     </select>
+
+								</div>
+							</div>
+						</div>
+					</ra-modal>
+
+                    <div id="createActivityModal">
+                        <ra-modal modal-class="btn" modal-size="xlarge"
+                                  display-title="Create New Activity" ng-cloak
+                            toggle="isCreateActivityOpen"
+                            func="toggleCreateActivityModal()"
+                            close-btn-label="Cancel"
+                            buttons="createButtons"
+                            extra="selectedPolicy"
+                            header-style="font-family:Arial;font-size:14px;font-weight:normal;font-style:normal;text-decoration:none;color:#990000;"
+                            cancel-function="doCreateNewActivityCancel()">
+                            <div class="container-fixed">
+                                <div class="row-form">
+                                    <div class="row-fluid">
+                                        <messages-modal validation="validationMessages"></messages-modal>
+                                        <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+                                        <div ng-switch on="selectedTypeHolder.selectedType">
+                                            <div ng-switch-when="CRC">
+                                                <div ng-include="'dyn/html/cancelReasonChange'"></div>
+                                            </div>
+                                            <div ng-switch-when="CNRW">
+                                                <div id="CNRW" ng-include="'dyn/html/cancelRewrite'"></div>
+                                            </div>
+                                            <div ng-switch-when="CANC">
+                                                <div ng-include="'dyn/html/cancellation'"></div>
+                                            </div>
+                                            <div ng-switch-when="ENDT">
+                                                <div id="ENDT" ng-include="'dyn/html/endorsement'"></div>
+                                            </div>
+                                            <div ng-switch-when="NRI">
+                                                <div ng-include="'dyn/html/nonRenewal'"></div>
+                                            </div>
+                                            <div ng-switch-when="NRRC">
+                                                <div ng-include="'dyn/html/nonRenewalReasonChange'"></div>
+                                            </div>
+                                            <div ng-switch-when="REIN">
+                                                <div ng-include="'dyn/html/reinstatement'"></div>
+                                            </div>
+                                            <div ng-switch-when="REMINDER">
+                                                <div ng-include="'dyn/html/reminder'"></div>
+                                            </div>
+                                            <div ng-switch-when="REN">
+                                                <div ng-include="'dyn/html/renewal'"></div>
+                                            </div>
+                                            <div ng-switch-when="RNR">
+                                                <div ng-include="'dyn/html/reverseNonRenewal'"></div>
+                                            </div>
+                                            <div ng-switch-when="REWRITE">
+                                                <div ng-include="'dyn/html/rewrite'"></div>
+                                            </div>
+                                            <div ng-switch-when="TEMPREIN">
+                                                <div ng-include="'dyn/html/temporaryReinstatement'"></div>
+                                            </div>
+											<div ng-switch-when="AUD">
+												<div ng-include="'dyn/html/audit'"></div>
+											</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </ra-modal>
+					</div>
+
+					<ra-modal modal-class="btn" modal-size="mini"
+							  display-title="Annualized Premium" ng-cloak
+							  toggle="isAnnualizedPremiumOpen"
+							  func="toggleAnnualizedPremiumModal()"
+							  turn-off-scroll="true"
+							  close-btn-label="Close"
+							  header-style="font-family:Arial;font-size:14px;font-weight:normal;font-style:normal;text-decoration:none;color:#990000;"
+							  cancel-function="toggleAnnualizedPremiumModal()">
+						<div class="container-fixed">
+							<div class="row-form">
+								<div class="row-fluid">
+									<table class="table gaig-table table-striped">
+										<thead>
+										<tr>
+											<th>Policy</th>
+											<th>Policy Term</th>
+											<th>Premium</th>
+										</tr>
+										</thead>
+										<tbody>
+										<tr ng-repeat="rows in table">
+											<td>{{rows.policy}}</td>
+											<td>{{rows.term}}</td>
+											<td>{{rows.premium}}</td>
+										<tr>
+										</tbody>
+									</table>
+									<i><label style="text-align:right;color:grey;">ID:{{annualizedPremiumSubId}}</label></i>
+								</div>
+							</div>
+
+						</div>
+					</ra-modal>
+
+					<ra-modal modal-class="btn"
+					    modal-size="xxlarge"
+                        display-title="Activity History" ng-cloak
+						toggle="isViewHistoryOpen"
+						func="toggleViewHistoryModal()"
+						header-style="font-family:Arial;font-size:14px;font-weight:normal;font-style:normal;text-decoration:none;color:#990000;"
+                        cancel-function="toggleViewHistoryModal()">
+
+						<div class="container-fixed">
+							<div class="row-form">
+								<div class="row-fluid">
+									<div class="span12">
+										<b>History for</b>
+										<br>
+										{{historyType}} for {{policyInfo}}
+									</div>
+								</div>
+
+								<div class="row-fluid">
+									<div class="span12">
+										<table  class="table table-striped gaig-table-ra" id="accountHistoryTable">
+											<thead>
+                                                <tr>
+												    <th>Date - Time</th>
+												    <th>User</th>
+												    <th>Description</th>
+                                                </tr>
+											</thead>
+											<tbody>
+												<tr ng-repeat="comment in auditComments">
+													<td>{{comment.createDate | date:'MM/dd/yyyy HH:mm:ss'}}</td>
+													<td>{{comment.createName}}</td>
+													<td>{{comment.activityCommentText}}</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</ra-modal>
+
+					<div id="transactionStatusModal" status-modal submissions="table"
+						 on-close="setTrnStatusReturn"
+						 is-open="isTRNStatusOpen"
+						 disposition-status-list="dispositionStatusList"
+						 view-only-mode="viewOnlyMode"
+						 disposition="disposition"
+						 is-admin="adminAuth"
+						 error-messages="errorMessages"
+						 success-messages="successMessages"
+						 validation-messages="validationMessages"
+						 info-messages="infoMessages"
+					     >
+					</div>
+
+					<ra-modal modal-class="btn" modal-size="confirm"
+                              display-title="Confirmation" ng-cloak
+						toggle="isConfirmOpen"
+						func="toggleConfirmModal()"
+						close-btn-label="Cancel"
+						buttons="confirmButtons"
+						header-style="font-family:Arial;font-size:14px;font-weight:normal;font-style:normal;text-decoration:none;color:#990000;"
+                        cancel-function="toggleConfirmModal()">
+						<br />
+						Review cancellation?
+					</ra-modal>
+					<ra-modal modal-class="btn" modal-size="confirm"
+							  display-title="Confirmation" ng-cloak
+							  toggle="isConfirmWork"
+							  func="toggleConfirmWorkModal()"
+							  close-btn-label="Cancel"
+							  buttons="confirmButtonsWork"
+							  header-style="font-family:Arial;font-size:14px;font-weight:normal;font-style:normal;text-decoration:none;color:#990000;"
+							  cancel-function="toggleConfirmWorkModal()">
+						<br />
+						There is an active submission on the previous policy.  Working this submission will not reflect any changes pending on the previous policy.  Would you like to continue or cancel?
+					</ra-modal>
+                    <ra-modal modal-class="btn" modal-size="confirm"
+                              display-title="Create endorsement?" ng-cloak
+                          toggle="isConfirmEndorsementOpen"
+                          func="toggleConfirmEndorsementModal()"
+                          close-btn-label="Cancel"
+                          buttons="confirmEndorsementButtons"
+                          cancel-function="toggleConfirmEndorsementModal()">
+                        <br />
+                        There are issued renewals on the policy(ies) you have selected. Would you like to create endorsements on the renewal policy(ies)?
+                    </ra-modal>
+					<div ng-include src="'dyn/html/confirmTransaction'"></div>
+                </form>
+	</div>
+	<div class="dataArea" ng-if="!showMainContent">
+		<div dynamic-ui main-display="mainDisplay"
+			 charms="charms" bindings="bindings"
+			 notify-container="returnFromBindDetail"
+			 error-messages="errorMessages"
+			 success-messages="successMessages"
+			 validation-messages="validationMessages"
+			 info-messages="infoMessages"/>
+	</div>
+    <script type="text/javascript" src="dyn/js/manageActivities"></script>
+</div>

@@ -1,0 +1,35 @@
+Ext.define('DCT.PopupWindow2', {
+	override: 'DCT.PopupWindow',
+	/* BEGIN BIS code: ensure that if you click an annotation or popup button
+	   at the bottom of a long page, you can see the new window. Base bug#00018327 */
+	constrain: true
+	/* END BIS code */
+});
+
+
+Ext.define('override.DCT.PopupWindow', {
+    override: 'DCT.PopupWindow',
+
+    closePopupWindow: function () {
+        var me = this;
+        if (me.dctParentIsPopup == 'false' || me.dctParentIsPopup == '0' || !me.dctParentIsPopup) {
+            DCT.Util.getSafeElement('_popUp').value = '0';
+        }
+        if (me.dctAssignFocus) {
+            var focusField = DCT.Util.getFocusField();
+            if (DCT.Util.isInterviewControl(focusField)) {
+                if (Ext.getCmp(focusField))
+                    Ext.getCmp(focusField).setFieldFocus();
+            } else {
+                if (Ext.get(focusField))
+                    /* BEGIN Popup Close Issue: Popup not getting close on clicking 'OK' button*/
+                    //  Ext.get(focusField).focus(false, 5);
+                    Ext.get(focusField).focus(5); 
+                /* END Popup Close Issue: Popup not getting close on clicking 'OK' button*/
+            }
+        }
+        DCT.Util.removeTabs(false);
+
+        Ext.Function.defer(me.destroy, 200, me);
+    }
+});

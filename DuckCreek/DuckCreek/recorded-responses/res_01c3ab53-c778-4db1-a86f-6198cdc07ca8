@@ -1,0 +1,4 @@
+Ext.define('DCT.RichTextAreaField2', {
+	override: 'DCT.RichTextAreaField',
+	msgTarget: 'qtip' /* DCT-00017754 */
+});

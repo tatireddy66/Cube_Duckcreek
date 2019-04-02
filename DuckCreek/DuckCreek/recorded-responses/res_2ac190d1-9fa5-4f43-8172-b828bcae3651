@@ -1,0 +1,92 @@
+Ext.define('DCT.FieldBase2', {
+	override: 'Ext.Component',
+	/* BEGIN BIS code
+	   dct-base-debug.js overrides Ext.Component to set this prop; we are overriding it to set the prop again.
+	   Allows you to click into a blank dropdown and start typing, and have the (select) replaced with your keystrokes. 
+	   This will be fixed in a later release of Platform per CC. */
+	selectOnFocus: true,
+	/* END BIS code */
+	
+	// Override for BIS: There's 2 versions of setFieldFocus in base, so put the one we want in the override to make it win.
+	setFieldFocus: function () {
+		var me = this;
+		
+		/* BEGIN code for BIS - remove label focus class */
+		// use "on" to append, not replace, so we don't disrupt any existing blur functionality
+		me.on('blur', me.removeFocusClass)
+		/* END code for BIS */
+		
+		if (DCT.Util.getFocusField() == me.id)
+			me.focus(true, 5);
+		if (DCT.fieldValidationLogsEnabled && DCT.currentPage == 'interview') {
+			DCT.ValidationLogs.showValidationLogDialog();
+		}
+		if (DCT.spotlightEnabled && me.dctSpotlight) {
+			DCT.Integration.Spotlight.mapInit(me, DCT.Integration.Spotlight.highlightForConfidence);
+		}
+	}
+	
+});
+Ext.define('DCT.FieldFormBase2', {
+	override: 'Ext.form.field.Base',
+	msgTarget: 'qtip' /* DCT-00017754 */
+});
+
+Ext.define('DCT.CheckboxGroup2', {
+	override: 'Ext.form.CheckboxGroup',
+	msgTarget: 'qtip' /* DCT-00017754 */
+});
+
+Ext.define('DCT.tip.Tip2', {
+	override: 'Ext.tip.Tip',
+	
+	doAlignment: function(newRegion) {
+		var me = this,
+			anchorEl = me.anchorEl,
+			anchorRegion = newRegion.anchor,
+			adjustedXY = me.getAdjustedXY(newRegion),
+			/* BEGIN code for BIS - always position the error qtip to the right of the field. DCT-00017754 */
+			targetEl = (me.activeTarget) ? me.activeTarget.el : me.target,
+			// Adjust for dropdown arrows and date pickers
+			xAdj = (targetEl.up().next('div[id$=trigger-picker]')) ? 18 : 0,
+			isErrorTip = (me.html && (me.html.indexOf('errorslist') > -1));
+		
+		me.setPagePosition([
+			isErrorTip ? targetEl.getBox().right + xAdj + 10 : adjustedXY.x,
+			isErrorTip ? targetEl.getBox().y : adjustedXY.y
+		]);
+		
+		// Workaround for a bug where the width of the qtip correlates to the width of the field it's for.
+		if(isErrorTip) {
+			me.setMaxWidth(380);
+		}
+		
+		// Now work on the little triangle/tail
+		if (anchorEl) {
+			anchorEl.removeCls(me.anchorCls);
+			if (anchorRegion) {
+				if(isErrorTip) {
+					anchorRegion.position = 'left';
+				}
+				me.anchorCls = Ext.baseCSSPrefix + 'tip-anchor-' + anchorRegion.position;
+				anchorEl.addCls(me.anchorCls);
+				anchorEl.show();
+				if(isErrorTip) {
+					anchorEl.dom.style.top = '9px';
+					anchorEl.dom.style.left = '-5px';
+				}
+				// The result is to the left or right of the target
+				else if (anchorRegion.align & 1) {
+					anchorEl.setTop(newRegion.anchor.y - newRegion.y);
+					anchorEl.dom.style.left = '';
+				} else {
+					anchorEl.setLeft(newRegion.anchor.x - newRegion.x);
+					anchorEl.dom.style.top = '';
+				}
+				/* END code for BIS */
+			} else {
+				anchorEl.hide();
+			}
+		}
+	}
+});

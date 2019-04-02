@@ -1,0 +1,446 @@
+var app = angular.module('refAppDirectivesDomManip', []);
+
+app.service('DomManip', function($timeout)
+{
+    function domManipService()
+    {
+        this.disable = function disable(field, disabled)
+        {
+            $('#' + field).attr('disabled', disabled);
+        };
+
+        this.check = function check(field, checked)
+        {
+            $('#' + field).prop('checked', checked);
+        };
+
+        this.click = function click(field)
+        {
+            $('#' + field).click();
+        };
+
+        this.clickElement = function clickElement(element)
+        {
+            $(element).click();
+        };
+
+        this.show = function show(field)
+        {
+            $('#' + field).show();
+        };
+
+        this.hide = function hide(field)
+        {
+            $('#' + field).hide();
+        };
+
+        this.addClass = function addClass(field, className)
+        {
+            $('#' + field).addClass(className);
+        };
+
+        this.removeClass = function removeClass(field, className)
+        {
+            $('#' + field).removeClass(className);
+        };
+
+        this.html = function html(object)
+        {
+            return $(object).html();
+        };
+
+        this.scrollTop = function scrollTop()
+        {
+            $('html, body').animate({scrollTop: $('.gaig-main').offset().top}, 0);
+        };
+
+        this.scrollModalTop = function scrollModalTop(modalName)
+        {
+            $('#' + modalName).find('.modal-body-refapp').animate({"scrollTop": 0}, 200);
+        };
+
+        this.removeLink = function removeLink(link, timeout)
+        {
+            $('#' + link).removeAttr('href', timeout ? timeout : 0);
+        };
+
+        this.append = function append(tagId, html)
+        {
+            var element = $('#' + tagId);
+            element.append(html);
+            return element;
+        };
+
+        this.empty = function empty(tagId)
+        {
+            var elem = $('#' + tagId);
+            elem.empty();
+            return elem;
+        };
+
+        this.buildForm = function buildForm(action, target, params)
+        {
+            // TODO - implement this in a directive
+            if(!action)
+            {
+                throw('Action must be supplied to the form.')
+            }
+
+            params = params || {};
+            params['@type'] = 'java.util.LinkedHashMap'; // might need to force the developer to supply this??
+            var jsonStringifyData = JSON.stringify(params);
+            var sendData = RA.UI.htmlEscape(jsonStringifyData, false);
+            var html = '<textarea name="map">' + sendData + '</textarea>';
+
+
+            var form = $('<form>',
+            {
+                id: 'myForm',
+                name: 'myForm',
+                html: html,
+                action: action,
+                target: target || '_blank',
+                method: 'POST',
+                enctype: 'text/plain'
+            });
+
+            $('body').append(form);
+            var formWrapper = function(form)
+            {
+                this.submit = function submit()
+                {
+                    form.submit().remove();
+                };
+            };
+            return new formWrapper(form); // returning the function discourages the use of jQuery in the controllers
+        };
+
+        this.getTableReaderInstance = function getTableReaderInstance(tableId, classCk, columns)
+        {
+            return new TableReader(tableId, classCk, columns);
+        };
+
+        this.getTableId = function getTableId(event)
+        {
+            return $(event.target).closest('table').attr('id');
+        };
+
+        this.addDataTable = function addDataTable(masterConfig) {
+            var tables = document.querySelectorAll('table.grid-template-table');
+
+            tables.forEach(function(t) {
+                var tableConfig = masterConfig[t.id] || {};
+
+                matchHeaders(t, findDataTags(t));
+                var newTable = $(t).DataTable({
+                    "aoColumnDefs": [
+                        {
+                            "bSortable": false, "aTargets": createSortArray(tableConfig['nonSortedColumns'])
+                        }
+                    ],
+                    "sDom": '<"rowsFoundPolicyInformation"i>',
+                    "bRetrieve": true,
+                    "bInfo": true,
+                    "bSortClasses":false,
+                    "bLengthChange": false,
+                    "bAutoWidth": false,
+                    "oLanguage": {
+                        "sInfo": "_TOTAL_ Record(s)",
+                        "sInfoFiltered": "&nbsp;",
+                        "sInfoEmpty": "&nbsp;&nbsp;0 Records"
+                    },
+                    "bPaginate": false,
+                    "aaSorting": []
+                });
+
+                var assocId = t.id;
+                var searchBox = document.querySelector('.' + assocId);
+
+                if (searchBox) {
+                    $(searchBox).unbind();
+                    $(searchBox).bind('keyup', function (e) {
+                        newTable.fnFilter(this.value);
+                    });
+                }
+            });
+
+            function findDataTags(table)
+            {
+                var tds = 0, id = $(table).attr('id');
+                var trs = $('#' + id + ' tbody tr');
+                if(trs.length > 0)
+                {
+                    tds = $(trs[0]).children('td').length;
+                }
+                return tds;
+            }
+
+            function matchHeaders(table, tdCount)
+            {
+                var elem, id = $(table).attr('id');
+                var headerRow = $($('#' + id)[0].childNodes[1].childNodes[1])[0];
+                var th = $('#' + id + ' thead tr th');
+                if(th.length === 0)
+                {
+                    while(tdCount > 0)
+                    {
+                        elem = document.createElement('th');
+                        elem.setAttribute('style', 'display:none;');
+                        headerRow.append(elem);
+                        tdCount--;
+                    }
+                }
+            }
+
+            function createSortArray(notSorted)
+            {
+                var i, len, array;
+                var retArray = [];
+                if(!notSorted)
+                {
+                    return [0,1];
+                }
+
+                array = notSorted.split(',');
+                for(i = 0, len = array.length; i < len; i++)
+                {
+                    retArray.push(parseInt(array[i]));
+                }
+                return retArray;
+            }
+        };
+
+        this.toggleDetailsPanel = function toggleDetailsPanel(panelId, tableId, content)
+        {
+            var tableRowId = "row" + panelId;
+            var tableRow = $('#' + tableRowId);
+            tableRow.toggleClass('icon-chevron-down');
+
+            var tr = tableRow.closest('tr')[0];
+
+            var dataTable = $('#' + tableId).dataTable({"bRetrieve": true});
+            if (dataTable.fnIsOpen(tr))
+            {
+                dataTable.fnClose(tr);
+            }
+            else
+            {
+                if (content)
+                    dataTable.fnOpen(tr, content, 'innerDetails');
+                else
+                    dataTable.fnOpen(tr, "No Information found", 'innerDetails');
+            }
+        };
+
+        this.toggleLastRow = function toggleLastRow(htmlMap, unique)
+        {
+            var i, row, panelId, tableId, tableSection, content,
+                used = [],
+                rows = $('tr[row]');
+
+            for(i = (rows.length - 1); i > -1; i--)
+            {
+                row = rows[i];
+                tableSection = $(row).attr('row');
+                if(tableSection && used.indexOf(tableSection) === -1)
+                {
+                    used.push(tableSection);
+                    tableId = $(row).closest('table').attr('id');
+                    panelId = $(row).find('td:first i').attr('id');
+                    panelId = panelId.substring(3);
+                    if (htmlMap[tableSection])
+                    {
+                        content = htmlMap[tableSection][unique[panelId]];
+                    }
+                    this.toggleDetailsPanel(panelId, tableId, content);
+                }
+            }
+        };
+
+        this.toggleAllFieldsets = function toggleAllFieldsets(direction) {
+            var fieldsets = document.querySelectorAll('.gaig-fieldset');
+            fieldsets.forEach(function(fset) {
+                $timeout(function () {
+                    var legend = $(fset).find('legend');
+                    var isClosed = legend.hasClass('gaig-fieldset-legend-closed');
+
+                    if ( ('expand' === direction && isClosed) || ('collapse' === direction && !isClosed) ) {
+                        $(fset).find('a').click().blur();
+                    }
+                });
+            });
+        };
+
+        var TableReader = function(tableId, classCk, columns)
+        {
+            var myTableId = tableId;
+            var myClassCk = classCk;
+            var myColumns = columns;
+
+            var getTableRow = function(object)
+            {
+                if(object.tagName === 'TR')
+                {
+                    return object
+                }
+                else
+                {
+                    var tr = $(object).closest('tr');
+                    if(tr[0].tagName === 'TR')
+                    {
+                        return tr[0];
+                    }
+                }
+            };
+
+            var create = function(index, array)
+            {
+                return function(row)
+                {
+                    return array[index] == 'checkbox' ? $($($(getTableRow(row)).children('td')).children('input')).val() :
+                        $($(getTableRow(row)).children('td')[index]).text();
+                }
+            };
+
+            this.initDataTable = function initDataTable(tableOpts, tableData)
+            {
+                var dataTable = $('#' + myTableId).dataTable(tableOpts);
+                if(dataTable.fnSettings())
+                {
+                    dataTable.fnClearTable();
+                }
+                dataTable.fnAddData(tableData);
+                return dataTable;
+            };
+
+            this.toDataTable = function toDataTable()
+            {
+                return $('#' + myTableId).dataTable({"bRetrieve":true});
+            };
+
+            this.isReader = function isReader(tableId)
+            {
+                return myTableId == tableId;
+            };
+
+            this.findIndex = function findIndex(object)
+            {
+                var dataTable = $('#' + myTableId).dataTable({"bRetrieve":true});
+                return object ? dataTable.fnGetPosition($(object).closest('tr')[0]) : dataTable.fnGetPosition(dataTable.fnGetNodes()[0]);
+            };
+
+            this.selectAll = function selectAll(selectAllId)
+            {
+                $('.' + myClassCk + ':checkbox[style!="visibility:hidden"]').prop('checked', $('#' + selectAllId + ':checkbox:checked').length > 0);
+            };
+
+            this.toggleRow = function toggleRow(e, twistyId, html)
+            {
+                var dataTable = this.toDataTable();
+                var tr = e ? $($(e)).closest('tr')[0] : dataTable.fnGetNodes()[0];
+                var index = this.findIndex(tr);
+                if(dataTable.fnIsOpen(tr))
+                {
+                    dataTable.fnClose(tr);
+                    $('#' + twistyId).removeClass('icon-chevron-down').addClass('icon-chevron-right');
+                }
+                else
+                {
+                    dataTable.fnOpen(tr, html, 'innerDetails');
+                    $('#' + twistyId).removeClass('icon-chevron-right').addClass('icon-chevron-down');
+                }
+            };
+
+            this.getCheckedRows = function getCheckedRows(tempClassCk)
+            {
+                var oldClassCk = myClassCk;
+                myClassCk = tempClassCk || oldClassCk;
+                var checked = [];
+                var rows = this.getRows();
+                for(var r in rows)
+                {
+                    var row = rows[r];
+                    if(row.checked)
+                    {
+                        checked.push(row)
+                    }
+                }
+                myClassCk = oldClassCk;
+                return checked;
+            };
+
+            this.getRows = function getRows()
+            {
+                var createCall = function createCall(func, row)
+                {
+                    return function()
+                    {
+                        return func(row);
+                    };
+                };
+
+                var index = 0;
+                var checks = [];
+                $('.' + myClassCk).each(function()
+                {
+                    var style = $(this).attr('style');
+                    if(style && ((style.indexOf('visibility:hidden') > -1) || (style.indexOf('visibility: hidden') > -1)))  // updated for IE
+                    {
+                        return true;
+                    }
+
+                    var obj = {};
+                    var reader = new TableReader(myTableId, myClassCk, myColumns);
+                    for(var f in reader)
+                    {
+                        if(f == 'getCheckedRows' || f == 'getRows')
+                        {
+                            continue;
+                        }
+                        obj[f] = createCall(reader[f], $(this).closest('tr')[0]);
+                    }
+
+                    obj.table = $(this).closest('table').attr('id');
+                    obj.html = $(this).html();
+                    obj.val = $(this).val();
+                    obj.checked = $(this).prop('checked');
+                    obj.handle = $(this);
+                    obj.index = index++;
+                    checks.push(obj);
+                });
+                return checks;
+            };
+
+            for(var c in columns)
+            {
+                this[columns[c]] = create(c, columns);
+            }
+        }
+
+        this.addTooltips = function addTooltips() {
+            $("div.select-tooltip").tooltip({
+                title: function() {
+                    return $(this).next().context.innerText;
+                }
+            });
+        };
+
+
+        this.showSearchingIndicator = function showSearchingIndicator() {
+            var searchArea = $('.searchArea').eq(0);
+            var searchLoading = $('#searchLoading');
+
+            searchLoading.css({
+                "width": searchArea.width(),
+                "height": searchArea.height()
+            });
+
+            searchLoading.show();
+        };
+
+        this.hideSearchingIndicator = function hideSearchingIndicator() {
+            $('#searchLoading').hide();
+        }
+    }
+    return new domManipService();
+});

@@ -1,0 +1,13 @@
+# Project description file
+
+project.name=DuckCreek
+project.version=6.3
+project.original.version=6.3
+product.name=NeoLoad
+product.original.name=NeoLoad
+product.version=6.5.1
+product.original.version=6.5.1
+project.id=3893c10e-da4a-4aab-a580-14e7d5c58278
+project.config.path=config.zip
+project.config.storage=ZIP
+team.server.enabled=false

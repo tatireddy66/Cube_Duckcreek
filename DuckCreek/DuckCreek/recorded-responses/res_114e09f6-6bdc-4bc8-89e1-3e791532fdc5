@@ -1,0 +1,25 @@
+var appDynamicUi = angular.module('dynamicUiDirective', [])
+
+    .directive('dynamicUi',
+        function() {
+            return ({
+                link: function (scope, element, attributes, controllers) {
+
+                },
+                scope: {
+                    mainDisplay: '=',
+                    charms: '=',
+                    bindings: '=',
+                    notifyContainer: '=',
+                    messageScope: '=',
+                    errorMessages: '=',
+                    successMessages: '=',
+                    validationMessages: '=',
+                    infoMessages: '='
+                },
+                restrict: 'EA',
+                templateUrl: 'dyn/html/dynamic'
+            });
+
+        }
+    );

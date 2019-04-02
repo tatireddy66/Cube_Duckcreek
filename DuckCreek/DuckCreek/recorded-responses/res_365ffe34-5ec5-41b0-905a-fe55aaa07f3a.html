@@ -1,0 +1,136 @@
+<div class="container-fixed">
+	<div class="row-form">
+		<table class="table gaig-table">
+			<thead>
+			    <th></th>
+				<th>Policy</th>
+                <th>Policy Term</th>
+				<th>Status</th>
+				<th></th>
+			</thead>
+			<tbody>
+				<tr ng-repeat="rows in table" ng-class="{true:'row-alt'}[$index%2!=0]">
+				    <td class="centerColumn"><img ng-src="{{rows.valid}}" ng-cloak/></td>
+					<td>{{rows.policy}}</td>
+                    <td>{{rows.term}}</td>
+					<td>{{rows.type}}</td>
+					<td class="centerColumn"><button type="button" class="redClose" ng-click="removeRow($index, toggleCreateActivityModal, 'policyTermTable');">X</button></td>
+				<tr>
+			</tbody>
+		</table>
+	</div>
+			
+	<div class="row-form">
+		<div class="row-fluid">	
+				<label for="activitySelector">Activity</label>
+				<select id="activitySelector" class="input-large"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="selectedTypeHolder.selectedType"
+                        on-change="toggleActivityForm('activitySelector')"
+						data-placeholder="--Select--">
+                     	<option ng-repeat="item in activityTypes" value="{{item.value}}">{{item.label}}</option>
+                </select>
+			</div>
+	</div>
+	
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="form-cell span3">
+				<label for="activityEffectiveDate" class="required">TRN Effective Date</label>
+					<gaig-datepicker id="activityEffectiveDate" 
+					ng-model="activity.transactionEffectiveDate" on-select="setCancellationType()"
+					ng-disabled="viewOnlyMode">
+					</gaig-datepicker>		
+			</div>
+			<div class="form-cell span3">
+				<label for="receivedDate" class="required">Received Date</label>
+					<gaig-datepicker id="receivedDate" 
+					ng-model="activity.receivedDate"  ng-change="doValidateReceivedDate()"
+					ng-disabled="viewOnlyMode">
+					</gaig-datepicker>
+			</div>
+			<div class="form-cell span3">
+				<label for="needByDate">Need By Date</label>
+					<gaig-datepicker id="needByDate" 
+					ng-model="activity.needByDate"  ng-change="doValidateEffectiveDate()"
+					ng-disabled="viewOnlyMode">
+					</gaig-datepicker>
+			</div>
+		</div>
+	</div>
+	
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="form-cell">
+				<label for="reason" class="required">Reason</label>
+				<select id="reason" class="input-large3"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.reasonRefCode"
+                        on-change="validateExplanationReason()"
+						data-placeholder="--Select--">
+						<option></option>
+                     	<option ng-repeat="item in cancellationReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+			</div>
+			<div class="form-cell">
+				<label for="reasonType">Type</label>
+				<select id="reasonType" class="input-medium"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.reasonTypeCode"
+                        ng-disabled="disableCancellationType"
+                        data-placeholder="">
+						<option value=""></option>
+                     	<option ng-repeat="item in cancellationTypeListMain" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                </select>
+			</div>
+		</div>
+	</div>
+
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="span12">
+				<label id="explanationLabel" for="explanation" 
+				       ng-show="activity.reasonRefCode === 'OTH' || activity.reasonRefCode === 'OTHER'">Explanation</label>
+				<textarea rows="4" id="explanation" class="span12"
+					ng-model="activity.activityReasonComments" maxlength="200" ng-disabled="viewOnlyMode"
+					gaig-maxlength="200" ng-show="activity.reasonRefCode === 'OTH' || activity.reasonRefCode === 'OTHER'"></textarea>
+			</div>
+		</div>
+	</div>
+
+		<div class="row-form">
+			<div class="row-fluid">
+				<div class="form-cell">
+					<label for="assignToCancellation" class="required">Assign To</label>
+					<select id="assignToCancellation" class="input-large"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.assignToHid"
+						data-placeholder="">
+						<option value=""></option>
+                     	<option ng-repeat="item in assignToList" value="{{item.hid}}">{{item.lastName}}, {{item.firstName}}</option>
+                	</select>					
+				</div>
+				<div class="form-cell">
+					<label for="assignmentReasonCancellation">Assignment Reason</label> 
+					<select id="assignmentReasonCancellation" class="input-xlarge"
+                		gaig-select="{'allowClear': true}"
+                        ng-model="activity.assignmentReasonCode"
+						data-placeholder="">
+						<option value=""></option>
+                     	<option ng-repeat="item in assignmentReasonList" value="{{item.itemCode}}">{{item.itemDescriptionShort}}</option>
+                	</select>
+			</div>
+		</div>
+	</div>		
+
+	<div class="row-form">
+		<div class="row-fluid">
+			<div class="span12">
+				<label for="commentsRemarks">Comments</label>
+				<textarea rows="4" id="commentsRemarks" class="span12"
+					ng-model="activity.userComments" maxlength="4000" ng-disabled="viewOnlyMode"
+					gaig-maxlength="4000"></textarea>
+			</div>
+		</div>
+	</div>								
+</div>	

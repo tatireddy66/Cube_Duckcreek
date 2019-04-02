@@ -1,0 +1,11 @@
+GET https://uncd63.duckcreekondemand.com:443/Policy/workbench/listgroups?_dc=1552472402339&configuredGroups=NotesController%2CAttachmentsController%2CTasksController%2CLongProcessController&_windowGuid=d7a71aba-ddc1-4e65-9e22-3428907c4ce3 HTTP/1.1
+Host: uncd63.duckcreekondemand.com
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+X-Requested-With: XMLHttpRequest
+Accept: */*
+Referer: https://uncd63.duckcreekondemand.com/Policy/default.aspx
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: ASP.NET_SessionId=ddl2hpu0e2ocnpdngsmcpam0
+

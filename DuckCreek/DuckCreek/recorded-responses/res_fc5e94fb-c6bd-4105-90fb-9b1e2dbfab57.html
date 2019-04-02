@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base href="/UwdRefApp/"/>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <title>CUBE</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="dyn/images/cube-official.ico" />
+    <script type="text/javascript" src="dyn/js/lib/polyfills"></script>
+    <script type="text/javascript" src="dyn/js/lib/dtagentApi"></script>
+    <script type="text/javascript">
+        /*  BEGIN code used by raCommons.js in CallMe to handle SMSession timeouts */
+        window.isInitialLoad = true;
+        /* END */
+
+        /* BEGIN code used by dynatrace */
+        var dtMainAction = null;
+
+        if (window.dT_) {
+            dynaTrace.incrementOnLoadEndMarkers();
+            setMetaData('ssPage',sessionStorage.getItem('mainDisplayPage'));
+            setMetaData('ssSubmId',sessionStorage.getItem('submissionIdSearch') || sessionStorage.getItem('submissionId'));
+            setMetaData('ssQuoteId',sessionStorage.getItem('selectedQuoteID') || sessionStorage.getItem('quoteId'));
+        }
+
+        function setMetaData(key,value) {
+            if (value && value != null) {
+                //console.log('dtSetMetaData key=' + key + ',value=' + value);
+                dynaTrace.setMetaData(key,value);
+            }
+        }
+
+        function onLoad() {
+            if (window.dT_) {
+                dtMainAction = dynaTrace.enterAction('main', 'load', null, true);
+            }
+        }
+        /* END */
+    </script>
+    <script type="text/javascript">
+        if(!sessionStorage.currentUser)
+        {
+            sessionStorage.currentUser = JSON.stringify({currentHid: 'unknown'});
+        }
+    </script>
+
+    <!--[if IE]>
+    <script src="cdn/js/gaig-ui-ie.js"></script>
+    <script>
+        document.createElement('footer');
+        document.createElement('ra-modal');
+        document.createElement('ra-modal-custom');
+        document.createElement('messages');
+        document.createElement('messages-modal');
+        document.createElement('topnav');
+    </script>
+    <![endif]-->
+    <link rel="stylesheet" href="cdn/css/gaig-bootstrap.css" />
+    <link rel="stylesheet" href="dyn/css/jquery.dataTables"/>
+    <link rel="stylesheet" href="dyn/css/ra" />
+    <link rel="stylesheet" href="dyn/css/dynamic" />
+    <link rel="stylesheet" href="dyn/css/letters" />
+    <link rel="stylesheet" href="dyn/css/dynamis-ui"/>
+    <link rel="stylesheet" href="dyn/css/changeRoles"/>
+
+</head>
+<body class="with-bg" onload="onLoad()">
+
+
+<div class="wrapper" ng-cloak>
+    <page-manager></page-manager>
+    <rpm-sessions map="rpmSessionMap"></rpm-sessions>
+    <div ng-show="mainDisplay.show.top">
+        <topnav></topnav>
+    </div>
+
+    <div ng-show="mainDisplay.show.charms">
+        <div class="navhelper">
+            <div class="navhelper-inner">
+                <div class="container">
+                    <h3 class="location-name"><i ng-class="mainDisplay.show.charmsClass"></i>{{mainDisplay.show.charms}}</h3>
+                    <gaig-charms charms="charms.charmsList"></gaig-charms>
+                    <div class="pull-right">
+                        <div ng-repeat="charm in mainDisplay.show.charmsRight" style="margin-top: 6px;">
+                            <span ng-show="$index === 0 && !hideRightCharm">
+                                <i ng-class="charm.iconClass"></i> <a ra-click="charm.action">{{charm.label}}</a> <i class="icon icon-chevron-down"></i>
+                            </span>
+                            <span ng-hide="$index === 0 || hideRightCharm">
+                                <div class="negativeMargin5">
+                                    <i ng-class="charm.iconClass"></i> <a ra-click="charm.action">{{charm.label}}</a> <i class="icon icon-chevron-down"></i>
+                                </div>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div ng-class="mainDisplay.classes.main">
+        <div ng-show="mainDisplay.show.left" class="gaig-sidebar">
+            <leftnav refresh-events="submissionSaved,submissionLoaded,updateLHN"></leftnav>
+        </div>
+        <div id="leftOther" ng-show="mainDisplay.show.leftOther" class="gaig-sidebar">
+        </div>
+
+        <div ng-class="mainDisplay.classes.stage">
+            <div class="gaig-stage-inner">
+                <div ng-show="mainDisplay.show.banner" class="container-fixed">
+                    <ra-banner type="mainDisplay.type.banner"></ra-banner>
+                </div>
+                <div ng-include="mainDisplay.show.content"></div>
+            </div>
+        </div>
+    </div>
+
+    <div ng-show="mainDisplay.show.footer" ng-cloak >
+        <footer></footer>
+    </div>
+</div>
+
+<script type="text/javascript" src="dyn/js/raConstants"></script>
+<script type="text/javascript" src="dyn/js/refAppIncludes"></script>
+<script src="cdn/js/lib/ckeditor/ckeditor.js"></script>
+<script type="text/javascript" src="cdn/js/gaig-ui.js"></script>
+<script type="text/javascript" src="dyn/js/notifications"></script>
+</body>
+</html>
+

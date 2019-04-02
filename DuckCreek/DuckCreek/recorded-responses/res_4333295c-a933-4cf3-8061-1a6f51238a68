@@ -1,0 +1,53 @@
+var base = '/UwdRefApp/';
+
+window.gaigUiConfig = {
+    modules: {
+        refAppDirectives: base + 'dyn/js/directives',
+        refAppDirectivesCarrierLookup: base + 'dyn/js/directivesCarrierLookup',
+        refAppDirectivesCustomerExperience: base + 'dyn/js/directivesCustomerExperience',
+        refAppDirectivesTopNav: base + 'dyn/js/directivesTopNav',
+        refAppDirectivesLeftNav : base + 'dyn/js/directivesLeftNav',
+        refAppDirectivesFieldCell: base + 'dyn/js/directivesFieldCell',
+        refAppDirectivesNotes: base + 'dyn/js/directivesNotes',
+        refAppDirectivesSubPolReports: base + 'dyn/js/directivesSubPolReports',
+        letterSelection: base + 'dyn/js/directives/directivesLetterSelection',
+        letterTemplate: base + 'dyn/js/directivesLetterTemplate',
+        coverageTable: base + 'dyn/js/directives/directivesCoverageTable',
+        letterNav: base + 'dyn/js/directivesLetterNav',
+        templateTable: base + 'dyn/js/directives/directivesTemplateTable',
+        manualEntry: base + 'dyn/js/directivesManualEntry',
+        trnStatusModal: base  + 'dyn/js/directives/directivesTRNStatusModal',
+        refAppDirectivesDomManip:  base  + 'dyn/js/domManipService',
+        dynamicUiDirective: base + 'dyn/js/directivesDynamic',
+        refAppDirectivesObsoleteSubm: base + 'dyn/js/directives/directivesObsoleteSubm',
+        refAppDirectivesChangeSubStatus: base + 'dyn/js/directives/directivesChangeSubStatus'
+    },
+    controllers: {
+        async: base + 'dyn/js/async.min',
+        constants: base + 'dyn/js/raConstants',
+        currencyFormatter: base + 'dyn/js/accounting.min',
+        dataTables: base + 'dyn/js/jquery.dataTables.min',
+        dataTablesGrouping: base + 'dyn/js/jquery.dataTables.rowGrouping',
+        dataTablesFloatThead: base + 'dyn/js/jquery.floatThead.min',
+        highcharts : base + 'dyn/js/highcharts',
+        dynamis: base + 'dyn/js/dynamis',
+        dynamisUI: base + 'dyn/js/dynamis-ui',
+        DynamicController: base + 'dyn/js/dynamic',
+        dynamicUI: base + 'dyn/js/dynamicUI',
+        rpmClassNames: base + 'dyn/js/rpmClassNames',
+        prodSelection: base + 'dyn/js/productSelectionService',
+        raCommons: base + 'dyn/js/raCommons',
+        raService: base + 'dyn/js/raService',
+        raController: base + 'dyn/js/raController',
+        raUI: base + 'dyn/js/raUI',
+        raSession: base + 'dyn/js/raSession',
+        raMessages: base + 'dyn/js/raMessages',
+        services: base + 'dyn/js/services',
+        obsoleteSubmController: base + 'dyn/js/obsoleteSubm'
+    },
+
+    load: [
+        base + 'dyn/js/bootstrap.min',
+        base + 'dyn/js/lib/alphanum'
+    ]
+};

@@ -1,0 +1,15 @@
+POST https://uncd63.duckcreekondemand.com:443/Policy/default.aspx?_windowGuid=c0e916af-e5c2-4c7d-8059-d286588475f3 HTTP/1.1
+Host: uncd63.duckcreekondemand.com
+Connection: keep-alive
+Content-Length: 1099
+Origin: https://uncd63.duckcreekondemand.com
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Content-Type: PreEvent/xml; charset=UTF-8
+Accept: */*
+Referer: https://uncd63.duckcreekondemand.com/Policy/default.aspx
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: ASP.NET_SessionId=jidq1cg3dmqzgrlqqpzrzjh1
+
+<AjaxRequest><action>a_d83F32C33BEB74A168AC86D4CF031CDB51F_3_1</action><currentPageID>087A8EC254834F11AD7D3635F6E50563</currentPageID><popUp>false</popUp><clientChanges>{"items":[{"path":"/@value","id":"_action","value":"","type":"change"},{"path":"/@value","id":"_fieldChanged","value":"2","type":"change"},{"path":"/@value","id":"_stateID","value":"e2676f2d-3248-41c7-b974-1307b36d561f","type":"change"},{"path":"/@value","id":"_focusField","value":"d83F32C33BEB74A168AC86D4CF031CDB51F_3_1","type":"change"},{"path":"/@value","id":"_currentPageID","value":"087A8EC254834F11AD7D3635F6E50563","type":"change"},{"path":"/@value","id":"_currentAction","value":"Carrier_CommercialAuto_Pages_US_10_22_0_0_MainInterview_Pricing","type":"change"},{"path":"/input[25]","id":"hiddenFields","value":"&lt;input type=\"hidden\" name=\"_clientChanges\" id=\"_clientChanges\" value=\"\"&gt;","type":"add"},{"path":"/input[26]","id":"hiddenFields","value":"&lt;input type=\"hidden\" name=\"runInterviewActionAsync\" id=\"runInterviewActionAsync\" value=\"false\"&gt;","type":"add"}]}</clientChanges></AjaxRequest>

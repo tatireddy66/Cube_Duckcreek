@@ -1,0 +1,50 @@
+//# sourceURL=dyn/js/userNotifications
+
+var allCubeWorkers = [];
+var startWorkers = function startWorkers()
+{
+    var messageWorker = new Worker('dyn/js/loadMessages');
+    messageWorker.onmessage = function(event)
+    {
+        if (event.data === 'login') {
+            handleSMBlockage();
+            return;
+        }
+        var i, len, msg;
+        var data = Dynamis.Util.resolveRefs(JSON.parse(event.data));
+        var messages = data['data']['NotificationsController.findMessages']['data'] || [];
+
+        for(i = 0, len = messages.length; i < len; i++)
+        {
+            msg = messages[i];
+            if(Notification && Notification.permission !== 'denied')
+            {
+                Notification.requestPermission(function(status)
+                {
+                    if(status === 'granted')
+                    {
+                        new Notification(msg, {});
+                    }
+                });
+            }
+        }
+    };
+    messageWorker.postMessage({});
+    allCubeWorkers.push(messageWorker);
+    return messageWorker;
+};
+startWorkers();
+
+var killWorkers = function killWorkers()
+{
+    var i, len, worker;
+    for(i = 0, len = allCubeWorkers.length; i < len; i++)
+    {
+        worker = allCubeWorkers[i];
+        if(worker)
+        {
+            worker.terminate();
+        }
+    }
+    allCubeWorkers = [];
+};

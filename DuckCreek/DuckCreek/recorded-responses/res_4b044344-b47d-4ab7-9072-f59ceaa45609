@@ -1,0 +1,18 @@
+(function () {
+
+    function letterSelectionLink(scope, element, attr) {
+
+    }
+
+    function letterSelectionDirective() {
+        return {
+            restrict: 'E',
+            templateUrl: 'dyn/html/letters/letterSelection',
+            link: letterSelectionLink
+        }
+    }
+
+    angular.module('letterSelection', [])
+        .directive('letterSelection', letterSelectionDirective);
+
+})();

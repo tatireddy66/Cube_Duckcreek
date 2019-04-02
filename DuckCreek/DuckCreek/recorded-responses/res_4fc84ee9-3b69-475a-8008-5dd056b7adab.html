@@ -1,0 +1,2433 @@
+<style>
+	.ul-header {
+		width: 100%;
+		padding: 0;
+		margin: 0;
+	}
+
+	.li-header {
+		display: inline-block;
+		list-style-type: none;
+		margin: 0;
+		padding: 10px 0;
+		width: 52%;
+		text-align: center;
+		background-color: #d3d3d3;
+	}
+
+	.li-header-half {
+		display: inline-block;
+		list-style-type: none;
+		margin: 0;
+		padding: 10px 0;
+		width: 38%;
+		text-align: center;
+		background-color: #d3d3d3;
+	}
+
+	.li-row {
+		list-style-type: none;
+		margin: 0;
+		padding: 10px 0;
+	}
+
+	.border-all {
+		border-left: solid 1px black;
+		border-top: solid 1px black;
+		border-bottom: solid 1px black;
+		border: solid 1px black;
+	}
+
+	.border-left {
+		border-left: solid 1px black;
+		border-top: solid 1px black;
+		border-bottom: solid 1px black;
+	}
+
+	.border-right {
+		border: solid 1px black;
+	}
+</style>
+
+<div id="controller" ng-controller="SubmissionManagementController" class="with-bg">
+
+      	<!-- Stage - main content presentation area -->
+      	<div class="gaig-loading" ng-if="pageLoaded == null">
+      	</div>
+        	    <form>
+
+	        	<br />
+
+				<gaig-validation-panel id="submissionInfoMessages_validation" ng-model="validationMessages" fixed-offset="75"></gaig-validation-panel>
+				<messages id="submissionInfoMessages" success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+				<div error-catcher></div>
+
+				<!-- Begin submission Nav -->
+				<div id="submission-nav" ng-hide="isAgencyLookupOpen || isAgencyDetailsOpen || isProductSelectionOpen || isSearchForCarrierOpen || taxonomyModalView.isOpen || isFloatingToolbarHidden" gaig-affix="letter-nav-affixed">
+					<div class="page-nav">
+						<div class="page-nav-cell">
+							<span class="gaig-icon gaig-icon-link"></span>
+							<select allow-clear="false" class="input-medium" id="select-anchor" ng-disabled="disabledFields.selectASection">
+								<option value="#general">-- Select a Section --</option>
+								<option value="#general">General Info</option>
+								<option value="#insured">Insured Info</option>
+								<option value="#producerInformationSection">Producer Info</option>
+								<option value="#products">Products</option>
+								<option value="#policyInfo">Policy Info</option>
+								<option value="#transStatusSection">Status</option>
+								<option value="#comments">Comments</option>
+							</select>
+						</div>
+						<div class="page-nav-cell">
+							<button type="submit" class="btn btn-primary" ng-click="saveSubmission(false)" id="subSaveButton"
+									ng-if="doDetermineSaveButton()" >Save
+							</button>
+							<button type="submit" class="btn btn-primary" ng-click="saveSubmission(true)" id="subSaveAndWorkButton"
+									ng-if="doDetermineSaveButton()" >Save & Work
+							</button>
+							<button type="submit" class="btn btn-primary" ng-click="updateSubmission()"  id="subUpdateButton"
+									ng-if="doDetermineUpdate() && (doShowCustNo() || !viewOnlyMode) && !doDetermineDispositionSaveButton() && !doDetermineReopenButton()"
+									ng-disabled="form.$invalid || disabledFields.updateButton">Update
+							</button>
+							<button type="submit" id="submissionCancelButton" class="btn"
+									ng-click="cancelFunction('submission', submission, preCallback, postCallback)">Cancel
+							</button>
+						</div>
+						<div class="page-nav-cell">
+							<div class="page-nav-cell" ng-if="mainDisplay.show.charms">
+								<button type="submit" class="btn btn-small btn-link" value="#policyInfo" id="floatInfo"
+										ng-if="doDetermineUpdate() && !viewOnlyMode && !doDetermineDispositionSaveButton() && !doDetermineReopenButton()"
+										ng-disabled="form.$invalid">
+								</button>
+								<div class="page-nav-cell pull-right">
+									<label for="transactionStatus" class="required" style="padding-right: 10px;">Transaction Status</label>
+									<select id="transactionStatus" class="input-medium"
+											gaig-select="{ 'allowClear': false }"
+											data-placeholder="--Select--"
+											ng-model="submission.transactionStatusRefCode"
+											ng-disabled="viewOnlyMode || disabledFields.transactionStatus || foundSubmission === false"
+											ng-change="doCheckForDisposition()"
+											ng-options="item.value as item.label for item in transactionStatusList track by item.value">
+										<option value=""></option>
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="page-nav-cell pull-right">
+							<button ng-click="scrollToTop()" class="btn btn-small btn-link">Top</button>
+						</div>
+					</div>
+				</div>
+				<!-- END submission Nav -->
+
+      			<div class="container-fixed">
+	   				<!--  **********************  -->
+	   				<!--    GENERAL INFORMATION   -->
+	   				<!--  **********************  -->
+      				<fieldset id="general" gaig-fieldset ng-cloak>
+	      				<legend>General Information</legend>
+                        <div class="row-form">
+		      				<div class="row-fluid">
+		      					<div class="form-cell">
+                                    <label for="submissionEffectiveDate" class="required">Effective Date</label>
+									<gaig-datepicker id="submissionEffectiveDate"
+										ng-model="submission.submissionEffectiveDate"
+										gaig-warning="warnings.effectiveDateWarning" on-select="doValidateEffectiveDate()"
+										ng-disabled="viewOnlyMode || disabledFields.submissionEffectiveDate">
+									</gaig-datepicker>
+		      					</div>
+		      					<div class="form-cell">
+		      						<label for="submissionExpirationDate" class={{submissionExpirationDateRequirement}}>Expiration Date</label>
+		      						<gaig-datepicker id="submissionExpirationDate"
+										ng-model="submission.submissionExpirationDate"
+                                        gaig-warning="warnings.expirationDateWarning" on-select="doValidateExpirationDate()"
+										ng-disabled="viewOnlyMode || disabledFields.submissionExpirationDate">
+									</gaig-datepicker>
+		      					</div>
+		      					<div class="form-cell">
+		      						<label for="receivedDate" class="required">Received Date</label>
+		      						<gaig-datepicker id="receivedDate"
+										ng-model="submission.receivedDate"
+										gaig-warning="warnings.receivedDateWarning" on-select="doValidateReceivedDate()"
+										ng-disabled="viewOnlyMode || disabledFields.receivedDate">
+									</gaig-datepicker>
+		      					</div>
+			                    <div class="form-cell">
+			                      	<label for="needByDate">Quote Needed By</label>
+		      						<gaig-datepicker id="needByDate"
+										ng-model="submission.needByDate" on-select="doValidateQuoteNeedByDate()"
+										ng-disabled="viewOnlyMode || disabledFields.needByDate">
+									</gaig-datepicker>
+			                    </div>
+								<div class="form-cell tentativeEffectiveDate" ng-if="!(hiddenFields.tentativeEffectiveDateIndicator || disabledFields.tentativeEffectiveDateIndicator)">
+									<rpm-field object-name="Submission" field="tentativeEffectiveDateIndicator" type="check" session="submission" id="tentativeEffectiveDateIndicator" ng-disabled="viewOnlyMode || disabledFields.tentativeEffectiveDateIndicator"></rpm-field>&nbsp;&nbsp;Tentative Effective Date.
+								</div>
+								<div class="form-cell info" ng-if="!(hiddenFields.tentativeEffectiveDateIndicator || disabledFields.tentativeEffectiveDateIndicator)">
+									<img src="dyn/images/info.jpeg"/>
+									<div class="infoDescription">
+										<p>Policy cannot be issued if checked, but will allow you to create a submission.</p>
+									</div>
+                                </div>
+							</div>
+						</div>
+
+                            <div class="row-form pull-left">
+                                  <fieldset>
+                                      <legend>
+                                        <label class="checkbox" ng-click="doSetAgentStatus()">
+                                            <input type="checkbox" id="boundByAgentCheck" ng-model="submission.agentBoundIndicator" ng-disabled="viewOnlyMode || disabledFields.boundByAgent"> Bound by Agent
+                                        </label>
+                                     </legend>
+                                    <div class="row-fluid">
+                                        <div class="form-cell">
+                                            <label for="agentBoundPremium">Agent Bound Premium</label>
+                                            <input id="agentBoundPremium" type="text" class="gaig-currency input-small"
+                                                ng-model="submission.agentBoundPremium"
+                                                ng-model-onblur ng-change="updatePremiums();tabToBinder()"
+                                                ng-disabled="!submission.agentBoundIndicator || viewOnlyMode || disabledFields.boundByAgent"
+                                                maxlength="13" gaig-focus="doAgentBoundPremiumFocus"/>
+                                        </div>
+
+                                        <div class="form-cell">
+                                            <label for="binderNumber">Binder #</label>
+                                            <input id="binderNumber" type="text" class="input-large"
+                                                ng-model="submission.binderNumberCode"
+                                                ng-disabled="!submission.agentBoundIndicator || viewOnlyMode || disabledFields.boundByAgent"
+                                                maxlength="30"/>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+
+                          </fieldset>
+
+                          <!--  ***********************  -->
+      				<!--  	INSURED INFORMATION    -->
+      				<!--  ***********************  -->
+
+	      			<fieldset id="insured" gaig-fieldset ng-cloak>
+	      				<legend>Insured Information</legend>
+
+						<div class="row-fluid">
+							<div class="span8">
+								<div class="row-form">
+									<div class="form-cell">
+										<rpm-field object-name="primaryInsured" field="legalEntity" type="selectReq" session="submission" label="Legal Entity" label-class="required"
+												   id="legalEntityType" class="input-xlarge" data-placeholder="--Select--" list="legalEntityList" ng-model="ignored"
+												   ng-change="doLegalEntityCheck()" ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+
+									<div class="form-cell" ng-cloak="true">
+										<rpm-field object-name="primaryInsured" field="yearBusinessBegan" type="select" session="submission" label="Year Established"
+												   id="yearEstablished" class="input-medium" data-placeholder="YYYY" list="yearEstablishedList" ng-model="ignored"
+												   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+									<div class="form-cell" ng-if="!hiddenFields.taxStatus">
+										<rpm-field object-name="primaryInsured" field="taxStatus" type="select" session="submission" label="Tax Status"
+												   id="taxStatus" class="input-medium" data-placeholder="--Select--" list="taxStatusCodeList" ng-model="ignored"
+												   ng-disabled="viewOnlyMode || disabledFields.taxStatus"></rpm-field>
+									</div>
+								</div>
+								<div class="row-form">
+									<div class="form-cell" ng-show="getRpmObjects('submission', 'primaryInsured').getField('legalEntity').traits['r:value'] !== 'IND'">
+										<rpm-field object-name="primaryInsured" field="fullName" type="input" session="submission" label="Insured Name"
+												   id="insuredPartyFullName" maxlength="35" class="input-xlarge2" label-class="required"
+												   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+									<div class="form-cell">
+										<rpm-field object-name="primaryInsured" field="fein" type="input" session="submission" label="FEIN"
+												   id="agentPartyFein" maxlength="10" class="input-medium" gaig-masked-input="99-9999999"
+												   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+								</div>
+								<div class="row-form" ng-show="getRpmObjects('submission', 'primaryInsured').getField('legalEntity').traits['r:value'] !== 'IND'">
+									<div class="form-cell">
+										<rpm-field object-name="primaryInsured" field="fullName2" type="input" session="submission" label="Insured Name Line 2"
+												   id="insuredPartyFullName2" maxlength="35" class="input-xlarge2"
+												   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+								</div>
+								<div class="row-form" ng-show="getRpmObjects('submission', 'primaryInsured').getField('legalEntity').traits['r:value'] === 'IND'">
+									<div class="form-cell">
+										<rpm-field object-name="primaryInsured" field="firstName" type="input" session="submission" label="First Name"
+												   id="insuredPartyFirstName" maxlength="14" label-class="required"
+												   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+									<div class="form-cell">
+										<rpm-field object-name="primaryInsured" field="middleInitial" type="input" session="submission" label="MI"
+												   id="insuredPartyMiddleInitial" maxlength="1" class="input-supermini"
+												   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+									<div class="form-cell">
+										<rpm-field object-name="primaryInsured" field="lastName" type="input" session="submission" label="Last Name"
+												   id="insuredPartyLastName" maxlength="18" label-class="required"
+												   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+								</div>
+
+
+
+								</div>
+								<div class="span4" ng-if="!hiddenFields.taxonomy">
+									<fieldset class="fieldset-white">
+										<legend>Taxonomy</legend>
+										<div class="row-form">
+											<div class="form-cell">
+												<label for="taxonomyCode">Code</label>
+												<input id="taxonomyCode" type="text" class="input-mini"
+													   ng-model="taxonomySearch.code" ng-blur="doTaxonomySearch()"
+													   ng-disabled="viewOnlyMode || disabledFields.taxonomy" maxlength="3">
+											</div>
+											<div class="form-cell">
+												<label for="majorGroup">Major Group and Description</label>
+												<input id="majorGroup" type="text" class="input-medium" placeholder="{{taxonomyDescriptionPlaceholder}}"
+													   gaig-tooltip="{{taxonomySearch.description}}"
+													   ng-model="taxonomySearch.description" ng-disabled="viewOnlyMode || disabledFields.taxonomy">
+											</div>
+										</div>
+										<div class="row-form">
+											<a href="#taxonomyLookupModal" class="btn" id="taxonomyLookupOpen">
+												<span class="gaig-icon gaig-icon-search"></span>
+											</a>
+											<gaig-modal
+												id="taxonomyLookupModal"
+												modal-css="gaig-modal-medium"
+												title="Taxonomy Lookup"
+												ng-model="taxonomyModalView.isOpen"
+												on-open="onTaxonomyLookupOpen()"
+												show-save="false">
+
+												<div class="margin10">
+													<fieldset class="fieldset-white">
+														<legend>Taxonomy Filters</legend>
+														<div class="row-form">
+															<gaig-radio-buttons id="taxonomyFilters" options="taxonomyModalView.filterOptions"
+																				ng-model="taxonomyModal.filter" on-click="resetTaxonomyModalDefaults()">
+															</gaig-radio-buttons>
+														</div>
+														<div class="row-form">
+															<div ng-show="taxonomyModal.filter === TAXONOMY_CODE">
+																<label for="taxonomyCodeSearch">Code</label>
+																<input id="taxonomyCodeSearch" type="text" class="input-mini" ng-model="taxonomyModal.code">
+															</div>
+															<div ng-show="taxonomyModal.filter === TAXONOMY_GROUP">
+																<label for="taxonomyGroupList">Group</label>
+																<select id="taxonomyGroupList" class="input-large"
+																	gaig-select="{ 'allowClear': true }"
+																	ng-model="taxonomyModal.group"
+																	ng-options="::item as ::item for item in ::taxonomyGroupsList">
+																	<option value=""></option>
+																</select>
+															</div>
+															<div ng-show="taxonomyModal.filter === TAXONOMY_KEYWORD">
+																<label for="taxonomyKeywordSearch">Keyword</label>
+																<input id="taxonomyKeywordSearch" type="text" class="input-medium" ng-model="taxonomyModal.keyword">
+															</div>
+															<button type="submit" class="btn" id="searchTaxonomyButton" ng-click="doTaxonomySearchModal()">
+																<span class="gaig-icon gaig-icon-search"></span>Search
+															</button>
+														</div>
+													</fieldset>
+													<div class="row-form">
+														<div class="gaig-table-primary-header">
+															<h6 class="table-title">Search Results</h6>
+															<div class="pull-right recordsFoundTableDisplay" ng-show="taxonomyModal.results.length > 0 && taxonomyModal.results[0][1] !== '--No Match Found--'">
+																{{taxonomyModal.results.length}}&nbsp;Record(s)
+															</div>
+															<div class="pull-right recordsFoundTableDisplay" ng-show="!taxonomyModal.results || taxonomyModal.results.length == 0 || taxonomyModal.results[0][1] === '--No Match Found--'">
+																0&nbsp;Record(s)
+															</div>
+														</div>
+														<table class="gaig-table table-striped" id="taxonomySearchResults">
+															<thead>
+																<th>Code</th>
+																<th>Taxonomy Code, Major Group and Description</th>
+															</thead>
+															<tbody>
+																<tr ng-if="taxonomyModal.results && !taxonomyModal.results.length">
+																	<td colspan="2">
+																		--No Match Found--
+																	</td>
+																</tr>
+																<tr ng-if="taxonomyModal.results.length" ng-repeat="item in taxonomyModal.results">
+																	<td><a ng-click="doSelectTaxonomyCode(item[0])">{{item[0]}}</a></td>
+																	<td>{{item[1]}}</td>
+																</tr>
+															</tbody>
+														</table>
+													</div>
+												</div>
+											</gaig-modal>
+										</div>
+									</fieldset>
+								</div>
+                            </div>
+						<br/>
+						<div class="row-form">
+							<div class="row-fluid ">
+								<div class="form-cell">
+									<div class="row-fluid">
+										<div class="icon icon-chevron-right pull-left" ng-click="togglePrimaryInsuredDBA()"></div>
+										<label for="primaryDBATable" class="form-cell">DBA ({{getOrderedRpmCollection('submission', 'primaryDBA').length || 0}})</label>
+									</div>
+									<table id="primaryDBATable" class="gaig-table table-striped pull-right" ng-show="showPrimaryDBA">
+										<thead>
+											<tr>
+												<th>DBA</th>
+											</tr>
+										</thead>
+										<tbody>
+											<tr ng-repeat="dba in getOrderedRpmCollection('submission', 'primaryDBA') track by $index">
+												<td>
+													<rpm-field object-id="dba.getId()" field="fullName" type="input" session="submission"
+															   id="primaryDba{{$index}}" class="input-large pull-left" maxlength="90" listen="subObjectLoaded"
+															   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+													<div class="close" style="float:left;margin-left: 20px" ng-click="doDeleteRpmObject(dba, 'party.DBA')" ng-if="!viewOnlyMode">X</div>
+												</td>
+											</tr>
+										</tbody>
+									</table>
+									<button class="btn" ng-click="doAddRpmObject(getRpmObjects('submission', 'primaryInsured'), 'dba', 'party.DBA')" ng-show="showPrimaryDBA" ng-disabled="viewOnlyMode || disabledFields.partyInformation">Add Another DBA</button>
+								</div>
+							</div>
+							<br/>
+							<div class="row-fluid ">
+								<div class="form-cell">
+									<div class="row-fluid">
+										<div class="icon icon-chevron-right pull-left" ng-click="togglePrimaryUnemployment()"></div>
+										<label for="primaryUnemploymentTable" class="form-cell">Unemployment ID ({{getRpmCollection('submission', 'primaryUnemployment').length || 0}})</label>
+									</div>
+									<table id="primaryUnemploymentTable" class="gaig-table table-striped pull-right" ng-show="showPrimaryUnemployment">
+										<thead>
+										<tr>
+											<th>Unemployment</th>
+										</tr>
+										</thead>
+										<tbody>
+										<tr ng-repeat="unemp in getRpmCollection('submission', 'primaryUnemployment') track by $index">
+											<td>
+												<span>
+													<rpm-field object-id="unemp.getId()" field="unemploymentId" type="input" session="submission"
+															   id="unempId{{$index}}" class="input-medium" maxlength="35" listen="subObjectLoaded"
+															   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+													<rpm-field object-id="unemp.getId()" field="stateCode" type="select" session="submission"
+															   id="unempState{{$index}}" class="input-large" maxlength="35" list="unemploymentStateList" listen="subObjectLoaded"
+															   ng-disabled="viewOnlyMode || disabledFields.partyInformation || disabledFields[unemp.getId()]"></rpm-field>
+													<div class="close" style="float: left;" ng-click="doDeleteRpmObject(unemp,'Unemployment')" ng-if="!viewOnlyMode">X</div>
+												</span>
+											</td>
+										</tr>
+										</tbody>
+									</table>
+									<button class="btn" ng-click="doAddRpmObject(getRpmObjects('submission', 'primaryInsured'), 'unemployment', 'Unemployment')" ng-show="showPrimaryUnemployment" ng-disabled="viewOnlyMode || disabledFields.partyInformation">Add Another ID</button>
+								</div>
+							</div>
+							<br/>
+						</div>
+
+
+						<div class="row-fluid">
+						<fieldset class="fieldset-white">
+							<div class="span6">	<!--  PROPERTY ADDRESS SECTION -->
+								<div ng-repeat="object in getRpmCollection('submission', 'primaryPlaces') track by $index">
+									<div class="row-form">
+										<label class="cursorText bottomMargin10 pull-left">Mailing Address</label>
+										<div class="row-fluid">
+											<div class="pull-left leftMargin15">
+												<label class="checkbox" ng-show="insuredPartyAddressOverrideInd">
+													<rpm-field object-id="object.getId()" field="addressOverride" type="check" session="submission"
+															   id="insuredPartyAddressOverride" ng-show="insuredPartyAddressOverrideInd"
+															   ng-disabled="viewOnlyMode || submission.disabledFields.partyInformation"></rpm-field>
+												Override Address Validation</label>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<div class="span12">
+												<rpm-field object-id="object.getId()" field="AddressLine1" type="input" session="submission" label="Address Line 1"
+														   id="insuredPartyAddress1" maxlength="35" class="input-xlarge" label-class="required"
+														   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<div class="span12">
+												<rpm-field object-id="object.getId()" field="AddressLine2" type="input" session="submission" label="Address Line 2"
+														   id="insuredPartyAddress2" maxlength="35" class="input-xlarge"
+														   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<div class="span12">
+												<rpm-field object-id="object.getId()" field="CountryISOCode" type="selectReq" session="submission" label="Country"
+														   id="insuredPartyCountry" maxlength="35" class="input-large" label-class="required"
+														   list="insuredCountryList" ng-change="updateStateProvList(null,true)" ng-model="ignored"
+														   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<div class="smallform-cell">
+												<rpm-field object-id="object.getId()" field="PostalCode" type="input" session="submission" label="{{insuredPostalLabel}}"
+														   id="insuredPartyPostalCode" maxlength="10" class="input-mini2" label-class="required" listen="primaryZipChanged"
+														   ng-disabled="viewOnlyMode || disabledFields.partyInformation"
+														   ng-blur="findCityStateByPostalCode('insuredParty')"></rpm-field>
+											</div>
+										   </div>
+
+										   <div class="row-fluid">
+											<div class="smallform-cell" ng-show="true">
+												<rpm-field object-id="object.getId()" field="City" type="selectReq" session="submission" label="City"
+														   id="insuredPartyCity" class="input-medium" label-class="required" listen="primaryZipChanged" list="insuredPartyCityList"
+														   data-placeholder="--Select--"
+														   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+											<div class="smallform-cell">
+												<rpm-field object-id="object.getId()" field="StateOrProvinceAbbreviation" type="selectReq" session="submission" label="{{insuredStateLabel}}"
+														   id="insuredPartyStateProv" class="input-medium" label-class="required" listen="primaryZipChanged"
+														   list="stateProvinceList" ng-model="ignored" on-change="updatePolicyStateProv()" data-placeholder="--Select--"
+														   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+									</div>	<!--  end of row form -->
+								</div>
+
+							</div>	<!--  end of span 6 .. first half of the page -->
+
+							<div class="span6">	<!--  Alternate Mailing Address section -->
+								<div class="row-form">
+									<div ng-repeat="object in getRpmCollection('submission', 'alternatePlaces') track by $index">
+										<label class="checkbox marginBottom10 bold pull-left">
+											<input id="alternateMailingInput" type="checkbox" ng-model="hasAlternateMailing.value"
+												   ng-disabled="viewOnlyMode || disabledFields.partyInformation" ng-click="doAlternateMailingCheck()" listen="altMailSelected"/>Alternate Mailing Address
+										</label>
+										<div class="row-fluid" ng-hide="!hasAlternateMailing.value">
+											<div class="pull-left leftMargin15">
+												<label class="checkbox" ng-show="alternatePartyAddressOverrideInd">
+												<rpm-field object-id="object.getId()" field="addressOverride" type="check" session="submission"
+														   id="alternatePartyAddressOverride" ng-show="alternatePartyAddressOverrideInd"
+														   ng-disabled="viewOnlyMode || submission.disabledFields.partyInformation"></rpm-field>
+												Override Address Validation</label>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<div class="span12">
+												<rpm-field object-name="alternateMailing" field="fullName" type="input" session="submission" label="Name"
+														   id="altMailPartyFullName" maxlength="35" class="input-xlarge" listen="altMailSelected"
+														   ng-disabled="!hasAlternateMailing.value || viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<div class="span12">
+												<rpm-field object-name="alternateMailing" field="fullName2" type="input" session="submission" label="DBA"
+														   id="altMailPartyDBAName" maxlength="35" class="input-xlarge" listen="altMailSelected"
+														   ng-disabled="!hasAlternateMailing.value || viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<div class="span12">
+												<rpm-field object-id="object.getId()" field="AddressLine1" type="input" session="submission" label="Address Line 1"
+														   id="altMailPartyAddress1" maxlength="35" class="input-xlarge" listen="altMailSelected"
+														   ng-disabled="!hasAlternateMailing.value || viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<div class="span12">
+												<rpm-field object-id="object.getId()" field="AddressLine2" type="input" session="submission" label="Address Line 2"
+														   id="altMailPartyAddress2" maxlength="35" class="input-xlarge" listen="altMailSelected"
+														   ng-disabled="!hasAlternateMailing.value || viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+
+										<div class="row-fluid">
+											<div class="span12">
+												<rpm-field object-id="object.getId()" field="CountryISOCode" type="selectReq" session="submission" label="Country"
+														   id="altMailPartyCountry" maxlength="35" class="input-xlarge" listen="altMailSelected" list="altMailCountryList"
+														   on-change="updateAltMailingProvinceList(null,true)"
+														   ng-disabled="!hasAlternateMailing.value || viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<rpm-field object-id="object.getId()" field="PostalCode" type="input" session="submission" label="{{altMailInsuredPostalLabel}}"
+													   id="altMailPartyPostalCode" maxlength="10" class="input-mini2" listen="altMailSelected,altMailZipChanged"
+													   ng-disabled="!hasAlternateMailing.value || viewOnlyMode || disabledFields.partyInformation"
+													   ng-blur="findCityStateByPostalCode('altMailParty')"></rpm-field>
+										   </div>
+										   <div class="row-fluid">
+											<div class="smallform-cell"> <!--TODO - NEED TO MAKE THIS WORK FOR OTHER COUNTRIES-->
+												<rpm-field object-id="object.getId()" field="City" type="selectReq" session="submission" label="City"
+														   id="altMailPartyCity" class="input-medium" listen="altMailSelected" list="altMailPartyCityList"
+														   ng-disabled="!hasAlternateMailing.value || viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											   </div>
+											<div class="smallform-cell">
+												<rpm-field object-id="object.getId()" field="StateOrProvinceAbbreviation" type="selectReq" session="submission" label="{{altMailInsuredStateLabel}}"
+														   id="altMailPartyStateProv" class="input-medium" listen="altMailSelected,altMailZipChanged" list="altMailingProvinceList"
+														   ng-disabled="!hasAlternateMailing.value || viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+											</div>
+										</div>
+									</div>
+								</div>	<!--  end of row form -->
+
+							</div>		<!--  end of span 6 .. second half of the page -->
+						</fieldset>
+						</div>
+
+							<div class="row-form">
+	              				<div class="row-fluid">
+	                				<div class="form-cell">
+										<rpm-field object-name="primaryContact" field="fullName" type="input" session="submission" label="Contact Name"
+												   id="primaryContact" class="input-large2" maxlength="80"
+       												   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+								</div>
+							</div>
+							<div class="row-form">
+	              				<div class="row-fluid">
+									<div class="form-cell">
+										<rpm-field object-name="primaryInsured" field="phoneNumber" type="input" session="submission" label="Contact #"
+												   id="insuredPartyPhone" maxlength="14" class="input-small2" gaig-masked-input="(999) 999-9999"
+												   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+									</div>
+								</div>
+							</div>
+
+                        <div class="row-form">
+                       		<div class="row-fluid">
+								<div class="form-cell negativeMargin5">
+									<rpm-field object-name="primaryInsured" field="website" type="input" session="submission" label="Website Address"
+											   id="insuredPartyWebsite" maxlength="250" class="input-xlarge3 marginTop7"
+											   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+	                 						<!--[if !IE]><!-->
+											<button type="submit" class="btn btn-medium btn-small-notIE"
+												ng-click="doOpenWebSiteAddressWindow($event)"
+												ng-disabled="!getRpmObjects('submission', 'primaryInsured').getField('website').traits['r:value'] || disabledFields.partyInformation">
+												<i class="icon-share"></i>
+											</button>
+											<!--<![endif]-->
+											<!--[if IE]>
+											<button type="submit" class="btn btn-medium btn-small-IE"
+												ng-click="doOpenWebSiteAddressWindow($event)"
+	                 							ng-disabled="!getRpmObjects('submission', 'primaryInsured').getField('website').traits['r:value'] || disabledFields.partyInformation">
+	                 							<i class="icon-share"></i>
+	                 						</button>
+	                 						<![endif]-->
+
+								</div>
+							</div>
+						</div>
+
+						<div class="row-form">
+              				<div class="row-fluid">
+								<div class="form-cell">
+									<rpm-field object-name="primaryInsured" field="email" type="input" session="submission" label="Email Address"
+											   id="insuredPartyEmail" maxlength="60" class="input-xlarge"
+											   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+								</div>
+							</div>
+						</div>
+
+						<div class="row-form">
+              				<div class="row-fluid">
+								<div class="span12">
+                  					<label for="descriptionOfOperations">Description of Operations</label>
+									<textarea rows="8" id="descriptionOfOperations" class="span12" gaig-maxlength="4000"
+										ng-disabled="viewOnlyMode || disabledFields.operations" ng-model="submission.descriptionOfOperations" maxlength="4000"></textarea>
+								</div>
+							</div>
+             			</div>
+
+						<div class="row-form">
+							<div class="row-fluid">
+								<div class="span12">
+									<rpm-field object-name="primaryInsured" field="longerNameText" type="textarea" session="submission" label="Longer Named Insured"
+											   id="longerNamedInsuredName" class="span12" max-length="4000" rows="8" ng-model="ignored"
+											   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+                				</div>
+               				</div>
+             			</div>
+
+						<div id="moreNamedDiv" class="row-form">
+							<div class="row-fluid">
+								<div class="span12">
+									<div class="row-fluid">
+										<label for="moreNamedInsuredTable" class="form-cell">More Named Insured</label>
+										<div style="text-align: right; text-decoration: underline" ng-show="removedList.length > 0"><span class="icon icon-plus-sign"></span><a href="#" ng-click="scrollRemovedInsured($event)">Removed ({{removedList.length}} {{numberOfRecords(removedList)}})</a></div>
+									</div>
+									<table class="table gaig-table table-striped" id="moreNamedInsuredTable">
+										<thead>
+										<tr>
+											<th class="actionColumn">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+											<th ng-class="{true:'required', false: 'legalEntityColumn'}[moreNamedObjects.length > 0]" data-placeholder="--Select--">Legal Entity</th>
+											<th ng-class="{true:'required', false: 'nameColumn'}[moreNamedObjects.length > 0]">Name</th>
+											<th>Fein</th>
+										</tr>
+										</thead>
+										<tbody>
+											<tr ng-repeat-start="object in getOrderedRpmCollection('submission', 'moreNamedInsured') track by object.getId()"
+												ng-if="object.fields.actionRef.value !== 'D' || isCancelOrRetro(submission)">
+												<td>
+													<div class="btn-group">
+														<gaig-context-menu ng-hide="submission.transactionTypeRefCode === 'REIN'">
+															<button class="btn dropdown-toggle" ng-disabled="viewOnlyMode || doCheckInsuredPartyNameDisabled() || isCancelOrRetro(submission)">
+																<span class="caret"></span>
+															</button>
+															<ul>
+																<li><a href="#" id="moreNamedCopy" ng-click="doCopyMoreNamedInsured(object,$event)">Copy</a></li>
+																<li><a href="#" id="moreNamedDelete" ng-click="doDeleteMoreNamedInsured(object,$event)">Delete</a></li>
+															</ul>
+														</gaig-context-menu>
+													</div>
+												</td>
+												<td>
+													<rpm-field object-id="object.getId()" field="legalEntity" type="select" session="submission"
+															   id="moreNamedLegalEntity{{$index + 1}}" class="input-large" data-placeholder="--Select--"
+															   list="legalEntityList" ng-model="ignored" listen="moreNamedLoaded"
+															   ng-disabled="viewOnlyMode || disabledFields.partyInformation" ng-change="doChangeMoreNamedLegalType(object)"></rpm-field>
+												</td>
+												<td class="nameColumn" ng-show="object.fields['legalEntity'].traits['r:value'] !== 'IND'">
+													<rpm-field object-id="object.getId()" field="fullName" type="input" session="submission"
+															   id="moreNamedInsuredFullName" class="input-xlarge" maxlength="90" listen="moreNamedLoaded"
+															   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+												</td>
+												<td class="nameColumn" ng-show="object.fields['legalEntity'].traits['r:value'] === 'IND'">
+													<rpm-field object-id="object.getId()" field="firstName" type="input" session="submission"
+															   id="moreNamedInsuredFullName" class="input-mini" maxlength="14" listen="moreNamedLoaded"
+															   ng-disabled="viewOnlyMode || disabledFields.partyInformation" placeholder="first name"></rpm-field>
+													<rpm-field object-id="object.getId()" field="middleInitial" type="input" session="submission"
+															   id="moreNamedInsuredFullName" class="input-nano" maxlength="1" listen="moreNamedLoaded"
+															   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+													<rpm-field object-id="object.getId()" field="lastName" type="input" session="submission"
+															   id="moreNamedInsuredFullName" class="input-mini2point5" maxlength="18" listen="moreNamedLoaded"
+															   ng-disabled="viewOnlyMode || disabledFields.partyInformation" placeholder="last name"></rpm-field>
+												</td>
+												<td class="dbaColumn">
+													<rpm-field object-id="object.getId()" field="fein" type="input" session="submission" gaig-masked-input="99-9999999"
+															   id="moreNamedInsuredFein" class="input-small" maxlength="35" listen="moreNamedLoaded"
+																   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+												</td>
+											</tr>
+										    <tr ng-repeat-end ng-if="object.fields.actionRef.value !== 'D' || isCancelOrRetro(submission)" ng-init="mniIndex = $index">
+											<td></td>
+											<td colspan="10">
+												<table class="table gaig-table">
+													<tbody>
+													<tr>
+														<td class="gaig-icon gaig-icon-chevron-right chevronColumn" ng-click="toggleMoreNamedInsuredTwisty($index, 'dba', object, 'party.DBA')"></td>
+														<td class="mniColumn"><b>DBA ({{object.getValue('dba').length}})</b>
+															<br/>
+															<ul class="ul-header" ng-show="mniTwisty[$index]['dba']">
+																<li class="li-header border-all">DBA
+																<li class="li-row" ng-repeat="dba in getOrderedSubGroup(object.getValue('dba')) track by dba.getId()">
+																	<div>
+																		<rpm-field object-id="dba.getId()" field="fullName" type="input" session="submission"
+																				   id="mniDba-{{mniIndex}}-{{$index}}" class="input-large pull-left" maxlength="90" listen="moreNamedLoaded"
+																				   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+																		<div class="close" style="float:left;margin-left: 20px" ng-click="doDeleteRpmObject(dba, 'party.DBA')" ng-if="!viewOnlyMode">X</div>
+																		<div style="clear:both"></div>
+																	</div>
+																</li>
+																<div style="clear:both"></div>
+																<button class="btn" ng-click="doAddRpmObject(object, 'dba', 'party.DBA')" ng-disabled="viewOnlyMode || disabledFields.partyInformation">Add Another DBA</button>
+															</ul>
+														</td>
+													</tr>
+													<tr>
+														<td class="gaig-icon gaig-icon-chevron-right chevronColumn"  ng-click="toggleMoreNamedInsuredTwisty($index, 'unemployment', object, 'Unemployment')"></td>
+														<td class="mniColumn"><b>Unemployment ID ({{object.getValue('unemployment').length}})</b>
+															<br/>
+															<ul class="ul-header" ng-show="mniTwisty[$index]['unemployment']">
+																<li class="li-header-half border-left">Unemployment ID
+																<li class="li-header-half border-right">State
+																<li class="li-row" ng-repeat="unemp in object.getValue('unemployment') track by unemp.getId()">
+																	<span>
+																		<rpm-field object-id="unemp.getId()" field="unemploymentId" type="input" session="submission"
+																				   id="mniUnempId-{{mniIndex}}-{{$index}}" class="input-medium" maxlength="35" listen="moreNamedLoaded"
+																				   ng-disabled="viewOnlyMode || disabledFields.partyInformation"></rpm-field>
+																		<rpm-field object-id="unemp.getId()" field="stateCode" type="select" session="submission"
+																				   id="mniUnempState-{{mniIndex}}-{{$index}}" class="input-large" maxlength="35" list="unemploymentStateList" listen="moreNamedLoaded"
+																				   ng-disabled="viewOnlyMode || disabledFields.partyInformation || disabledFields[unemp.getId()]"></rpm-field>
+																		<div class="close" style="float: left;" ng-click="doDeleteRpmObject(unemp, 'Unemployment')" ng-if="!viewOnlyMode">X</div>
+																	</span>
+																</li>
+																<button class="btn" ng-click="doAddRpmObject(object, 'unemployment', 'Unemployment', object)" ng-disabled="viewOnlyMode || disabledFields.partyInformation">Add Another ID</button>
+															</ul>
+														</td>
+													</tr>
+													<tr>
+														<td class="gaig-icon gaig-icon-chevron-right chevronColumn"  ng-click="toggleMoreNamedInsuredTwisty($index, 'places', object, 'place.USAddress')"></td>
+														<td class="mniColumn"><b>Mailing Address</b>
+															<br/>
+															<div ng-show="mniTwisty[$index]['places']">
+																<div ng-repeat="place in object.getValue('places') track by $index">
+																	<div class="row-fluid">
+																		<div class="span12">
+																			<rpm-field object-id="place.getId()" field="AddressLine1" type="input" session="submission" label="Address Line 1"
+																					   id="moreNamedAddress1-{{mniIndex}}-{{$index}}" class="input-large" maxlength="35" listen="moreNamedLoaded"
+																					   ng-disabled="viewOnlyMode  || disabledFields.partyInformation"></rpm-field>
+																			<div class="close" style="margin-right:20px" ng-click="toggleMoreNamedInsuredTwisty($index, 'places', object, 'place.USAddress');doDeleteRpmObject(place, 'place.USAddress');" ng-if="!viewOnlyMode">X</div>
+
+																		</div>
+																	</div>
+																	<div class="row-fluid">
+																		<div class="span12">
+																			<rpm-field object-id="place.getId()" field="AddressLine2" type="input" session="submission" label="Address Line 2"
+																					   id="moreNamedAddress2-{{mniIndex}}-{{$index}}" class="input-large" maxlength="35" listen="moreNamedLoaded"
+																					   ng-disabled="viewOnlyMode  || disabledFields.partyInformation"></rpm-field>
+																		</div>
+																	</div>
+																	<div class="row-fluid">
+																		<div class="span12">
+																			<rpm-field object-id="place.getId()" field="CountryISOCode" type="select" session="submission" label="Country"
+																					   id="moreNamedCountry-{{mniIndex}}-{{$index}}" class="input-large" data-placeholder="--Select--" list="prospectCountryList" ng-model="ignored"
+																					   ng-disabled="viewOnlyMode  || disabledFields.partyInformation" ng-change="updateMoreNamedStateProvinceList(null,true,object, place.getId(), mniIndex)"
+																					   listen="moreNamedLoaded" ng-init="updateMoreNamedStateProvinceList(null,false,object, place.getId(), mniIndex)"></rpm-field>
+																		</div>
+																	</div>
+																	<div class="row-fluid">
+																		<div class="form-cell">
+																			<rpm-field object-id="place.getId()" field="PostalCode" type="input" session="submission" label="{{getMoreNamedInsuredPostalLabel(place.getId()) || 'ZIP CODE'}}"
+																					   id="moreNamedPostalCode-{{mniIndex}}-{{$index}}" class="input-mini2" maxlength="11" listen="moreNamedLoaded,moreNamedZipChanged-{{mniIndex}}"
+																				   ng-disabled="viewOnlyMode  || disabledFields.partyInformation" ng-blur="findCityStateByPostalCode('moreNamedInsuredParty',undefined,object, place.getId())"></rpm-field>
+																		</div>
+																		<div class="form-cell">
+																		<rpm-field object-id="place.getId()" field="City" type="select" session="submission" label="City" list="getMoreNamedListOfCityList(place.getId())"
+																				   id="moreNamedCity-{{mniIndex}}-{{$index}}" class="input-medium" ng-disabled="viewOnlyMode  || disabledFields.partyInformation" data-placeholder="   " ng-model="ignored"
+																					   listen="moreNamedLoaded"></rpm-field>
+
+																		</div>
+																		<div class="form-cell">
+																			<rpm-field object-id="place.getId()" field="StateOrProvinceAbbreviation" type="select" session="submission" label="{{getMoreNamedInsuredStateLabel(place.getId()) || 'State'}}" list="getMoreNamedStateProvinceList(place.getId())"
+																					   id="moreNamedStateProv-{{mniIndex}}-{{$index}}" class="input-medium" ng-disabled="viewOnlyMode  || disabledFields.partyInformation" data-placeholder="   " ng-model="ignored"
+																					   listen="moreNamedLoaded,moreNamedZipChanged-{{mniIndex}}"></rpm-field>
+																	</div>
+																</div>
+															</div>
+															</div>
+														</td>
+													</tr>
+													</tbody>
+												</table>
+											</td>
+										</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+						<soft-delete></soft-delete>
+						<div>
+							<button type="submit" class="btn" id="moreNamedInsuredAdd" ng-click="doAddMoreNamedInsured($event);" ng-disabled="viewOnlyMode || doCheckInsuredPartyNameDisabled() || disabledFields.addMoreNamedInsured">Add</button>
+						</div>
+                    </fieldset>
+
+	      			<!--  **********************  -->
+      				<!--   PRODUCER INFORMATION   -->
+      				<!--  **********************  -->
+		      		<fieldset gaig-fieldset ng-cloak id="producerInformationSection">
+	      				<legend>Producer Information</legend>
+						<div class="row-form">
+							<div ng-if="!isProducerSecurityEnabledForUser">
+								<label>Producer type</label>
+								<div class="row-fluid">
+									<div class="span3">
+										<gaig-radio-buttons id="producerRadioOptions" options="producerTypeList"
+															ng-model="foundProspectProducer.value"
+															on-click="doConfirmProducerChange()"
+															ng-disabled="viewOnlyMode || doCheckProducerInformationDisabled() || disabledFields.producerCode" >
+										</gaig-radio-buttons>
+									</div>
+								</div>
+							</div>
+
+							<div class="row-fluid"  ng-show="(foundProspectProducer.value == 'YES' && producerConfiguration.producerSource == 'PRM')">
+				      			<!--  **********************  -->
+			      				<!--  	PROSPECT PRODUCER     -->
+			      				<!--  **********************  -->
+		                		<div class="row-fluid">
+		                  			<div class="span12">
+										<rpm-field object-name="prospectProducer" field="fullName" type="input" session="submission" label="Agency Name"
+												   id="prospectProducer" class="input-xlarge" maxlength="60"
+												   ng-disabled="viewOnlyMode"></rpm-field>
+				                  	</div>
+				                </div>
+								<div ng-repeat="object in getRpmCollection('submission', 'prospectPlaces') track by $index">
+									<div class="row-fluid">
+										<div class="span12">
+											<rpm-field object-id="object.getId()" field="AddressLine1" type="input" session="submission" label="Address Line 1"
+													   id="prospectProducerAddress1" class="input-xxlarge" maxlength="35"
+													   ng-disabled="viewOnlyMode"></rpm-field>
+										</div>
+									</div>
+									<div class="row-fluid">
+										<div class="span12">
+											<rpm-field object-id="object.getId()" field="AddressLine2" type="input" session="submission" label="Address Line 2"
+													   id="prospectProducerAddress2" class="input-xxlarge" maxlength="35"
+													   ng-disabled="viewOnlyMode"></rpm-field>
+										</div>
+									</div>
+									<div class="row-fluid">
+										<div class="span12">
+											<rpm-field object-id="object.getId()" field="CountryISOCode" type="select" session="submission" label="Country"
+													   id="prospectProducerCountry" class="input-large" data-placeholder="--Select--" list="prospectCountryList" ng-model="ignored"
+													   ng-disabled="viewOnlyMode" ng-change="updateProspectProducerStateProvinceList(null,true)"></rpm-field>
+										</div>
+									</div>
+									<div class="row-fluid">
+										<div class="form-cell">
+											<rpm-field object-id="object.getId()" field="PostalCode" type="input" session="submission" label="{{prospectProducerPostalLabel}}"
+													   id="prospectProducerPostalCode" class="input-mini2" maxlength="11" listen="prospectProducerZipChanged"
+													   ng-disabled="viewOnlyMode" ng-blur="findCityStateByPostalCode('prospectProducerParty')"></rpm-field>
+										</div>
+										<div class="form-cell">
+											<rpm-field object-id="object.getId()" field="City" type="select" session="submission" label="City" list="prospectProducerCityList"
+													   id="prospectProducerCity" class="input-medium" ng-disabled="viewOnlyMode" listen="prospectProducerZipChanged" data-placeholder="   " ng-model="ignored"></rpm-field>
+
+										</div>
+										<div class="form-cell">
+											<rpm-field object-id="object.getId()" field="StateOrProvinceAbbreviation" type="select" session="submission" label="{{prospectProducerStateLabel}}" list="prospectProducerStateProvinceList"
+													   id="prospectProducerStateProv" class="input-medium" ng-disabled="viewOnlyMode" listen="prospectProducerZipChanged"
+													   data-placeholder="   " ng-model="ignored"></rpm-field>
+										</div>
+									</div>
+								</div>
+			      				<div class="row-fluid">
+			      					<div class="form-cell">
+										<rpm-field object-name="prospectContact" field="fullName" type="input" session="submission" label="Contact Name"
+												   id="prospectContact" class="input-large2" maxlength="80"
+												   ng-disabled="viewOnlyMode"></rpm-field>
+			      					</div>
+			      			  		<div class="form-cell">
+										<rpm-field object-name="prospectProducer" field="email" type="input" session="submission" label="Email Address"
+												   id="prospectProducerEmail" class="input-xlarge" maxlength="60"
+												   ng-disabled="viewOnlyMode"></rpm-field>
+			      					</div>
+									<div class="form-cell">
+										<rpm-field object-name="Submission" field="incumbentAgent" type="radio" session="submission" options="incumbentAgentList"
+												   ng-disabled="viewOnlyMode || disabledFields.incumbentAgent" id="incumbentAgentProspect"
+												   label="Incumbent Agent"></rpm-field>
+									</div>
+			      				</div>
+
+			      				<div class="row-fluid">
+			      					<fieldset class="selectFieldset" class="fieldset-white">
+			      					<div class="smallform-cell">
+                                        <rpm-field object-name="profitCenter" size="5" class="select-profitCenter" label-class="required" field="fullName" type="selectMulti" session="submission" label="Profit Center"
+                                                   id="profitCenterFullName" data-placeholder="--Select--" list="profitCenterList" ng-model="ignored"
+                                                   ng-change="updateTerritoryList(true)" ng-disabled="viewOnlyMode">
+                                        </rpm-field>
+			      					</div>
+			      					<div class="smallform-cell">
+                                        <rpm-field object-name="territory" size="5" class="select-territory" field="fullName" type="selectMulti" session="submission" label="Territory"
+                                                   id="territoryFullName" list="territoryList" ng-model="ignored"
+                                                   ng-change="updateFieldList(true)" ng-disabled="viewOnlyMode">
+                                        </rpm-field>
+			      					</div>
+									<div class="smallform-cell">
+                                        <rpm-field object-name="field" size="5" class="select-field" field="fullName" type="selectMulti" session="submission" label="Field"
+                                                   id="fieldFullName" list="fieldList" ng-model="ignored"
+                                                   ng-disabled="viewOnlyMode">
+                                        </rpm-field>
+			      					</div>
+			      					</fieldset>
+								</div>
+							</div>
+
+			      			<div class="row-fluid" ng-show="(foundProspectProducer.value == 'NO') || (foundProspectProducer.value == 'YES' && producerConfiguration.producerSource == 'CRM')">
+		      					<div class="span12">
+					      			<!--  **********************  -->
+				      				<!--  	REGULAR PRODUCER     -->
+				      				<!--  **********************  -->
+									<div>
+										<div class="span12">
+											<div class="row-fluid">
+												<div class="span7">
+													<fieldset class="fieldset-white span460">
+														<div class="row-fluid">
+															<div class="form-cell ">
+																<label for="businessUnitSubmissionInfo">Business Unit</label>
+																<select id="businessUnitSubmissionInfo" class="input-medium"
+																		gaig-select="{'allowClear':false}"
+																		ng-model="producerLookUpBuSubInfo.value" ng-disabled="viewOnlyMode || disabledFields.businessUnitSubmissionInfo">
+																	<option value=""></option>
+																	<option ng-repeat="item in businessUnitListForProducerLookUp" value="{{item.value}}">{{item.label}}</option>
+																</select>
+															</div>
+														</div>
+													   	<div class="row-fluid">
+															<div class="form-cell">
+				                        			    		<label for="producerCode" class="required">Producer Code</label>
+																<input id="producerCode" type="text" class="input-small"
+																	ng-model="submission.producerCode"
+																	ng-model-onblur ng-change="findProducerInformation(true);producerChangedFlag(true)" ng-disabled="viewOnlyMode || disabledFields.producerCode" maxlength="10" />
+				                        			    	</div>
+															<div class="form-cell-nopadding" ng-show="foundProspectProducer.value == 'NO'">
+				                        			    		<label for="agentPartyFullName" class="required">Agency Name</label>
+				                        			    		<input id="agentPartyFullName" type="text"  class="input-agencyName"
+				                        			    			ng-model="submission.agencyName" ng-disabled="viewOnlyMode || disabledFields.producerCode" maxlength="60"/>
+															</div>
+															<div class="form-cell-nopadding" ng-show="foundProspectProducer.value == 'YES'">
+                                                                <rpm-field object-name="prospectProducer" field="fullName" type="input" label-class="required" label="Agency Name" session="submission"
+                                                                           id="prospFullName" class="input-agencyName" maxlength="60"
+                                                                           ng-disabled="viewOnlyMode || disabledFields.producerCode"></rpm-field>
+															</div>
+														</div>
+
+														<div class="row-fluid">
+															<ra-modal modal-class="btn" modal-size="xxlargeProducer producerLookupModal" ng-disabled="doCheckProducerInformationDisabled()"
+																modal-id="producerLookupModal"
+										      					open-btn-label="  "
+										      					icon-class="icon-search"
+                                                                display-title="Producer Lookup" ng-cloak
+																toggle="isAgencyLookupOpen"
+																func="toggleAgencyLookupOpen()"
+                                                                cancel-function="toggleAgencyLookupOpen('isCancel')"
+                                                                buttons="prodLookupModalBtns">
+
+																<div class="container-fixed">
+
+																	<messages-modal id="producerLookupMessages_validation" validation="validationMessages"></messages-modal>
+																	<messages id="producerLookupMessages" success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+
+																	<div class="spanModalLhnProducerSubmission modalLHNProducer">
+																		<div class="row-fluid">
+															        		<label>Producer Filters</label>
+															        		<div style="text-align:center">
+													                			<button type="submit" class="btn" id="viewProducersButton" ng-click="updateProducerList($event)">
+													                				<span class="gaig-icon gaig-icon-search"></span>
+													                				Search
+													                			</button>
+													                		</div>
+													                	</div>
+													                	<div class="row-fluid">
+													                		<hr>
+																		</div>
+																		<div class="row-fluid" ng-if="producerConfiguration.producerSource == 'CRM' && producerConfiguration.subAgency == 'true'">
+																			<label>Search For</label>
+																		</div>
+																		<div class="row-fluid" ng-if="producerConfiguration.producerSource == 'CRM' && producerConfiguration.subAgency == 'true'">
+																			<gaig-radio-buttons id="subAgencyRadioOptions" options="searchForProdType"
+																				ng-model="foundSearchForProdType.value"
+																				on-change="doClearProducerResults()">
+																			</gaig-radio-buttons>
+																		</div><br>
+																		<div class="row-fluid" ng-show="producerConfiguration.producerSource == 'CRM' && foundSearchForProdType.value == 'producer'">
+																			<label>Type</label>
+																		</div>
+																		<div class="row-fluid" ng-show="producerConfiguration.producerSource == 'CRM' && foundSearchForProdType.value == 'producer'">
+														                	<gaig-radio-buttons id="producerRadioOptions" options="producerTypeList"
+														                		ng-model="foundCRMProspectProducer.value"
+														                		on-change="doClearProducerResults()">
+														                	</gaig-radio-buttons>
+														              	</div>
+														              	<br />
+																		<div class="row-fluid">
+																			<div class="form-cell ">
+																				<label for="businessUnitSubmissionInfoProducerLookup">Business Unit</label>
+																				<select id="businessUnitSubmissionInfoProducerLookup" class="input-medium"
+																						gaig-select="{'allowClear':false}"
+																						ng-model="producerLookUpBuSubInfoModal.value" >
+																					<option value=""></option>
+																					<option ng-repeat="item in businessUnitListForProducerLookUp" value="{{item.value}}">{{item.label}}</option>
+																				</select>
+																			</div>
+																		</div>
+																		<div class="row-fluid">
+															            	<label for="agencyNameLookupInput">Agency Name/DBA</label>
+									      									<textarea rows="2" id="agencyNameLookupInput" style="width:140px;"
+																				ng-model="producerLookup.fullName" maxlength="30" ></textarea>
+																        </div>
+																		<div class="row-fluid">
+											      							<label for="producerCodeLookupInput">Producer Code</label>
+											      							<input id="producerCodeLookupInput" type="text" class="input-mini2"
+											      								ng-model="producerLookup.producerCode" maxlength="10"/>
+																        </div>
+																		<div class="row-fluid">
+											      							<label for="countryLookupInput">Country</label>
+																			<select id="countryLookupInput" class="input-medium"
+                                                                                gaig-select="{ 'allowClear': true }"
+										                        				ng-model="producerLookup.countryCode"
+										                        				on-change="updateAgencyLookupStateProvList()"
+																				ng-options="::item.itemCode as ::item.itemDescriptionShort for item in ::countryList track by item.itemCode">
+                                                                                <option value=""></option>
+												      						</select>
+                                                                        </div>
+																		<div class="row-fluid">
+											      							<label for="stateLookupInput" id="stateLookupInputLabel">State</label>
+																			<select id="stateLookupInput" class="input-medium"
+                                                                                gaig-select="{ 'allowClear': true }"
+												      							ng-model="producerLookup.stateProvinceCode"
+												      							ng-disabled="stateLookupDisabled"
+																				ng-options="::item.itemCode as ::item.itemDescriptionShort for item in ::agencyLookupStateProvinceList track by item.itemCode">
+                                                                                <option value=""></option>
+												      						</select>
+                                                                        </div>
+																	</div>
+																	<div class="spanModalContentProducerSubmission bottomPad90">
+																		<div class="gaig-table-topper producerLookupTableTopper">
+														 					<div class="pull-left">
+																				 <h3 class="table-title">Search Results</h3>
+																			 </div>
+																		</div>
+																		<table class="table gaig-table"
+																			producer-lookup-table
+																			id="agencyLookupTableSub"
+																			data="producerList"
+																			headings="producerLookupColumnHeadings"
+																			use-twisty="YES"
+																			column-defs="producerLookupColumnHeadingsDef">
+																		</table>
+																		<fieldset class="fieldset-white selectedProdLookupInfo"
+																				ng-if="producerConfiguration.producerSource == 'CRM'">
+																			<div class="row-form">
+																				<div class="row-fluid">
+																					<div class="row-form">
+																						<div class="span6">
+																							<table ng-class="{true: 'table gaig-table nonselectedProducers', false: 'table gaig-table selectedProducers'}[foundSearchForProdType.value == 'subAgency']" id="selectedProducer">
+																								<tr>
+																									<th>Selected Producer</th>
+																								</tr>
+																								<tr>
+																									<td>
+																										{{producerLookupModal.selectedProducer}}
+																										<button type="button" class="redCloseProducer" ng-click="doRemoveProducer('producer')" ng-show="(producerLookupModal.selectedProducer && producerLookupModal.selectedProducer != '(None)')" >X&nbsp;&nbsp;</button>
+																									</td>
+																								</tr>
+																							</table>
+																						</div>
+																						<div class="span6">
+																							<table ng-class="{true: 'table gaig-table selectedProducers', false: 'table gaig-table nonselectedProducers'}[foundSearchForProdType.value == 'subAgency']" id="selectedSubAgent">
+																								<tr>
+																									<th>Selected Sub Agent</th>
+																								</tr>
+																								<tr>
+																									<td>
+																										{{producerLookupModal.selectedSubAgent}}
+																										<button type="button" class="redCloseProducer" ng-click="doRemoveProducer('subAgent')" ng-show="(producerLookupModal.selectedSubAgent && producerLookupModal.selectedSubAgent != '(None)')">X&nbsp;&nbsp;</button>
+																									</td>
+																								</tr>
+																							</table>
+																						</div>
+																					</div>
+																				</div>
+																			</div>
+																		</fieldset>
+																	</div>
+																</div> <!--  end of container-fixed -->
+															</ra-modal>
+														</div>
+													</fieldset>
+												</div>
+												<div class="span5 topPadding11">
+													<div class="form-cell">
+														<div ng-if="producerConfiguration.teamAssignment=='false' || producerConfiguration.producerSource == 'PRM'">
+															<rpm-field object-name="producerContact" field="fullName" type="input" session="submission" label="Contact Name"
+																	   id="producerContact" class="input-large2" maxlength="80"
+																	   ng-disabled="viewOnlyMode || disabledFields.agencyContactName"></rpm-field>
+														</div>
+
+														<div ng-show="producerConfiguration.teamAssignment=='true' && foundProspectProducer.value == 'NO' && producerConfiguration.producerSource == 'CRM'">
+															<rpm-field object-name="producerContact" field="fullName" type="select" session="submission" label="Contact Name"
+																	   id="producerContact" class="input-large2" data-placeholder="--Select--" list="producerContactList" ng-model="ignored"
+																	   ng-disabled="viewOnlyMode || disabledFields.producerContactName"></rpm-field>
+														</div>
+														<div ng-show="producerConfiguration.teamAssignment=='true' && foundProspectProducer.value == 'YES' && producerConfiguration.producerSource == 'CRM'">
+															<rpm-field object-name="prospectContact" field="fullName" type="select" session="submission" label="Contact Name"
+																	   id="prospectProducerContact" class="input-large2" data-placeholder="--Select--" list="producerContactList" ng-model="ignored"
+																	   ng-disabled="viewOnlyMode || disabledFields.producerContactName"></rpm-field>
+														</div>
+													</div>
+													<div class="form-cell">
+														<rpm-field object-name="Submission" field="incumbentAgent" type="radio" session="submission" options="incumbentAgentList"
+																   ng-disabled="viewOnlyMode || disabledFields.incumbentAgent" id="incumbentAgentAppointed"
+																   label="Incumbent Agent"></rpm-field>
+													</div>
+												</div>
+											</div>
+											<br />
+											<div class="row-fluid">
+												<div class="span2">
+											   		<label class="default-cursor">Producer Status</label>
+											   		<div ng-show="producerStatus == null || producerStatus == ''">
+														N/A
+													</div>
+											   		<div id="producerStatus" ng-show="producerStatus != null && producerStatus != ''">
+													{{producerStatus}}
+													</div>
+												</div>
+												<div class="spanAppointedFields">
+													<label class="default-cursor">Profit Center</label>
+                                                    <div id="producerProfitCenterDisplay">
+                                                        {{submission.profitCenterFullName || 'N/A'}}
+                                                    </div>
+												</div>
+												<div class="spanAppointedFields">
+											   		<label class="default-cursor">Territory</label>
+													<div id="producerTerritoryDisplay" >
+                                                        {{submission.territoryFullName || 'N/A'}}
+													</div>
+												</div>
+												<div class="spanAppointedFields">
+													<label class="default-cursor">Field</label>
+													<div id="producerFieldDisplay">
+                                                        {{submission.fieldFullName || 'N/A'}}
+													</div>
+												</div>
+	                        			    </div>
+	                        			    <br />
+	                        			</div>
+									</div>
+		      					</div>
+			      			</div>
+
+							<div class="row-fluid">
+								<div class="form-cell">
+									<label for="wholesaleRetail">Wholesale/Retail</label>
+									<gaig-radio-buttons id="wholesaleRadioOptions" options="retailWholesaleList"
+														ng-model="submission.wholesaleRetailRefCode"
+														ng-disabled="viewOnlyMode || doCheckUnderwriterDisabled() || disabledFields.wholesaleRetail">
+									</gaig-radio-buttons>
+								</div>
+							</div>
+							<br />
+							<fieldset class="fieldset-white">
+								<div class="row-fluid">
+									<div class="form-cell">
+										<rpm-field ng-class="underwriterLoading" object-name="underwriter" field="gaiUserCode" type="selectReq" session="submission" label="Underwriter" label-class="required"
+												   id="underwriter" class="input-large" data-placeholder="--Select--" list="underWriterList" ng-model="ignored"
+												   ng-disabled="viewOnlyMode || doCheckUnderwriterDisabled() || disabledFields.underwriter || updatingTeamAssignments"></rpm-field>
+									</div>
+									<div class="form-cell" ng-if="!hiddenFields.renewalUnderwriter">
+										<rpm-field ng-class="renewalUnderwriterLoading" object-name="renewalUnderwriter" field="gaiUserCode" type="select" session="submission" label="Renewal Underwriter"
+												   id="renewalUnderwriter" class="input-large" data-placeholder="--Select--" list="renewalUnderWriterList" ng-model="ignored"
+												   ng-disabled="viewOnlyMode || disabledFields.renewalUnderwriter || updatingTeamAssignments"></rpm-field>
+									</div>
+									<div class="form-cell">
+										<label for="assignTo" class="required">Assign To</label>
+										<div ng-class="assignToLoading">
+										<select id="assignTo"  class="input-large"
+											ng-class="assignToLoading"
+											gaig-select="{ 'allowClear': false }"
+											data-placeholder="--Select--"
+											ng-model="submission.assignedToHid"
+											ng-disabled="viewOnlyMode || disabledFields.assignTo || (producerConfiguration.assignees && updatingTeamAssignments)"
+											ng-options="item.hid as item.nameForDisplay for item in assignToList track by item.hid">
+											<option value=""></option>
+										</select>
+										</div>
+									</div>
+									<div class="form-cell" ng-if="!hiddenFields.csr">
+										<rpm-field ng-class="csrLoading" object-name="csr" field="gaiUserCode" type="select" session="submission" label="CSR"
+												   id="csrParty" class="input-large" data-placeholder="--Select--" list="csrList" ng-model="ignored"
+												   ng-disabled="viewOnlyMode || updatingTeamAssignments"></rpm-field>
+									</div>
+									<div class="form-cell" ng-if="!hiddenFields.businessDeveloper">
+										<rpm-field ng-class="businessDeveloperLoading" object-name="businessDeveloper" field="gaiUserCode" type="select" session="submission" label="Marketing" label-class="{true:'required', false: ''}[doDetermineFieldRequired('businessDev')]"
+												   id="businessDev" class="input-large" data-placeholder="--Select--" list="businessDeveloperList" ng-model="ignored"
+												   ng-disabled="viewOnlyMode || disabledFields.businessDeveloper || updatingTeamAssignments"></rpm-field>
+									</div>
+									<div class="form-cell" ng-if="!hiddenFields.delegate">
+										<rpm-field object-name="delegate" field="gaiUserCode" type="select" session="submission" label="Delegate/UA"
+												   id="delegate" class="input-large" data-placeholder="--Select--" list="delegateList" ng-model="ignored"
+												   ng-disabled="viewOnlyMode || disabledFields.delegate"></rpm-field>
+									</div>
+
+									<div class="form-cell" ng-if="!hiddenFields.lossPrevention">
+										<rpm-field object-name="lossPrevention" field="gaiUserCode" type="select" session="submission" label="Loss Prevention"
+												   id="lossPrevention" class="input-large" data-placeholder="--Select--" list="lossPreventionList" ng-model="ignored"
+												   ng-disabled="viewOnlyMode || disabledFields.lossPrevention"></rpm-field>
+									</div>
+
+									<div class="form-cell" ng-if="!hiddenFields.accountManager">
+										<rpm-field ng-class="accountManagerLoading" object-name="accountManager" field="gaiUserCode" type="select" session="submission" label="Account Manager"
+												   id="accountManager" class="input-large" data-placeholder="--Select--" list="accountManagerList" ng-model="ignored"
+												   ng-disabled="viewOnlyMode || disabledFields.accountManager || updatingTeamAssignments"></rpm-field>
+									</div>
+								</div>
+							</fieldset>
+
+							<div class="row-fluid"  ng-show="(foundProspectProducer.value == 'NO') || (foundProspectProducer.value == 'YES' && producerConfiguration.producerSource == 'CRM')">
+
+								<ra-modal modal-class="btn" modal-id="agencyLookupModal"
+                                 	open-btn-label="View Agency Details..." display-title="Agency Details"
+                                  	modal-size="large" ng-cloak
+                                	toggle="isAgencyDetailsOpen"
+                                	func="toggleAgencyDetailsOpen()"
+                                	cancel-function="toggleAgencyDetailsOpen()">
+									<div class="pad5">
+										<legend class="padding5-bottom leftPad0">General</legend>
+										<div class="grayBorderColor grayBackgroundColor bottomMargin10">
+											<div class="pad10">
+												<div class="row-fluid">
+													<div class="span4">
+														<label>Agency Name</label>
+														<div id="agencyName">{{producerDetails.agencyName}}</div>
+													</div>
+													<div class="span2andAHalf">
+														<label>Producer Description</label>
+														<div id="dbaName">{{producerDetails.producerDescription}}</div>
+													</div>
+													<div class="span2">
+														<label>Principal Name</label>
+														<div id="principalName">{{producerDetails.principalContactFullName || "--"}}</div>
+													</div>
+													<div class="span2">
+														<label>Producer Code</label>
+														<div id="agencyDetailsProducerCode">{{producerDetails.producerCode}}</div>
+													</div>
+												</div>
+											</div>
+											<div class="pad10">
+												<div class="row-fluid">
+													<div class="span2">
+														<label>Toll-Free</label>
+														<div id="tollFree">{{producerDetails.agencyTollFreeNumber}}</div>
+													</div>
+													<div class="span2">
+														<label>Primary</label>
+														<div id="primary">{{producerDetails.agencyPrimaryNumber}}</div>
+													</div>
+													<div class="span2andAHalf">
+														<label>Fax</label>
+														<div id="fax">{{producerDetails.agencyFaxNumber}}</div>
+													</div>
+													<div class="span2">
+														<label>Website</label>
+														<a href=# ng-click="doOpenAgencySiteAddressWindow($event)" id="website">{{producerDetails.agencyWebsite}}</a>
+													</div>
+													<div class="span1andAHalf">
+														<label>Status</label>
+														<div id="status">{{producerDetails.producerCodeStatus}}</div>
+													</div>
+													<div class="span1andAHalf">
+														<label>Termination Date</label>
+														<div id="terminationDate">{{producerDetails.producerCodeCloseDate}}</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="row-fluid">
+											<div class="span6">
+												<legend class="padding5-bottom leftPad0">Address</legend>
+												<div class="grayBorderColor grayBackgroundColor bottomMargin10 pad10">
+													<div class="row-fluid">
+														<div class="span6">
+															<label>Location</label>
+															{{producerDetails.addressLine1}}<br/>
+															<div ng-show="producerDetails.addressLine2 != null && producerDetails.addressLine2 != ''">
+																{{producerDetails.addressLine2}}<br/>
+															</div>
+															<div ng-show="producerDetails.agencyLocationCity || producerDetails.agencyLocationState">
+																{{producerDetails.agencyLocationCity}}, {{producerDetails.agencyLocationState}}<br/>
+															</div>
+															{{producerDetails.agencyLocationZipCode}}
+															{{producerDetails.agencyLocationCountryCode}}<br/>
+															<div ng-show="producerDetails.addressLine2 == null || producerDetails.addressLine2 == ''">
+																<br/>
+															</div>
+														</div>
+														<div class="span6">
+															<label>Shipping</label>
+															{{producerDetails.shippingAddressLine1}}<br/>
+															<div ng-show="producerDetails.shippingAddressLine2 != null && producerDetails.shippingAddressLine2 != ''">
+																{{producerDetails.shippingAddressLine2}}<br/>
+															</div>
+															<div ng-show="producerDetails.shippingCity || producerDetails.shippingState">
+																{{producerDetails.shippingCity}}, {{producerDetails.shippingState}}<br/>
+															</div>
+															{{producerDetails.shippingZipCode}}
+															{{producerDetails.shippingCountryCode}}<br/>
+															<div ng-show="producerDetails.shippingAddressLine2 == null || producerDetails.shippingAddressLine2 == ''">
+																<br/>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="span6">
+												<legend class="padding5-bottom leftPad0">GAI Business Unit Assignments</legend>
+												<div class="grayBorderColor grayBackgroundColor bottomMargin10 pad10">
+													<div class="row-fluid">
+														<div class="span4">
+															<label>Profit Center</label>
+															<div id="profitCenter">{{producerDetails.profitCenterName}}</div>
+														</div>
+														<div class="span4">
+															<label>Territory</label>
+															<div id="territory">{{producerDetails.territory}}</div>
+														</div>
+														<div class="span4">
+															<label>Field</label>
+															<div id="field">{{producerDetails.field}}</div>													</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<legend class="padding5-bottom leftPad0">Agency Output Preferences</legend>
+										<div class="grayBorderColor grayBackgroundColor bottomMargin10 pad10">
+											<div class="row-fluid padLeft10">
+												<div class="span2">
+													<label>Agent Copy</label>
+													<div id="agentCopy">{{producerDetails.agentCopy}}</div>											</div>
+												<div class="span2">
+													<label>Insured Copy</label>
+													<div id="insuredCopy">{{producerDetails.insuredCopy}}</div>											</div>
+												<div class="span2">
+													<label>Email notification</label>
+													<div id="emailNotification">{{producerDetails.emailNotification}}</div>											</div>
+												<div class="span3">
+													<label>Email Sent Per Agency/Policy</label>
+													<div id="emailSentPerAgency">{{producerDetails.emailbyAgencyPolicy}}</div>											</div>
+												<div class="span3">
+													<label>Email Address</label>
+													<div id="emailAddress">{{producerDetails.email}}
+													</div>											</div>
+											</div>
+										</div>
+									</div>
+								</ra-modal>
+
+							</div>
+
+						</div>
+					</fieldset>
+
+                  <!--  ***********************  -->
+      				<!--   SUB AGENT INFORMATION   -->
+      				<!--  ***********************  -->
+		      		<fieldset gaig-fieldset ng-cloak id="subAgentInformation"
+		      			ng-if="producerConfiguration.producerSource == 'CRM' && producerConfiguration.subAgency == 'true'">
+
+	      				<legend>Sub Agent Information</legend>
+
+						<div class="row-form">
+			      			<div class="row-fluid">
+		      					<div class="span12">
+									<div class="row-fluid">
+										<div class="span7">
+											<fieldset class="fieldset-white span460">
+												<div class="row-fluid">
+													<div class="form-cell ">
+														<label for="businessUnitSubAgentProducerLookup">Business Unit</label>
+														<select id="businessUnitSubAgentProducerLookup" class="input-medium"
+																gaig-select="{'allowClear':false}"
+																ng-model="producerLookUpBusubAgent.value" >
+															<option value=""></option>
+															<option ng-repeat="item in businessUnitListForProducerLookUp" value="{{item.value}}">{{item.label}}</option>
+														</select>
+													</div>
+												</div>
+											   	<div class="row-fluid">
+													<div class="form-cell">
+														<rpm-field object-name="Submission" field="subAgent" type="input" session="submission" label="Producer Code"
+															id="subAgentProducerCode" class="input-small" maxlength="10"
+															ng-blur="findProducerInformationSubAgent(true)"
+															ng-disabled="viewOnlyMode"></rpm-field>
+		                        			    	</div>
+
+													<div class="form-cell">
+														<label class="default-cursor">Agency Name</label>
+														<input id="subAgentPartyFullName" class="input-agencyName" type="text"
+															   ng-model="submission.subAgentFullName" maxlength="60"
+															   ng-disabled="viewOnlyMode || disabledFields.subAgentAgencyName" />
+													</div>
+
+
+												</div>
+
+												<div class="row-fluid">
+													<button type="button" id="subAgentProdLookupButton" ng-click="toggleAgencyLookupOpen(true)"
+															class="btn" ng-disabled="viewOnlyMode">
+														<i class="icon icon-search"></i>
+													</button>
+												</div>
+											</fieldset>
+
+										</div>
+										<div class="span5 topPadding11">
+											<div class="form-cell">
+												<label class="default-cursor">Producer Status</label>
+												<div id="subAgentProducerStatus">
+													{{submission.subAgentStatus || 'N/A'}}
+												</div>
+											</div>
+										</div>
+									</div>
+		      					</div>
+			      			</div>
+
+			      			<button class="btn" type="button" ng-click="toggleAgencyDetailsOpen(true)">
+									View Agency Details...
+							</button>
+						</div>
+		      		</fieldset>
+
+	      			<fieldset id="products" gaig-fieldset ng-cloak>
+	      				<legend>Product Information</legend>
+
+		      			<!--  **********************  -->
+	      				<!--   		PRODUCTS          -->
+	      				<!--  **********************  -->
+		      			<div class="row-form">
+                            <div class="row-fulid" ng-if="quoteList.length >  1">
+                                <div class="form-cell">
+                                    <label id="multiProductPPSLabel" class="required">Multiple products selected.  The default PPS will be used for each of them.</label>
+                                </div>
+                                <br/>
+                            </div>
+		      				<div class="row-fluid">
+		      					<div class="form-cell" ng-show="(submission.rpmSession.namedObjects.submissions === undefined || submission.rpmSession.namedObjects.submissions.length == 0) && !viewOnlyMode">
+		      						<label id="productSelectionLabel" class="required">You must select a product to save this submission.</label>
+		      					</div>
+                                <br />
+
+								<div ng-show="quoteList && quoteList.length">
+									<div>
+										<div ng-repeat="rpmSession in quoteList" class="productSectionClass">
+											<div>
+												<div class="floatLeft" ><label>Submission # {{rpmSession.namedObjects.quoteNum}}</label></div>
+												<div class="floatRight" ng-if="!viewOnlyMode && doDetermineSaveButton()">
+													<button type="button" class="redClose" ng-click="doDeleteProductLocal(rpmSession.namedObjects.quoteNum)">X</button>
+												</div>
+											</div>
+											<br />
+											<label>Symbol</label>{{rpmSession.namedObjects.symbolLabel}}<br /><br />
+											<label>Products</label>
+											<ul class="no-bullets2" ng-show="sub !== '@type'">
+												<li ng-repeat="productLabel in rpmSession.namedObjects.productLabels">
+													{{productLabel}}
+												</li>
+											</ul>
+											<div class="productEditButton">
+												<div class="floatBottom" ng-if="!viewOnlyMode">
+													<button type="submit" id="productsEditButton" class="btn" ng-click="doEditProduct(rpmSession.namedObjects.quoteNum)" ng-disabled="viewOnlyMode || disableEditProducts || disabledFields.policyInformation || (submission.submissionId > 0 && submission.sourceSystemRefCode === SOURCE_SYSTEM_CUBE)  ">Edit</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+
+                                <!--workAround for IE, show this button instead of the modal button when it should truly be disabled,
+                                disabling the modal preventing the edit button from working as expected -->
+                                <div ng-show="viewOnlyMode || !submission.submissionEffectiveDate || !submission.policyInfo.policyStateCode || submission.submissionId > 0">
+                                    <button type="submit" class="btn" id="selectProductButton" ng-disabled="true">Select a Product...</button>
+                                </div>
+
+                                <div id="productsModal" ng-show="!viewOnlyMode && submission.submissionEffectiveDate && submission.policyInfo.policyStateCode && (submission.submissionId === 0 || isProductSelectionOpen)">
+                                    <ra-modal-custom modal-class="btn" modal-size="xlarge" ng-disabled="viewOnlyMode"
+                                                     modal-id="productSelectionModal" show-open-btn="true"
+                                                     open-btn-label="Select a Product..."
+                                                     title="Select/Edit Product" ng-cloak
+                                                     toggle="isProductSelectionOpen"
+                                                     open-func="toggleProductSelection()"
+                                                     cancel-func="cancelProductSelection()"
+                                                     buttons="productSelectionButtons">
+
+                                        <div class="container-fixed">
+
+                                            <messages-modal id="productSelectionMessages_validation" validation="validationMessages"></messages-modal>
+                                            <messages id="productSelectionMessages" success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+
+
+                                            <div class="row-form">
+                                                <div class="row-fluid">
+                                                    <div class="span5">
+                                                        <label id="selectBySymbolProduct" ng-show="model.productSelectionType=='SYMBOL'">Select by Symbol</label>
+                                                        <label id="selectBySymbolProduct2" ng-show="model.productSelectionType=='PRODUCT'">Select by Product</label>
+                                                        <gaig-radio-buttons id="selectProductOptions" options="options.productSelectionList"
+                                                                            ng-model="model.productSelectionType"
+                                                                            on-click="doChangeProductSelection()"
+                                                                            ng-disabled="viewOnlyMode || disabledFields.productInformation" >
+                                                        </gaig-radio-buttons>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row-form" ng-show="model.productSelectionType=='SYMBOL'">
+                                                <div class="row-fluid" >
+                                                    <div class="span3">
+                                                        <label>Symbol</label>
+                                                        <select id="productSelectionSymbol" class="input-small"
+                                                                gaig-select="{ 'allowClear': false }"
+                                                                data-placeholder="--Select--"
+                                                                ng-model="selectedHolder.symbol"
+                                                                on-change="updateProductSelectionBySymbolView()"
+                                                                ng-disabled="viewOnlyMode || disabledFields.productInformation">
+                                                            <option value=""></option>
+                                                            <option ng-repeat="item in available | orderBy:sortProducts">{{item.getRpmClass().getClassTrait('ui:label')}}</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="span6">
+                                                        <label>Product</label>
+                                                        <div id="rpmProductScreenLabel">-- Empty --</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row-form" ng-show="model.productSelectionType=='PRODUCT'">
+                                                <div class="row-fluid" >
+                                                    <div class="span12">
+                                                        <label>Products</label>
+                                                        <div ng-class="{true:'twoColumns'}[available.length > 8]">
+                                                            <div id="rpmProductScreenLabel2">-- Empty --</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row-form">
+                                                <div class="row-fluid" >
+                                                    <fieldset class="fieldset-white">
+                                                        <legend>Output</legend>
+                                                        <div class="row-fluid">
+                                                            <label id="rpmSubmissionNumberScreenLabel"></label><br />
+
+                                                            <div ng-show="model.productSelectionType=='SYMBOL'">
+                                                                <label>Symbol</label>
+                                                                <div id="rpmSymbolScreenLabel">{{selectedHolder.symbol}}</div><br />
+                                                                <label>Products</label>
+                                                                <div id="rpmProductsScreenLabel">{{selectedHolder.labels.length > 0 ? selectedHolder.labels.join(', ') : '-- None --'}}</div>
+                                                            </div>
+
+                                                            <div ng-show="model.productSelectionType=='PRODUCT'">
+                                                                <label>Symbol</label>
+                                                                <div ng-show="availableProducts.symbols.length > 0">
+                                                                    <gaig-radio-buttons id="selectSymbolOptions" options="availableProducts.symbols"
+                                                                        ng-model="selectedHolderProd.symbol"
+                                                                        on-change="disableProducts()"
+                                                                        ng-disabled="viewOnlyMode" >
+                                                                    </gaig-radio-buttons>
+                                                                    <br /><br />
+                                                                </div>
+                                                                <div ng-show="availableProducts.symbols.length === 0">
+                                                                    <div>-- None --</div><br />
+                                                                </div>
+                                                                <label>Products</label>
+                                                                <div>{{selectedHolderProd.labels.length > 0 ? selectedHolderProd.labels.join(', ') : '-- None --'}}</div>
+                                                            </div>
+                                                        </div>
+                                                    </fieldset>
+                                                </div>
+                                            </div>
+                                        </div> <!--  end of container-fixed -->
+                                    </ra-modal-custom>
+                                </div>
+ 		      				</div>
+		      			</div>
+		      		</fieldset>
+
+	      			<fieldset gaig-fieldset ng-cloak ng-if="foundSubmission">
+	      				<legend>Related policies</legend>
+		      			<!--  **********************  -->
+	      				<!--   	 RELATED POLICIES     -->
+	      				<!--  **********************  -->
+		      			<div class="row-form">
+		      				<div class="row-fluid">
+							  	<table class="table gaig-table table-striped">
+				                	<thead>
+				                    	<tr>
+				                    		<th>Line of Business - Products</th>
+				                    		<th>Policy</th>
+				                      		<th>Term</th>
+				                    	</tr>
+				                  	</thead>
+				                  	<tbody ng-show="relatedPolicies.length > 0">
+				                  		<tr ng-repeat="relatedPolicy in ::relatedPolicies">
+				                  			<td><div ng-repeat="line in relatedPolicy.productDescription.split('::::')">{{line}}<br/></div></td>
+				                  			<td>{{::relatedPolicy.policyInformation}}</td>
+				                  			<td>{{::relatedPolicy.policyTerm}}</td>
+				                  		</tr>
+				                  	</tbody>
+				                  	<tbody ng-show="relatedPolicies == null || relatedPolicies.length == 0">
+				                  		<tr>
+				                  			<td colspan="3">There are no related policies for this submission</td>
+				                  		</tr>
+				                  	</tbody>
+			                	</table>
+		      				</div>
+		      			</div>
+		      		</fieldset>
+
+	      			<!--  **********************  -->
+      				<!--    POLICY INFORMATION    -->
+      				<!--  **********************  -->
+  	      			<fieldset id="policyInfo" gaig-fieldset ng-cloak>
+	      				<legend>Policy Information</legend>
+
+						<div class="row-fluid">
+							<div class="span5">
+								<div class="row-form">
+
+									<div class="row-fluid">
+										<div class="span12">
+											<div ng-if="!hiddenFields.policyCountry">
+												<label for="policyCountry" class="required">Policy Country</label>
+												<select id="policyCountry" class="input-large"
+														gaig-select="{ 'allowClear': false }"
+														data-placeholder="--Select--"
+														ng-model="submission.policyInfo.policyCountryCode"
+														on-change="updatePolicyStateProvList()"
+														ng-disabled="viewOnlyMode || disabledFields.policyInformation"
+														ng-options="::item.itemCode as ::item.itemDescriptionShort for item in ::countryList track by item.itemCode">
+													<option value=""></option>
+												</select>
+											</div>
+										</div>
+									</div>
+
+									<div class="row-fluid">
+										<div class="span12">
+											<label for="policyStateProv" ng-class="{true:'required', false: ''}[submission.policyInfo.policyCountryCode == 'US' || submission.policyInfo.policyCountryCode == 'CA']" id="policyStateProvinceLabel">Policy State</label>
+											<select id="policyStateProv" class="input-medium"
+													gaig-select="{ 'allowClear': false }"
+													data-placeholder="--Select--"
+													ng-model="submission.policyInfo.policyStateCode"
+													ng-change="updateDefaultRegionForPolicyState()"
+													ng-disabled="viewOnlyMode || disabledFields.policyInformation"
+													ng-options="item.itemCode as item.itemDescriptionShort for item in policyStateProvinceList track by item.itemCode">
+												<option value=""></option>
+											</select>
+										</div>
+									</div>
+
+									<div class="row-fluid">
+										<div class="span12">
+											<label for="customerNumber">Customer #</label>
+											<input id="customerNumber" type="text" class="input-medium"
+												   ng-model="submission.customerNumber" ng-disabled="disabledFields.customerNum || viewOnlyModeCustNo" maxlength="12" onKeyPress="RA.UI.allowOnlyNumericsStrict(event)"/>&nbsp;&nbsp;
+										</div>
+										<div class="span12" ng-hide="showCustNoButton">
+											<button type="submit" class="btn" ng-click="doCheckGenerateCustomerNumber($event)"
+													ng-disabled="disabledFields.customerNum || viewOnlyModeCustNo">Generate</button>
+
+										</div>
+									</div>
+
+
+								</div>
+							</div>
+
+							<div class="span7">
+								<div class="row-form">
+									<div class="row-fluid" ng-show="quoteList.length == 1">
+										<div class="span12">
+											<label ng-class="{true:'required', false: ''}[doDeterminePolicyFieldsRequired()]" for="policyProcessingSystem">Policy Processing System</label>
+											<select id="policyProcessingSystem" class="input-large"
+													gaig-select="{ 'allowClear': true }"
+													data-placeholder="--Select--"
+													ng-model="submission.sourceSystemRefCode"
+													ng-change="updateTransactionStatusList()"
+													ng-disabled="viewOnlyMode || disabledFields.policyInformation"
+													ng-options="::item.value as ::item.label for item in ::sourceSystemList track by item.value">
+												<option value=""></option>
+											</select>
+										</div>
+									</div>
+
+									<div class="row-fluid">
+										<div class="span12">
+											<rpm-field object-name="Submission"
+													   field="processingType"
+													   type="select"
+													   session="submission"
+													   label="Renewal Processing Type"
+													   id="processingType"
+													   class="input-large"
+													   list="processingTypeList"
+													   data-placeholder ="--Select--"
+													   ng-model="ignored"
+													   ng-disabled="viewOnlyMode || disabledFields.processingType">
+											</rpm-field>
+										</div>
+									</div>
+
+									<div class="row-fluid">
+										<div class="span12">
+											<rpm-field object-name="Submission"
+													   field="policyOrigination"
+													   type="select"
+													   session="submission"
+													   label="Policy Origination"
+													   id="policyOrigination"
+													   data-placeholder="--Select--"
+													   class="input-large"
+													   list="policyOriginationList"
+													   ng-model="ignored"
+													   ng-disabled="viewOnlyMode || disabledFields.policyOrigination">
+											</rpm-field>
+										</div>
+									</div>
+
+									<div class="row-fluid" ng-hide="hiddenFields.aggregateSection || hiddenFields.policyType">
+										<div class="span12">
+											<rpm-field object-name="Submission"
+													   field="policyType"
+													   type="selectReq"
+													   session="submission"
+													   label="Policy Type"
+													   label-class="required"
+													   id="policyType"
+													   class="input-large"
+													   list="policyTypeList"
+													   ng-click="triggerPolicyTypeChangeWarning('policyType')"
+													   ng-model="ignored"
+													   ng-disabled="viewOnlyMode || disabledFields.policyType">
+											</rpm-field>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+		      			<div class="row-form">
+							<div class="row-fluid" ng-show="doDeterminePolicyOutlineBox()">
+								<div class="row-fluid" ng-show="doShowFleetIndicator()">
+									<div class="form-cell">
+										<rpm-field object-name="policy.Policy" field="fleetIndicator" type="switch" session="quote" on-label="Fleet" off-label="Non Fleet"
+												   ng-disabled="viewOnlyMode || disabledFields.fleet" id="fleetIndicator" class="has-switch-extraLarge"
+												   label="Fleet Indicator"></rpm-field>
+									</div>
+								</div>
+							</div>
+
+							<div class="row-fluid" >
+								<div class="form-cell" ng-if="!hiddenFields.governingClassCode">
+									<rpm-field object-name="Submission" field="governingClassCode" type="input" session="submission" label="Governing Class" label-class="governingClassCodeRequired"
+									   			id="governingClassCode" class="input-large" maxlength="4" ng-disabled="viewOnlyMode || disabledFields.governingClassCode" onKeyPress="RA.UI.allowOnlyAlphaNumericsStrict(event)"></rpm-field>
+								</div>
+								<div class="form-cell" ng-if="!hiddenFields.billingType">
+									<label>Billing Type</label>
+									<gaig-radio-buttons id="billingType" options="billingTypeList" ng-model="submission.billingTypeRefCode"
+														ng-disabled="viewOnlyMode || disabledFields.policyInformation || disabledFields.billingType">
+									</gaig-radio-buttons>
+								</div>
+								<div class="form-cell" ng-if="!hiddenFields.indicated">
+									<rpm-field object-name="Submission" field="indicated" type="radio" session="submission" options="indicatedList"
+											   ng-disabled="viewOnlyMode || disabledFields.indicated" id="indicated"
+											   label="Indicated"></rpm-field>
+								</div>
+								<div class="form-cell" ng-if="!hiddenFields.servicingRegion">
+									<rpm-field object-name="Submission" field="servicingRegion" type="select" session="submission" label="Region" label-class="required"
+											   id="servicingRegion" class="input-large" list="regionList"  ng-model="ignored"
+											   ng-disabled="viewOnlyMode || disabledFields.servicingRegion"></rpm-field>
+								</div>
+							</div>
+						</div>
+
+						<div class="row-form" >
+							<div class="form-cell">
+									<fieldset class="fieldset-white" ng-show="doDeterminePolicyOutlineBox()">
+			      						<legend>Policy</legend>
+					      				<div class="row-fluid">
+					      					<div class="form-cell">
+					      						<span>
+					      						<label for="policyNumber"
+					      							ng-class="{true:'required', false: ''}[doDeterminePolicyFieldsRequired()]">#</label>
+					      						<input id="policyNumber" type="text" class="input-small"
+													   onKeyPress="RA.UI.allowOnlyAlphaNumericsStrict(event)"
+					      							ng-model="submission.policyInfo.policyNumber" maxlength="7" ng-disabled="disabledFields.policyNumber || viewOnlyMode || disabledFields.policyInformation"
+													ng-model-onblur ng-change="doCheckNewNumber()"/>
+												</span><br>
+												<button type="submit" class="btn" ng-click="doCheckGeneratePolicyNumber($event)"
+				  										ng-disabled="disabledFields.generatePolicyNumButton || disablePolicyInfo || doCheckPolicyNumberIsDisabled() || disabledFields.policyInformation">Generate</button>
+					      					</div>
+					      					<div class="form-cell">
+					      						<label for="policyModule"
+					      							ng-class="{true:'required', false: ''}[doDeterminePolicyFieldsRequired()]">Mod</label>
+					      						<input id="policyModule" type="text" class="input-supermini"
+					      							ng-model="submission.policyInfo.policyMod"
+					      							onKeyPress="RA.UI.allowOnlyNumerics(event)"
+					      							ng-disabled="disablePolicyInfo || disabledFields.policyInformation || disabledFields.policyMod" maxlength="2"/>
+					  						</div>
+					      					<div class="form-cell">
+					      						<label for="policyVersion">Version</label>
+					      						<input id="policyVersion" type="text" class="input-supermini"
+					      							ng-model="submission.policyInfo.policyVersion"
+					      							ng-disabled="true" maxlength="4"/>
+					      					</div>
+						  					<div class="form-cell" >
+						  						<label>Previous Policy</label>
+							      				<div class="row-fluid" ng-show="submission.transactionSubTypeRefCode == 'RW' && (submission.transactionTypeRefCode == 'NBS' || submission.transactionTypeRefCode =='NBP')">
+							      					<div class="form-cell">
+							      						<label>{{submission.policyInfo.prevPolicySymbol}}</label>
+							      					</div>
+							      					<div class="form-cell">
+							      						<label>{{submission.policyInfo.prevPolicyNumber}}</label>
+							      					</div>
+							      					<div class="form-cell">
+							      						<label>{{submission.policyInfo.prevPolicyMod}}</label>
+							      					</div>
+							      					<div class="form-cell">
+							      						<label>{{submission.policyInfo.prevPolicyVersion}}</label>
+							      					</div>
+							      				</div>
+
+                                                <div class="row-fluid" ng-show="submission.transactionSubTypeRefCode != 'RW' || (submission.transactionTypeRefCode =='REN' || submission.transactionTypeRefCode =='RENP')">
+                                                    <div class="form-cell">
+                                                        <label>{{submission.renewalPolicySymbolCode}}</label>
+                                                    </div>
+                                                    <div class="form-cell">
+                                                        <label>{{submission.renewalPolicyNumber}}</label>
+                                                    </div>
+                                                    <div class="form-cell">
+                                                        <label>{{submission.renewalPolicyMod}}</label>
+                                                    </div>
+                                                    <div class="form-cell">
+                                                        <label>{{submission.renewalPolicyVersion}}</label>
+                                                    </div>
+                                                </div>
+						  					</div>
+					  					</div>
+					  				</fieldset>
+			  				</div>
+				  		</div>
+
+                        <!--  *************************  -->
+                        <!--  Continuous Until Cancelled  -->
+                        <!--  *************************  -->
+
+		                        <div class="row-form" ng-show ="doShowContinuousCancel()">
+		                            <div class="row-fluid">
+		                                <div class="form-cell marginRight20">
+		                                <label for="continuousUntilCancelled">Continuous Until Cancelled</label>
+		                                    <gaig-switch
+		                                                 ng-model="submission.continuousTillCancInd"
+		                                                 data-on-label="Yes"
+		                                                 data-off-label="No"
+		                                                 ng-disabled="viewOnlyMode || !isContinuousEnabled"
+		                                                 size = "small"
+		                                                 on-click="doToggleContinuousUntilCancelled()"
+		                                                 id="continuousUntilCancelled">
+		                                    </gaig-switch>
+		                                </div>
+		                                <div class="form-cell">
+		                                    <label for="continuousUntilCancelledReviewDate" class={{continuousReviewDateRequirement}} >Review Date</label>
+		                                    <gaig-datepicker id="continuousUntilCancelledReviewDate"
+		                                                     ng-model="submission.continuousTillCancReviewDt"
+		                                                     ng-disabled="viewOnlyMode || !isContinuousReviewDateEnabled || !isContinuousEnabled"
+		                                                     on-select="doValidateReviewDate()">
+		                                    </gaig-datepicker>
+		                                </div>
+		                            </div>
+		                        </div>
+							</fieldset>
+
+					<div ng-hide="hiddenFields.aggregateSection" ng-include="'dyn/html/aggregateSnippet'"></div>
+
+	   				<!--  ***************  -->
+	   				<!--  BU Configurable  -->
+	   				<!--  ***************  -->
+
+					<fieldset gaig-fieldset ng-show="buSpecificFields">
+						<legend>{{buConfigurableSectionName}}</legend>
+						<fieldset>
+							<div class="row-form">
+								<div class="form-cell" ng-repeat="field in getRpmObjects('submission', 'BUSpecificFields').fields | orderByTrait:field track by $index">
+									<!-- Display BU Config Fields with Text Boxes.  ui:type=input -->
+									<div ng-if="field.getTraits()['ui:type'] == 'input'">
+										<rpm-field object-name="{{field.getTraits()['v:className']}}"
+												   field="{{field.getTraits()['v:fieldName']}}"
+												   type="{{field.getTraits()['ui:type']}}"
+												   session="submission"
+												   label="{{field.getTraits()['ui:label']}}"
+												   id="{{field.getTraits()['v:fieldName']}}"
+												   class="input-small"
+												   maxlength="{{field.getTraits()['v:max']}}"
+												   ng-disabled="viewOnlyMode || disabledFields.buSpecific_{{field.getTraits()['v:fieldName']}}"
+												   label-class="{{(field.getTraits()['v:min'] > 0?'required':'')}}">
+										</rpm-field>
+									</div>
+									<!-- Display BU Config Fields with Slider Text Boxes. ui:type=switch -->
+									<div ng-if="field.getTraits()['ui:type'] == 'switch'">
+										<rpm-field object-name="{{field.getTraits()['v:className']}}"
+												   field="{{field.getTraits()['v:fieldName']}}"
+												   type="{{field.getTraits()['ui:type']}}"
+												   session="submission"
+												   label="{{field.getTraits()['ui:label']}}"
+												   id="{{field.getTraits()['v:fieldName']}}"
+												   class="has-switch-extraLarge"
+												   ng-disabled="viewOnlyMode || disabledFields.buSpecific_{{field.getTraits()['v:fieldName']}}"
+												   label-class="{{(field.getTraits()['v:min'] > 0?'required':'')}}">
+										</rpm-field>
+									</div>
+									<!-- Display BU Config Fields with a required value dropdown box. ui:type=selectReq -->
+									<div ng-if="field.getTraits()['ui:type'] == 'selectReq'">
+										<rpm-field object-name="{{field.getTraits()['v:className']}}"
+												   field="{{field.getTraits()['v:fieldName']}}"
+												   type="{{field.getTraits()['ui:type']}}"
+												   session="submission"
+												   label="{{field.getTraits()['ui:label']}}"
+												   id="{{field.getTraits()['v:fieldName']}}"
+												   class="input-large"
+												   ng-model="ignored"
+												   label-class="required"
+												   list="{{field.getTraits()['db:attrRefList']}}"
+												   ng-disabled="viewOnlyMode || disabledFields.buSpecific_{{field.getTraits()['v:fieldName']}}">
+										</rpm-field>
+									</div>
+									 <!--Display BU Config Fields with a non-required value dropdown box. ui:type=select -->
+									<div ng-if="field.getTraits()['ui:type'] == 'select'">
+										<rpm-field object-name="{{field.getTraits()['v:className']}}"
+												   field="{{field.getTraits()['v:fieldName']}}"
+												   type="{{field.getTraits()['ui:type']}}"
+												   session="submission"
+												   label="{{field.getTraits()['ui:label']}}"
+												   id="{{field.getTraits()['v:fieldName']}}"
+												   class="input-large"
+												   ng-model="ignored"
+												   label-class=""
+												   data-placeholder ="--Select--"
+												   list="{{field.getTraits()['db:attrRefList']}}"
+												   ng-disabled="viewOnlyMode || disabledFields.buSpecific_{{field.getTraits()['v:fieldName']}}">
+										</rpm-field>
+									</div>
+
+								</div>
+							</div>
+						</fieldset>
+					</fieldset>
+
+	   				<!--  ******  -->
+	   				<!--  STATUS  -->
+	   				<!--  ******  -->
+      				<fieldset gaig-fieldset ng-cloak id="transStatusSection">
+	      				<legend>Status</legend>
+		      			<div class="row-form">
+		      				<div class="row-fluid">
+		      					<div class="span3">
+		      						<label for="transactionStatus" class="required">Transaction Status</label>
+									<select id="transactionStatus" class="input-medium"
+                                        gaig-select="{ 'allowClear': false }"
+										data-placeholder="--Select--"
+										ng-model="submission.transactionStatusRefCode"
+		      							ng-disabled="viewOnlyMode || disabledFields.transactionStatus || foundSubmission === false"
+		      							ng-change="doCheckForDisposition()"
+										ng-options="item.value as item.label for item in transactionStatusList track by item.value">
+                                        <option value=""></option>
+		      						</select>
+		      					</div>
+		      					<div class="span2 " ng-if="!(hiddenFields.transactionPremium || submission.sourceSystemRefCode === SOURCE_SYSTEM_CUBE)">
+		      						<!-- Validation Error Message component does not work for Currency Widget.  Different Label Method Required -->
+									<div><label for="transactionPremium" ng-class="{true:'required', false: ''}[doDeterminePremiumFieldsRequired('transactionPremium')]">Transaction Premium</label></div>
+									<input id="transactionPremiumTxt" type="text" class="gaig-currency input-medium alignRight"
+										ng-model="policyPremiums.TOTAPRPPremium" onKeyPress="RA.UI.allowOnlyNumericsAndDash(event)"
+										maxlength="13" ng-disabled="viewOnlyMode || disabledFields.transactionPremium"/>
+								</div>
+							</div>
+						</div>
+						<div class="row-form pull-left" ng-if="!((hiddenFields.quotedPremium && hiddenFields.boundPremium && hiddenFields.issuedPremium) || submission.sourceSystemRefCode === SOURCE_SYSTEM_CUBE)">
+							<label for="premiumFieldsetLabel" >New Business and Renewal Premiums</label>
+								<fieldset class="fieldset-white" >
+							<div class="row-fluid">
+								<div class="form-cell" ng-if="!(hiddenFields.quotedPremium || submission.sourceSystemRefCode === SOURCE_SYSTEM_CUBE)">
+									 <!-- Validation Error Message component does not work for Currency Widget.  Different Label Method Required -->
+									 <div><label id="quotedPremium" ng-class="{true:'required', false: ''}[doDeterminePremiumFieldsRequired('quotedPremium')]">Quoted Premium</label></div>
+									 <input id="quotedPremiumTxt" type="text" class="gaig-currency input-medium alignRight" ng-change="doDetermineWholeNumber(submission.quotedPremium)"
+										ng-model="policyPremiums.TOTQUOPremium"	onKeyPress="RA.UI.allowOnlyNumerics(event)"
+										maxlength="13" ng-disabled="submission.agentBoundIndicator || viewOnlyMode || disabledFields.quotedPremium" />
+								</div>
+								<div class="form-cell" ng-if="!(hiddenFields.boundPremium || submission.sourceSystemRefCode === SOURCE_SYSTEM_CUBE)">
+								 	 <!-- Validation Error Message component does not work for Currency Widget.  Different Label Method Required -->
+									 <div><label id="boundPremium" ng-class="{true:'required', false: ''}[doDeterminePremiumFieldsRequired('boundPremium')]">Bound Premium</label></div>
+									 <input id="boundPremiumTxt" type="text" class="gaig-currency input-medium alignRight" ng-change="doDetermineWholeNumber(submission.boundPremium)"
+										ng-model="policyPremiums.TOTBOUNDPremium"	onKeyPress="RA.UI.allowOnlyNumerics(event)"
+										maxlength="13" ng-disabled="submission.agentBoundIndicator || viewOnlyMode || disabledFields.boundPremium"/>
+								</div>
+
+								<div class="form-cell" ng-if="!(hiddenFields.issuedPremium || submission.sourceSystemRefCode === SOURCE_SYSTEM_CUBE)">
+									 <!-- Validation Error Message component does not work for Currency Widget.  Different Label Method Required -->
+									  <div><label id="issuedPremium" ng-class="{true:'required', false: ''}[doDeterminePremiumFieldsRequired('issuedPremium')]">Issued Premium</label></div>
+										<input id="issuedPremiumTxt" type="text" class="gaig-currency input-medium alignRight" ng-change="doDetermineWholeNumber(submission.issuedPremium)"
+										ng-model="policyPremiums.TOTPOLPremium"	onKeyPress="RA.UI.allowOnlyNumerics(event)"
+										maxlength="13" ng-disabled="viewOnlyMode || disabledFields.issuedPremium"/>
+								</div>
+							</div>
+							</fieldset>
+						</div>
+
+						<div class="row-form">
+		      				<div class="row-fluid">
+		      					<div ng-show="submission.transactionStatusRefCode == 'DECL'">
+		      						<fieldset>
+					      				<div class="row-fluid">
+					      					<div class="span4">
+					      						<label for="declinedDate">Declined Date</label>
+					      						{{disposition.dispositionDate  | date:'MM/dd/yyyy'}}
+					      					</div>
+					      				</div>
+										<div class="row-fluid">
+					      					<div class="span12">
+					      						<label for="declinedReason" class="required">Declined Reason</label>
+												<select id="declinedReason"  class="input-xlarge4"
+                                                     gaig-select="{ 'allowClear': false }"
+													 data-placeholder="--Select--"
+													 ng-model="disposition.reasonRefCode"
+													 ng-disabled="viewOnlyMode"
+													 ng-options="::item.itemCode as ::item.itemDescriptionLong for item in ::dispositionDeclinedList track by item.itemCode">
+                                                    <option value=""></option>
+												</select>
+                                            </div>
+				      					</div>
+										<div class="row-fluid">
+					      					<div class="span12">
+					      						<label for="declinedComments">Declined Comments</label>
+												<textarea rows="4" id="declinedComments" class="span12" gaig-maxlength="500"
+													ng-disabled="viewOnlyMode"
+													ng-model="disposition.dispositionComments" maxlength="500" ></textarea>
+				      						</div>
+				      					</div>
+
+					      				<div class="row-fluid">
+					      					<div class="span5">
+												<label>Recapture Next Term?</label>
+								                <gaig-switch id="declinedRecaptureSwitch"
+								            		ng-model="disposition.declinedRecaptureIndicator"
+								            		data-on-label="Yes"
+								            		data-off-label="No"
+								            		on-click="updateDispositionStatus('declined',$event)"
+								            		ng-disabled="viewOnlyMode"
+								            		size="small" >
+								            	</gaig-switch>
+				      						</div>
+					      					<div class="span7">
+					      						<label for="declinedRecaptureReviewDate"
+					      							ng-class="{true:'required', false: ''}[!disableRecapture]">Recapture Review Date</label>
+												<gaig-datepicker id="declinedRecaptureReviewDate"
+													ng-model="disposition.declinedRecaptureReviewDate"
+													ng-disabled="viewOnlyMode || disableRecapture"
+													on-select="updateReviewDate('declined',$event)"
+													ng-required="!disableRecapture">
+												</gaig-datepicker>
+				      						</div>
+				      					</div>
+					      				<div class="row-fluid">
+					      					<div class="span12">
+					      						<label for="declinedRecaptureComments">Recapture Comments</label>
+												<textarea rows="4" id="declinedRecaptureComments" class="span12"
+													ng-disabled="viewOnlyMode || disableRecapture" gaig-maxlength="500"
+													ng-model="disposition.recaptureComments" maxlength="500" ></textarea>
+											</div>
+				      					</div>
+				      				</fieldset>
+		      					</div>
+
+
+		      					<div ng-show="submission.transactionStatusRefCode == 'LOST'">
+									<fieldset>
+					      				<div class="row-fluid">
+					      					<div class="span4">
+					      						<label>Lost Date</label>
+					      						{{disposition.dispositionDate  | date:'MM/dd/yyyy'}}
+					      					</div>
+					      					<div class="span3">
+					      						<label for="lostToCarrier">Lost to Carrier</label>
+					      						{{disposition.lostToCarrierName}}&nbsp; &nbsp;
+					      					</div>
+
+					      					<div class="span4" ng-if="foundSubmission && !viewOnlyMode">
+					      					<button type="submit" id="lostToCarrierX" class="redClose" ng-click="clearLostCarrier()" >X</button>
+					      					&nbsp;
+					      					<button type="submit" id="carrierLookupModal" class="btn" ng-click ="onCarrierLookupOpen()"><i class="icon-search"></i></button>
+
+					      					<ra-modal-custom modal-class="btn" modal-size="carrierLookup" ng-disabled="viewOnlyMode"
+						    					custom-footer open-btn-label="" show-open-btn="false"
+						    					title="Search for Carrier" ng-cloak toggle="isSearchForCarrierOpen"
+												open-func="onCarrierLookupOpen()" cancel-func="onCarrierLookupCancelButton()"
+												buttons="">
+												<div class="container-fixed">
+													<messages  id="carrierLookupMessages" success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+													<div class="row-form modal-body-carrierLookup noPadding">
+														<div class="row-fluid">
+															<div class="span2andAHalf">
+																<div class="carrierModalLHN">
+																	<div class="row-fluid">
+																		<div style="text-align:center">
+																			<button type="submit" class="btn" id="carrierLookupButton" ng-click="doCarrierLookup()" ng-disabled="carrierLookup.carrierLookupString.length < 3">Search&nbsp;<i class="icon-search"></i></button>
+																		</div>
+																	</div>
+																	<div class="row-fluid">
+																		<hr>
+																	</div>
+																	<div class="row-fluid">
+																		<select class="input-medium"
+																			gaig-select="{'allowClear': false }"
+																			ng-model="carrierLookup.carrierLookupType"
+																			ng-disabled="disabledFields.lostCarrierModal"
+																	        on-change="doChangeCarrierLookupType()"
+																			ng-options="::item.value as ::item.label for item in ::carrierLookupTypeList track by item.value">
+																		        <option value=""></option>
+																	    </select>
+																	</div>
+																	<div class="row-fluid">
+																			<label>Carrier Name</label>
+																			<input type="text" class="input-mini3" id="carrierLookupInput" ng-model="carrierLookup.carrierLookupString"
+																				   ng-disabled="disabledFields.lostCarrierModal" placeholder="Search..." gaig-keypress="{'enter': 'doCarrierLookup()'}"/>
+																				   &nbsp;&nbsp;
+																	</div>
+																</div>
+															</div>
+															<div class="span9andThreeFourths">
+																<div class="gaig-table-topper carrierLookupTableTopper">
+																	<div class="pull-left">
+																		<h3 class="table-title">Search Results</h3>
+																	</div>
+																</div>
+																<table class="table gaig-table table-striped display marginLeft-10"
+																	carrier-lookup-table
+																	id="carrierLookupTable" data="carrierLookupRows"
+																	headings="carrierLookupColumnHeadings"
+																	columnDefs="carrierLookupColumnHeadingsDef">
+																</table>
+															</div>
+														</div>
+													<div class="row-form">
+														<div class="row-fluid">
+															<div  style="width:80.5%">
+																<table class="pull-left leftMargin171">
+																	<tr>
+																		<td><label>&nbsp;&nbsp;Can't find the correct match?</label></td>
+																	</tr>
+																	<tr>
+																		<td>
+																			<legend>
+																				<label class="checkbox small">
+																					<input type="checkbox" id="checkOtherCarrier" ng-model="carrierLookup.otherCarrierIndicator" ng-click="toggleOtherCarrierCheckbox()"
+																					                       ng-disabled="viewOnlyMode || disabledFields.lostCarrierModal"/>
+																						   Use "Other" or enter your own carrier or group name
+																				</label>
+																			</legend>
+																		</td>
+																	</tr>
+																	<tr>
+																		<td>
+																			<label class="leftMargin26">Carrier Name</label>
+																			<input class="leftMargin26" id="otherCarrierInput" ng-model="carrierLookup.otherCarrierName" type="text" placeholder="Other"
+																				   						maxlength="60" ng-disabled="!carrierLookup.otherCarrierIndicator || disabledFields.lostCarrierModal"/>
+																		</td>
+																	</tr>
+																</table>
+															</div>
+														</div>
+													</div>
+												</div>
+												</div>
+												<div class="modal-custom-footer-refapp">
+													<button type="submit" class="btn btn-primary" ng-disabled="!carrierLookup.otherCarrierIndicator || carrierLookup.otherCarrierName.length < 1"
+													ng-click="onSelectCarrierName()">Ok</button>
+													&nbsp;<button type="submit" class="btn" ng-click="onCarrierLookupCancelButton()">Cancel</button>
+												</div>
+											</ra-modal-custom>
+					      					</div>
+					      				</div>
+                                        <br />
+                                        <div class="row-fluid">
+                                            <div class="form-cell">
+												<rpm-field object-name="lostToAgent" field="fullName" type="input" session="submission" label="Lost to Agent"
+														   id="lostToAgent" class="input-large2" maxlength="90" ng-disabled="viewOnlyMode"></rpm-field>
+                                            </div>
+
+                                            <div class="form-cell">
+                                                <label for="lostToRate">Lost to Rate</label>
+                                                <input id="lostToRate" type="text" class="input-medium"
+                                                       ng-model="disposition.lostToRate" onKeyPress="RA.UI.allowOnlyNumerics(event)"
+                                                       maxlength="10" ng-disabled="viewOnlyMode || disabledFields.lost"
+                                                        />
+                                            </div>
+                                            <div class="form-cell">
+                                                <label for="noOfYearsQuoted"># of Years Quoted</label>
+                                                <input id="noOfYearsQuoted" type="text" class="input-small"
+                                                       ng-model="disposition.numberOfYearsQuoted"
+													   onKeyPress="RA.UI.allowOnlyNumerics(event)"
+                                                       maxlength="3" ng-disabled="viewOnlyMode || disabledFields.lost"
+                                                        />
+                                            </div>
+                                        </div>
+										<div class="row-fluid">
+					      					<div class="span12">
+					      						<label for="lostReason" class="required">Lost Reason</label>
+												<select id="lostReason"  class="input-xlarge2"
+                                                    gaig-select="{ 'allowClear': false }"
+													data-placeholder="--Select--"
+													ng-model="disposition.reasonRefCode"
+													ng-disabled="viewOnlyMode"
+													ng-options="::item.itemCode as ::item.itemDescriptionShort for item in ::dispositionLostList track by item.itemCode">
+                                                    <option value=""></option>
+												</select>
+                                            </div>
+				      					</div>
+										<div class="row-fluid">
+					      					<div class="span12">
+					      						<label for="lostComments">Lost Comments</label>
+												<textarea rows="4" id="lostComments" class="span12"
+													ng-disabled="viewOnlyMode" gaig-maxlength="500"
+													ng-model="disposition.dispositionComments" maxlength="500" ></textarea>
+				      						</div>
+				      					</div>
+
+					      				<div class="row-fluid">
+					      					<div class="span5">
+												<label>Recapture Next Term?</label>
+								                <gaig-switch id="lostRecaptureSwitch"
+								            		ng-model="disposition.lostRecaptureIndicator"
+								            		data-on-label="Yes"
+								            		data-off-label="No"
+								            		on-click="updateDispositionStatus('lost',$event)"
+								            		ng-disabled="viewOnlyMode"
+								            		size="small" >
+								            	</gaig-switch>
+				      						</div>
+					      					<div class="span7">
+					      						<label for="lostRecaptureReviewDate"
+					      							ng-class="{true:'required', false: ''}[!disableRecapture]">Recapture Review Date</label>
+												<gaig-datepicker id="lostRecaptureReviewDate"
+													ng-model="disposition.lostRecaptureReviewDate"
+													ng-disabled="viewOnlyMode || disableRecapture"
+													on-select="updateReviewDate('lost',$event)"
+													ng-required="!disableRecapture">
+												</gaig-datepicker>
+				      						</div>
+				      					</div>
+					      				<div class="row-fluid">
+					      					<div class="span12">
+					      						<label for="lostRecaptureComments">Recapture Comments</label>
+												<textarea rows="4" id="lostRecaptureComments" class="span12"
+													ng-disabled="viewOnlyMode || disableRecapture" gaig-maxlength="500"
+													ng-model="disposition.recaptureComments" maxlength="500"></textarea>
+											</div>
+				      					</div>
+	    							</fieldset>
+		      					</div>
+
+		      					<div ng-show="submission.transactionStatusRefCode == 'WITH'">
+									<fieldset>
+					      				<div class="row-fluid">
+					      					<div id="withdrawnDate" class="span4">
+					      						<label>Withdrawn Date</label>
+					      						{{disposition.dispositionDate   | date:'MM/dd/yyyy'}}
+					      					</div>
+					      				</div>
+										<div class="row-fluid">
+					      					<div class="span12">
+					      						<label for="withdrawnReason" class="required">Withdrawn Reason</label>
+												<select id="withdrawnReason"  class="input-xlarge2"
+                                                    gaig-select="{ 'allowClear': false }"
+													data-placeholder="--Select--"
+													ng-model="disposition.reasonRefCode"
+													ng-disabled="viewOnlyMode"
+													ng-options="::item.itemCode as ::item.itemDescriptionShort for item in ::dispositionWithdrawnList track by item.itemCode">
+                                                    <option value=""></option>
+                                                </select>
+                                            </div>
+				      					</div>
+										<div class="row-fluid">
+					      					<div class="span12">
+					      						<label for="withdrawnComments">Withdrawn Comments</label>
+												<textarea rows="4" id="withdrawnComments" class="span12"
+						      						ng-disabled="viewOnlyMode" gaig-maxlength="500"
+													ng-model="disposition.dispositionComments" maxlength="500" ></textarea>
+				      						</div>
+				      					</div>
+
+					      				<div class="row-fluid">
+					      					<div class="span5">
+												<label>Recapture Next Term?</label>
+								                <gaig-switch id="withdrawnRecaptureSwitch"
+								            		ng-model="disposition.withdrawnRecaptureIndicator"
+								            		data-on-label="Yes"
+								            		data-off-label="No"
+								            		on-click="updateDispositionStatus('withdrawn',$event)"
+								            		ng-disabled="viewOnlyMode"
+								            		size="small" >
+								            	</gaig-switch>
+				      						</div>
+					      					<div class="span7">
+					      						<label for="withdrawnRecaptureReviewDate"
+					      							ng-class="{true:'required', false: ''}[!disableRecapture]">Recapture Review Date</label>
+												<gaig-datepicker id="withdrawnRecaptureReviewDate"
+													ng-model="disposition.withdrawnRecaptureReviewDate"
+													ng-disabled="viewOnlyMode || disableRecapture"
+													on-select="updateReviewDate('withdrawn',$event)"
+													ng-required="!disableRecapture" >
+												</gaig-datepicker>
+
+				      						</div>
+				      					</div>
+					      				<div class="row-fluid">
+					      					<div class="span12">
+					      						<label for="withdrawnRecaptureComments">Recapture Comments</label>
+												<textarea rows="4" id="withdrawnRecaptureComments" class="span12"
+												ng-disabled="viewOnlyMode  || disableRecapture" gaig-maxlength="500"
+													ng-model="disposition.recaptureComments" maxlength="500"></textarea>
+											</div>
+				      					</div>
+	    							</fieldset>
+		      					</div>
+
+							</div>
+		      			</div>
+		      		</fieldset>
+
+
+
+  	      			<fieldset gaig-fieldset ng-cloak id="comments">
+	      				<legend>Comments</legend>
+
+		      			<!--  **********************  -->
+	      				<!--     COMMENTS/REMARKS     -->
+	      				<!--  **********************  -->
+	      				<div class="row-form">
+		      				<div class="row-fluid">
+		      					<div class="span12">
+		      						<label for="commentsRemarks">Comments</label>
+                                	<textarea rows="8" id="commentsRemarks" class="span12 ckeditor"
+                                		ng-model="submission.comments" maxlength="500" ng-disabled="viewOnlyMode || disabledFields.commentsRemarks"
+                                		gaig-maxlength="500"></textarea>
+                                </div>
+                            </div>
+                        </div>
+		      		</fieldset>
+
+	      			<br />
+
+	      			<div ng-cloak>
+	      				<div class="form-actions">
+		      			<button type="submit" class="btn btn-primary" ng-click="saveSubmission(false)" id="subSaveButton"
+                  			ng-if="doDetermineSaveButton()" >Save</button>
+						<button type="submit" class="btn btn-primary" ng-click="saveSubmission(true)" id="subSaveAndWorkButton"
+								ng-if="doDetermineSaveButton()" >Save & Work</button>
+
+		      			<button type="submit" class="btn btn-primary" ng-click="updateSubmission()"  id="subUpdateButton"
+		      				ng-if="doDetermineUpdate() && (doShowCustNo() || !viewOnlyMode) && !doDetermineDispositionSaveButton() && !doDetermineReopenButton()"
+		      				ng-disabled="form.$invalid || disabledFields.updateButton">Update</button>
+
+							<!-- //TODO: Temporary only. Remove once WPI makes call to CUBE for OOS. -->
+							<button type="submit" class="btn btn-primary" ng-click="externalPASPostExternalIssue()"  id="externalPASPostExternalIssueButton"
+									ng-if="doShowExternalPASButtons()">Send extra issue info for OOS</button>
+
+							<!--  disposition SAVE/REOPEN/PREVIEW LETTER BUTTONS -->
+	      				<button type="submit" class="btn btn-primary" id="subUpdateDispButton"
+	      					ng-click="saveSubmissionDisposition()"
+	      					ng-if="doDetermineDispositionSaveButton()">Update </button>
+	      				<button type="submit" class="btn btn-primary" id="submissionReopenButton" ng-click="doReopen()" id="subReopenButton"
+	      					ng-if="doDetermineReopenButton()" >Reopen</button>
+
+
+		      			<button type="submit" id="submissionCancelButton" class="btn" ng-click="cancelFunction('submission', submission, preCallback, postCallback)">Cancel</button>
+
+		      			<br /><br />
+		      			</div>
+      				</div>
+      			</div>	<!--  end of container-fluid -->
+      			</form>
+
+                <!--  TIMEOUT MODAL -->
+                <ra-modal modal-class="btn" modal-size="confirm"
+                          display-title="Timeout Message" ng-cloak
+                          toggle="isTimeoutOpen"
+                          func="toggleTimeoutModal()"
+                          close-btn-label="OK"
+                          cancel-function="toggleTimeoutModal()"
+                        >
+                    <br />
+                    Your request has exceeded the time allowed.
+                </ra-modal>
+    <script type="text/javascript" src="dyn/js/submission"></script>
+</div>
+
+</html>

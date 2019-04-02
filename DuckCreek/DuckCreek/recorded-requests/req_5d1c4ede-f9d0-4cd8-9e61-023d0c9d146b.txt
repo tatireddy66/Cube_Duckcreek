@@ -1,0 +1,11 @@
+GET https://cubeshsdev.td.afg:443/UwdRefApp/ HTTP/1.1
+Host: cubeshsdev.td.afg
+Connection: keep-alive
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: BIGipServerudratcdev.td.afg-http-pool=3454349834.20480.0000; SMSESSION=fFAJbV+TNF7KbhIputmYLN0by1kqnUOUn+PvybnmsDj+aAlLGWacoQZYqLuEzFEYmd7wEJ2Wzo+vmAvqreAUDwA3UN/Ek+tm+sk141a/cXIP5QL1Of7mbCbiRnb7KQ9kyT0mvM00nPkG7TDaKOrnoItGP7nWYWMEB3kVsdvawHyaFvCAf+UiWuEYT2Q9h5hsGhugmSKmrMpy7NJxrqR5j+QPG/c0OIVOIvAwZGVyiMSAe8C6WXpgACvmhQV4ABLxUsxapFx1jcZ36KBj91KlkF1t/E63dqqbnqKsANDQnicaPGBRB4zYs7bg9hKvuXXX3qYrkTM/u88Ds6Y6T1pZhjvOjejHPGQNRj2RuRW2LSrzIsGbJiWSlCjImmYTUnkphVF8JnzToCgquuS8btim4lsDOXEcDzePQ6Ti6yqCNtXgrvECG/GzAfcvykkcZFo2LR/NCMxgVz5skFGFKynO6o2MM2uQrDP9GTCV5Oqh/EOfMZmI+7jtDWdaf8rZh9DGQq2daiI5uxVgl9Hf6tq8IQsHBZpi6HVbbZcZJFeIdmUkE+VOqj9DS2otY/FUC6fsWeDDoaYKWvj5swH/jN2UxQJsxicqL5VSrfb6ezqfKDhxT12FQ61nqGgPSbUIM1FesSckmiqFXhWPqb6DrUklDWzsTwh5YrC2193GvtsBerGTeOJz1HR75cThtDxViZ5xfl2OMhvshwNmTfpvIcaOvWymk+BaEXr78vpep8R1qn+tAhnJd5NM3kuCjOHtgqpgUdo8QhmlYlJlLsSDB+/k9dP8JQMdg4Hr+GLF8Xy5cKvCVPp8/6ETrcPPc5vAdqWK2b9+jsssk+w+L9CToiglySEB9+vHQSRdZP8KJXaKcydtMVRAphIXVMmAzz8/stU7W3Q7byITAQW4lBDaC7mbUaTVJrOpNO4vV5L+vCkHjnYlIh3Pn33xctYN4Uho4Ku4ZmuCEhmi13KNho53Ljsn9Y+PwNncRzut7HqjeeHyLqcFm4qa0LLCJRzUkdkt+Yd/jC3c2dBbbnFEfs/jQuSV1DneKhFoNdYKOA7wtUoQPH46yB7SCZEt4rhv3GjDHBkXYzoI1qadNHAIR5J4i2e3A6NhWiH7auhj89sCW6VNluavJ2d8/NrZxYGR4Q3HE+cI0wmWDcVOVJ1MSI7X5U9Z8tbhGcxBp0iWhq1imsivBcsJ2mrmLwLrw9wLQoOu3a3nkhKVN2z1BmAvFkRNmMLUnUrbUrDkQtTt
+

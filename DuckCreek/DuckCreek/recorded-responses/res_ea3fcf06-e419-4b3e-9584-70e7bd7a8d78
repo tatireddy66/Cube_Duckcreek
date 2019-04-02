@@ -1,0 +1,26 @@
+var appTopNav = angular.module('refAppDirectivesTopNav', ['submissionServices', 'presentationServices', 'searchServices',
+    'notesServices', 'accountServices', 'activityServices', 'navigationServices', 'dashboardServices', 'reportServices', 'renewalServices']);
+
+
+/****************************
+ * topnav - top navigation element common to all pages
+ ****************************/
+appTopNav.directive('topnav', function ()
+{
+
+    return {
+        restrict: 'E',
+        transclude: true,
+        scope: true,
+        controller: 'topNavController',
+
+        templateUrl: 'dyn/html/templates/directives/directivesTopNav',
+
+        link: function (scope, element, attrs)
+        {
+
+        }	// end of link section
+
+    }	// end of return section
+
+});

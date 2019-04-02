@@ -1,0 +1,7 @@
+POST https://update.googleapis.com/service/update2 HTTP/2.0
+content-length: 1012
+content-type: application/xml
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+accept-encoding: gzip, deflate, br
+
+<?xml version="1.0" encoding="UTF-8"?><request protocol="3.1" dedup="cr" acceptformat="crx2,crx3" sessionid="{ac91a933-9be0-4507-a6ed-c5a48e60ef8a}" requestid="{0e105482-c07e-4723-a4a0-799eb38076f1}" updater="chrome" updaterversion="72.0.3626.119" prodversion="72.0.3626.119" lang="en-US" os="win" arch="x64" nacl_arch="x86-64"><hw physmemory="8"/><os platform="Windows" arch="x86_64" version="10.0.14393.2791"/><app appid="hfnkpimlhhgieaddgfemjhofmfblmnib" version="5017"><event download_time_ms="8180" downloaded="16642" downloader="bits" eventresult="1" eventtype="14" nextversion="5017" previousversion="5016" total="16642" url="http://redirector.gvt1.com/edgedl/release2/chrome_component/Emlo8bX_f9k_5017/5017_all_crl-set-12525364975880064040.data.crx3"/><event eventresult="1" eventtype="3" nextfp="1.2479690ad9e4e5bae256c6dbfb55ace4f178cfca5da60e206c97b83f763539b9" nextversion="5017" previousfp="1.6768d4bff1bfcdc6834a5a334e34415de18aa58eccba451816d3d1fef159c950" previousversion="5016"/></app></request>

@@ -1,0 +1,1 @@
+{"@type":"hMap","data":{"@type":"hMap","SubmissionController.doGetSystemDate":{"@type":"hMap","data":{"@type":"date","value":"2019-03-14T05:05:14"},"messages":{"@type":"[Lcom.gaic.bue.uwd.ra.common.resource.Message;","@items":[]},"status":true}},"messages":{"@type":"hSet"},"status":true}

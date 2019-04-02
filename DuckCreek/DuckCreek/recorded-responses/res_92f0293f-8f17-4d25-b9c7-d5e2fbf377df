@@ -1,0 +1,27 @@
+//# sourceURL=dyn/js/loadMessages
+
+onmessage = function(e)
+{
+    var pollTime = 180000;
+    function poll()
+    {
+        var url = location.protocol + '//' + location.hostname + ':' + location.port + '/UwdRefApp/dispatch/NotificationsController.findMessages';
+        var req = new XMLHttpRequest();
+        req.open('POST', url, false);
+        req.setRequestHeader('Content-Type', 'application/json');
+        req.send(JSON.stringify({'NotificationsController.findMessages': {hid: e.data}}));
+        var contentType = req.getResponseHeader('content-type');
+
+        if (contentType === 'application/json') {
+            if(req.response)
+            {
+                postMessage(req.response);
+            }
+            setTimeout(poll, pollTime);
+        } else {
+            console.log('Invalid notification response, terminating worker');
+            postMessage('login');
+        }
+    }
+    setTimeout(poll, pollTime);
+};

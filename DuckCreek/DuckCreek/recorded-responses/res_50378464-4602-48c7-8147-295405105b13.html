@@ -1,0 +1,148 @@
+<script type="text/javascript" src="dyn/js/aggregate"></script>
+<div ng-controller="AggregateController">
+<fieldset gaig-fieldset ng-cloak>
+    <legend>Aggregate</legend>
+    <div class="row-form">
+        <div class="row-fluid">
+            <div class="form-cell" ng-show="showOthers">
+                <rpm-field object-name="Submission" field="defaultOccurrenceLimit" type="currency" session="submission" label="Default Occurrence Limit"
+                           id="defaultOccurrenceLimit" decimal-places="0" decimals-to-show="0" class="input-medium" ng-disabled="viewOnlyMode || disabledFields.aggregate || !editAggregateAccess"></rpm-field>
+            </div>
+            <div ng-hide="!submission.rpmSession">
+                {{!foundAggId ? doLoadAggregateById(getRpmObjects('submission', 'Submission').getValue('aggregateId')) : ''}}
+            </div>
+        </div>
+        <br />
+
+        <div ng-show="showOthers">
+            <fieldset class="fieldset-white">
+            <div class="row-fluid" >
+                <label>Aggregate Search</label>
+                <div class="form-cell">
+                    <select id="aggregateSearchType" class="input-large" gaig-select="{ 'allowClear': true }" ng-show="editAggregateAccess" ng-disabled="viewOnlyMode || disabledFields.aggregateSearch" ng-model="search.aggSearchType"
+                            ng-options="::item.value as ::item.label for item in ::aggregatesSearchTypeList track by item.value">
+                    <option value=""></option>
+                    </select>
+                </div>
+                <div class="form-cell">
+                    <input id="searchAggregates" type="text" ng-model="search.searchValue" ng-disabled="viewOnlyMode  || disabledFields.aggregateSearch" ng-show="editAggregateAccess"/>
+                    <ra-modal modal-size="xxlarge"
+                              modal-id="addAggregateModal"
+                              display-title="Search Results" ng-cloak
+                              toggle="isSearchAggregatesOpen"
+                              cancel-function="toggleSearchAggregates()"
+                              buttons="searchAggregatesButtons">
+                        <div class="container-fixed">
+                            <div class="spanModalLhn modalLHN">
+                                <label for="searchButtonModal">Aggregate Search</label>
+                                <center><button id="searchButtonModal" class="btn" ng-click="doSearchAggregates(false)">Search</button></center>
+                                <p></p>
+                                <div class="form-cell">
+                                    <select id="aggregateSearchTypeInModal" class="input-medium" gaig-select="{ 'allowClear': true }" ng-model="search.aggSearchType"
+                                            ng-options="::item.value as ::item.label for item in ::aggregatesSearchTypeList track by item.value">
+                                        <option value=""></option>
+                                    </select>
+                                </div>
+                                <input id="aggregateSearch" class="input-medium" ng-model="search.searchValue" ng-disabled = "disabledFields.aggregateSearch"/>
+                            </div>
+                            <div class="spanModalContentBilling">
+                                <div class="gaig-table-primary-header">
+                                    <h6 class="table-title">
+                                        <div class="pull-left">Search Results</div>
+                                    </h6>
+                                    <label class="pull-right title">
+                                        <input id='aggregateTopFilterSub' type="text" class="tableTopperSearchBox" placeholder="Search table ..."
+                                               onKeyUp="filterTable('aggregateTableSub', this.value)" />
+                                        <span class="tableTopperRecords" >0  Records</span>
+                                    </label>
+                                </div>
+                                <table id="aggregateTableSub" class="table gaig-table table-striped">
+                                    <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Aggregate Name</th>
+                                        <th>Lrg Ded Type</th>
+                                        <th>Effect Date</th>
+                                        <th>Expire Date</th>
+                                        <th>Var. Fee</th>
+                                        <th>Aggr Deduct.</th>
+                                        <th>Split Invoice</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="aggregateTableSubBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </ra-modal>
+                    <button id="searchButton" class="btn searchImageAggregate" ng-click="toggleSearchAggregates()" ng-disabled="viewOnlyMode || disabledFields.aggregate " ng-show="editAggregateAccess"><i class="icon-search"></i></button>
+                </div>
+                <div class="form-cell">
+                        <button class="btn aggregateButtonSub" ng-click="toggleAddAggregate()" ng-disabled="viewOnlyMode || disabledFields.aggregate" ng-show="editAggregateAccess">Add New Aggregate...</button>
+                        <ra-modal modal-class="btn aggregateButtonSub"
+                                  modal-size="addAggregateModal"
+                                  modal-id="addAggregateModal"
+                                  display-title="" ng-cloak
+                                  extra="aggregateModalTitle"
+                                  toggle="isAddAggregateOpen"
+                                  func="toggleAddAggregate()"
+                                  cancel-function="toggleAddAggregate()"
+                                  buttons="addSubAggregateButtons"
+                                  ng-disabled="disabledFields.aggregate">
+                            <div ng-include="'dyn/html/addAggregate'"></div>
+                        </ra-modal>
+                </div>
+            </div>
+
+            <div class="row-form">
+                <div class="form-cell">
+                    <label class="required">ID</label>
+                    {{selectedResult.aggregateID || '--'}}
+                </div>
+                <div class="form-cell">
+                    <label class="default-cursor">Aggregate Name</label>
+                    {{selectedResult.aggregateName || '--'}}
+                </div>
+                <div class="form-cell">
+                    <label class="default-cursor">Lrg Ded Type</label>
+                    {{selectedResult.largeDeductibleTypeLabel || '--'}}
+                </div>
+                <div class="form-cell">
+                    <label class="default-cursor">Effect Date</label>
+                    {{selectedResult.aggLimitTermEffectiveDate || '--'}}
+                </div>
+                <div class="form-cell">
+                    <label class="default-cursor">Expire Date</label>
+                    {{selectedResult.aggLimitTermExpirationDate || '--'}}
+                </div>
+                <div class="form-cell">
+                    <label class="default-cursor">Var. Fee</label>
+                    <div ng-show="selectedResult.variableFeePercent">
+                        {{selectedResult.variableFeePercent}}%
+                    </div>
+                    <div ng-show="!selectedResult.variableFeePercent">
+                        {{'--'}}
+                    </div>
+                </div>
+                <div class="form-cell">
+                    <label class="default-cursor">Aggr Deduct.</label>
+                    {{selectedResult.aggregateDeductibleLimit || '--'}}
+                </div>
+                <div class="form-cell">
+                    <label class="default-cursor">Split Invoice</label>
+                    {{selectedResult.splitLabel || '--'}}
+                </div>
+                <div class="form-cell">
+                    <button ng-show="selectedResult && editAggregateAccess" class="btn" ng-click="doEditAggregate(aggregateIndex, false, false)" ng-disabled="viewOnlyMode || disabledFields.aggregate" >Edit</button>
+                    <button ng-show="selectedResult && !editAggregateAccess" class="btn" ng-click="doEditAggregate(aggregateIndex, false, true)" ng-disabled="disabledFields.aggregate" >View</button>
+                </div>
+                <div class="form-cell">
+                    <button ng-show="selectedResult && editAggregateAccess" class="btn" ng-click="doRemoveAggregate()" ng-disabled="viewOnlyMode || disabledFields.aggregate " >Remove</button>
+                </div>
+            </div>
+            </fieldset>
+        </div>
+    </div>
+
+</fieldset>
+</div>

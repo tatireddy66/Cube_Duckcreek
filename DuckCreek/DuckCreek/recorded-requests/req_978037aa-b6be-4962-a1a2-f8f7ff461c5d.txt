@@ -1,0 +1,10 @@
+GET https://secureauthdev.td.afg:443/siteminderagent/forms/jquery-1.7.1.min.js HTTP/1.1
+Host: secureauthdev.td.afg
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: */*
+Purpose: prefetch
+Referer: https://secureauthdev.td.afg/siteminderagent/forms/branded_login.fcc?TYPE=33619969&REALMOID=06-000ef54e-b3bb-16bb-a929-e8270a324027&GUID=&SMAUTHREASON=0&METHOD=GET&SMAGENTNAME=-SM-osUb62PWBjPNzTaUAeEMCcXMMvoyy7MXgpF9pWs9szQn5M4g1syvVt7mx1vkQ4M%2bKi8PFqoXJleHSSUIA1XA5TyTzbhszmwr&TARGET=-SM-http%3a%2f%2fcubeshsdev%2etd%2eafg%2fUwdRefApp%2f
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+

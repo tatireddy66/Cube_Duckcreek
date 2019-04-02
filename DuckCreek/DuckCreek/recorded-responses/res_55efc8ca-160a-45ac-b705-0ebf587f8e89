@@ -1,0 +1,636 @@
+function setTRNStatusModalController($scope, $rootScope, $timeout, Presentation, Search, Submission) {
+    var FOOTER_BUTTONS = { SAVE: 0, SAVE_AND_CHANGE: 1}
+
+    $scope.dateLabel = DATE_LABEL;
+    $scope.reasonLabel = REASON_LABEL;
+    $scope.commentsLabel = COMMENTS_LABEL;
+    $scope.currentDateTrnStatus = RA.UI.doMakeCurrentDateMMDDYYYY(new Date());
+    $scope.lostDisposition = false;
+    $scope.withdrawnDisposition = false;
+    $scope.declinedDisposition = false;
+    $scope.oneStatusValid = false;
+    $scope.currentUser = $rootScope.currentUser.createHid;
+    $scope.docBody = angular.element(document).find('body');
+
+    async.auto(
+        {
+            decline: function (callback) {
+                Presentation.findDispositionDeclinedList(function (result) {
+
+                    var data = RA.Service.handleServiceResult(result, $scope);
+                    $scope.declineList = data;
+                    callback(null, data);
+                });
+            },
+            lost: function (callback) {
+                Presentation.findDispositionLostList(function (result) {
+                    var data = RA.Service.handleServiceResult(result, $scope);
+                    $scope.lostList = data;
+                    callback(null, data);
+                });
+            },
+            withdrawn: function (callback) {
+                Presentation.findDispositionWithdrawnList(function (result) {
+                    var data = RA.Service.handleServiceResult(result, $scope);
+                    $scope.withdrawnList = data;
+                    callback(null, data);
+                });
+            }
+        },
+        function(err, results)
+            {
+                $scope.$apply();
+            }
+       );
+
+    $scope.footerButtons = [
+        {
+            "buttonId": "saveStatusButton",
+            "label": "Save",
+            "css": "btn btn-primary",
+            "onClick": function () {
+                $scope.disposition.dispositionTypeCode === 'REOPEN' ? $scope.reopenSubmission() : $scope.saveSubmissionDisposition();
+            },
+            "closeOnClick": false,
+            "isDisabled": true,
+            "dynatrace": "trnSaveStatusAndChangeDetails"
+        },
+        {
+            "buttonId": "saveStatusAndChangeDetails",
+            "label": "Save and Change Details",
+            "css": "btn",
+            "onClick": function () {
+                $scope.saveStatusAndChangeDetails();
+            },
+            "closeOnClick": false,
+            "isDisabled": false,
+            "dynatrace": "trnSaveStatusAndChangeDetails"
+        }
+    ];
+
+    $scope.saveStatusAndChangeDetails = function() {
+        if ($scope.table && $scope.table.length > 0) {
+            $scope.$parent.isSingle = false;
+            $scope.$parent.changeDetailsTable = $scope.table;
+        } else {
+            $scope.$parent.changeDetailsTable = null;
+        }
+        if ($scope.disposition.dispositionTypeCode === 'REOPEN') {
+            $scope.reopenSubmission();
+        } else {
+            $scope.saveSubmissionDisposition();
+        }
+    };
+
+    $scope.changeDisposition = function()
+    {
+        // This method can take a while to run and we're on a modal so there are no dancing dots so this flips the
+        // cursor to indicate that it's thinking... it's turned off at the end of the callback in verifyStatusChange
+        $scope.docBody.addClass('waiting-cursor');
+
+        RA.UI.doClearMessages($scope);
+        var type = $scope.disposition.dispositionTypeCode;
+
+        $scope.showBindLink = false;
+        $scope.lostDisposition = false;
+        $scope.withdrawnDisposition = false;
+        $scope.declinedDisposition = false;
+        $scope.disposition.recaptureIndicator = FALSE;
+        Presentation.findDispositionDefaults(type, function (result) {
+            var dispositionDefaults = RA.Service.handleServiceResult(result, $scope);
+
+            switch (type) {
+                case TRANSACTION_STATUS_LOST:
+                    $scope.displayList = $scope.lostList;
+                    $scope.reasonLabel = REASON_LOST_LABEL;
+                    $scope.commentsLabel = COMMENTS_LOST_LABEL;
+                    $scope.dateLabel = DATE_LOST_LABEL;
+                    $scope.lostDisposition = true;
+                    if (dispositionDefaults['recaptureIndicator']) {
+                        $scope.disposition.recaptureIndicator = TRUE;
+                    }
+                    break;
+                case TRANSACTION_STATUS_DECLINED:
+                    $scope.displayList = $scope.declineList;
+                    $scope.reasonLabel = REASON_DECLINED_LABEL;
+                    $scope.commentsLabel = COMMENTS_DECLINED_LABEL;
+                    $scope.dateLabel = DATE_DECLINED_LABEL;
+                    $scope.declinedDisposition = true;
+                    break;
+                case TRANSACTION_STATUS_WITHDRAWN:
+                    $scope.displayList = $scope.withdrawnList;
+                    $scope.reasonLabel = REASON_WITHDRAWN_LABEL;
+                    $scope.commentsLabel = COMMENTS_WITHDRAWN_LABEL;
+                    $scope.dateLabel = DATE_WITHDRAWN_LABEL;
+                    $scope.withdrawnDisposition = true;
+                    break;
+                case TRANSACTION_STATUS_BOUND:
+                    $scope.showBindLink = true;
+                    break;
+            }
+            if (RA.Controller.isDispositionStatus(type)) {
+                if ($scope.submission == null ) {
+                    $scope.submission = $scope.$parent.submission
+                }
+                if ($scope.submission != null) {
+                    $scope.disposition.recaptureReviewDate = null;
+                    $scope.disposition.recaptureIndicator = FALSE;
+                    $scope.submission.transactionStatusRefCode = type;
+                    async.series(
+                        {
+                            defaultDisposition: function (callback) {
+                                console.log('changeDisposition defaultDisposition: entry');
+                                Submission.findDefaultDisposition(RA.Controller.serialize($scope.submission), function (result) {
+                                    var data = RA.Service.handleServiceResult(result, $scope);
+                                    callback(null, data);
+                                });
+                            }
+                        },
+                        function (err, result) {
+                            if (result.defaultDisposition != null) {
+                                $scope.defaultDisposition = result.defaultDisposition;
+                                // Scope Apply Required to Refresh Recapture Review Date in Modal
+                                $scope.$apply();
+                            }
+
+                        }
+                    );
+                }
+            }
+            $scope.verifyStatusChange();
+        });
+    };
+
+
+    $scope.resetModal = function () {
+        RA.UI.doClearMessages($scope);
+        $scope.disposition.dispositionTypeCode = null;
+        $scope.disableRecapture = true;
+        $scope.displayList = [];
+        $scope.lostDisposition = false;
+        $scope.withdrawnDisposition = false;
+        $scope.declinedDisposition = false;
+        $scope.showBindLink = false;
+    }
+
+    $scope.clearLostCarrier = function()
+    {
+        $scope.disposition.lostToCarrierName = EMPTY_STRING;
+        $scope.disposition.lostToCarrierExternalPartyIdCd = EMPTY_STRING;
+        $scope.disposition.businessCategoryRefCode = EMPTY_STRING;
+    };
+
+    $scope.toggleOtherCarrierCheckbox = function(){
+        if($scope.carrierLookup.otherCarrierIndicator == true){
+            $scope.carrierLookup.otherCarrierName = "Other";
+        }
+        else{
+            $scope.carrierLookup.otherCarrierName = EMPTY_STRING;
+        }
+    };
+
+    $scope.updateDispositionStatus = function()
+    {
+        if ($scope.disposition.recaptureIndicator == FALSE || !$scope.disposition.recaptureIndicator) {
+            $scope.disposition.recaptureReviewDate = null;
+            $scope.disposition.recaptureComments = EMPTY_STRING;
+            $("#recaptureReviewDate").val(EMPTY_STRING);
+            $scope.disableRecapture = true;
+        } else {
+            $scope.disposition.recaptureReviewDate = $scope.recaptureReviewDate;
+            $scope.disableRecapture = false;
+            if ($scope.recaptureReviewDate !== null && $scope.recaptureReviewDate !== EMPTY_STRING && $scope.defaultDisposition && $scope.table.length===1) {
+                $scope.disposition.recaptureReviewDate = $scope.defaultDisposition.recaptureReviewDate;
+            }
+        }
+    };
+
+    $scope.removeRow = function(index)
+    {
+        $scope.table.splice(index, 1);
+        if($scope.table.length == 0)
+        {
+            $scope.trn_cancel();
+        }
+
+        if (TRANSACTION_STATUS_WORK_AND_ISSUE === $scope.disposition.dispositionTypeCode) {
+            $scope.disposition.dispositionTypeCode = '';
+            $scope.footerButtons[FOOTER_BUTTONS.SAVE].isDisabled = true;
+            $scope.footerButtons[FOOTER_BUTTONS.SAVE_AND_CHANGE].isDisabled = true;
+
+            angular.forEach($scope.table, function(tableRow)
+            {
+                delete tableRow.isValid;
+                delete tableRow.errors;
+                tableRow.showErrors = false;
+            });
+        }
+    }
+
+    $scope.updateRecaptureReviewDate = function() {
+        return RA.UI.updateRecaptureReviewDate($scope);
+    }
+
+    $scope.trn_cancel = function () {
+        if($scope.onClose) {
+            $scope.onClose({cancelled:true});
+        }
+    };
+
+    $scope.saveSubmissionDisposition = function()
+    {
+        RA.UI.doClearMessages($scope);
+        $scope.disposition.recaptureIndicator = RA.Controller.transformBoolean($scope.disposition.recaptureIndicator);
+        $scope.disposition.reasonDescription = $scope.disposition.recaptureComments;
+        $scope.disposition.recaptureReviewDate=$scope.dispositionReviewDate;
+        if (($scope.lostDisposition || $scope.withdrawnDisposition || $scope.declinedDisposition) && !$scope.disposition.reasonRefCode)
+        {
+            RA.UI.doDisplayUIMessages([{type: MESSAGE_VALIDATION, text: $scope.reasonLabel + " is a required field."}], $scope);
+            return;
+        }
+        if ($scope.disposition.recaptureIndicator && !$scope.disposition.recaptureReviewDate)
+        {
+            RA.UI.doDisplayUIMessages([{type: MESSAGE_VALIDATION, text: "Recapture review date is required."}], $scope);
+            return;
+        }
+        var dispositions = [];
+        //$('.dashboardCheck:checkbox:checked').each(function()
+        angular.forEach($scope.table, function(tableRow)
+        {
+            if(tableRow.isValid)
+            {
+                //todo: remove jquery...
+                // requires angular 1.4:  var dispLocal = angular.merge({}, $scope.disposition);
+                var dispLocal = $.extend(true, {}, $scope.disposition);
+                dispLocal.submissionId = tableRow.subId;
+                dispositions.push(dispLocal);
+            }
+        });
+
+        var continueMultiWorkAndIssueSubmissionDisposition = function() {
+            Submission.saveSubmissionDispositionById(dispositions, function(result)
+            {
+                result.data['SubmissionController.saveSubmissionDispositionById'].status;
+            });
+
+            $scope.successMessages.push({
+                "type": MESSAGE_SUCCESS,
+                "context": "",
+                "text": "All submissions will be worked and issued and you will receive an email of failures only."
+            });
+            $scope.disposition.dispositionTypeCode = '';
+            $scope.footerButtons[FOOTER_BUTTONS.SAVE].isDisabled = true;
+            $scope.footerButtons[FOOTER_BUTTONS.SAVE_AND_CHANGE].isDisabled = true;
+        }
+
+        var continueSaveSubmissionDisposition = function() {
+            $rootScope.showPageLoading();
+            Submission.saveSubmissionDispositionById(dispositions, function(result)
+            {
+                var data = RA.Service.handleServiceResult(result, $scope);
+                var resultStatus = result.data['SubmissionController.saveSubmissionDispositionById'].status;
+                $scope.oneStatusValid = false;
+                angular.forEach($scope.table, function(tableRow) {
+                    if (data[tableRow.subId] && data[tableRow.subId].length > 0) {
+                        tableRow.errors = [];
+                        angular.forEach(data[tableRow.subId], function(errorMessage) {
+                            tableRow.errors.push(errorMessage.text);
+                            if (errorMessage.type.value === MESSAGE_VALIDATION) {
+                                tableRow.isValid = false;
+                                resultStatus = false;
+                            }
+                        });
+                    } else {
+                       tableRow.isValid = true;
+                       $scope.oneStatusValid = true;
+                       $scope.$apply($scope.oneStatusValid);
+                    }
+                });
+                // Turn the cursor back to normal - Done with timeout so that it doesn't finish until after $scope.apply
+                $timeout(function () {
+                    $scope.docBody.removeClass('waiting-cursor');
+                });
+                $scope.$apply($scope.table);
+                $scope.oneStatusValid = true;
+
+                if($scope.onClose) {
+                    $scope.onClose({resultStatus:resultStatus, result:data});
+                }
+            });
+        }
+
+        if (TRANSACTION_STATUS_WORK_AND_ISSUE  === $scope.disposition.dispositionTypeCode) {
+            if ($scope.table.length > 1) {
+                continueMultiWorkAndIssueSubmissionDisposition();
+            }
+            else {
+            var submissionId  = $scope.table[0].subId;
+            $rootScope.confirmTransaction(submissionId, function(submissionId){
+                continueSaveSubmissionDisposition();
+            });
+            }
+        } else {
+            continueSaveSubmissionDisposition();
+        }
+
+        RA.Session.removeQuoteId();
+        RA.Session.removeSelectedQuoteId();
+        $rootScope.$broadcast('submissionLoaded');
+    };
+
+    $scope.continueSaveSubmissionDispositionById = function(dispositions) {
+        $rootScope.showPageLoading();
+        Submission.saveSubmissionDispositionById(dispositions, function(result)
+        {
+            var data = RA.Service.handleServiceResult(result, $scope);
+            var resultStatus = result.data['SubmissionController.saveSubmissionDispositionById'].status;
+            if($scope.onClose) {
+                $scope.onClose({resultStatus:resultStatus, result:data});
+            }
+        });
+
+    };
+
+    $scope.reopenSubmission = function()
+    {
+        RA.UI.doClearMessages($scope);
+        var ids = [];
+        angular.forEach($scope.table, function(tableRow)
+        {
+            if(tableRow.isValid)
+            {
+                ids.push(tableRow.subId);
+            }
+        });
+
+        $rootScope.showPageLoading();
+        Submission.doReopenSubmissionById(ids, function(result)
+        {
+            var data = RA.Service.handleServiceResult(result, $scope);
+            var resultStatus = result.data['SubmissionController.doReopenSubmissionById'].status;
+            if($scope.onClose) {
+                $scope.onClose({resultStatus:resultStatus, result:data});
+            }
+        });
+
+    };
+
+    $scope.doOpenEditBindDetails = function doOpenEditBindDetails()
+    {
+        var i, len;
+        var dynIds = [];
+        var table = $scope.table;
+
+        RA.UI.doClearMessages($scope);
+        for(i = 0, len = table.length; i < len; i++)
+        {
+            // you can check the isValid here, but they will likely all be in an invalid state at this point
+            dynIds.push(table[i].subId);
+        }
+        sessionStorage['dynamicIds'] = dynIds;
+        sessionStorage['submissionId'] = table[0].subId;
+        $rootScope.mainDisplay.productSection = 'AccountBind';
+        $rootScope.mainDisplay.show.left = false;
+        $rootScope.mainDisplay.show.leftOther = false;
+        $rootScope.showMainContent = false;
+        $rootScope.mainDisplay.show.banner = false;
+        $rootScope.hideRightCharm = true;
+        $rootScope.mainDisplay.show.charms += ACCT_BIND_ROOT_CHARM_EXTENSION;
+    };
+
+    $scope.evaluateFooterState = function() {
+       if ($scope.oneStatusValid == false) {
+           $scope.footerButtons[FOOTER_BUTTONS.SAVE].isDisabled = true;
+           $scope.footerButtons[FOOTER_BUTTONS.SAVE_AND_CHANGE].isDisabled = true;
+        } else {
+           $scope.footerButtons[FOOTER_BUTTONS.SAVE].isDisabled = false;
+           $scope.footerButtons[FOOTER_BUTTONS.SAVE_AND_CHANGE].isDisabled = false;
+        }
+    }
+
+    $scope.verifyStatusChange = function() {
+        var dispositions = [];
+        //$('.dashboardCheck:checkbox:checked').each(function()
+        $scope.oneStatusValid = false;
+        angular.forEach($scope.table, function(tableRow)
+        {
+            delete tableRow.isValid;
+            delete tableRow.errors;
+            tableRow.showErrors = false;
+            // requires angular 1.4:  var dispLocal = angular.merge({}, $scope.disposition);
+            var dispLocal = $.extend(true, {}, $scope.disposition);
+            dispLocal.submissionId = tableRow.subId;
+            dispositions.push(dispLocal);
+        });
+        Submission.verifySubmissionDispositionById(dispositions, function(result) {
+            var data = RA.Service.handleServiceResult(result, $scope);
+            $scope.oneStatusValid = false;
+            angular.forEach($scope.table, function(tableRow) {
+               if (data[tableRow.subId] && data[tableRow.subId].length > 0) {
+                   tableRow.errors = [];
+                   angular.forEach(data[tableRow.subId], function(errorMessage) {
+                       if (!(errorMessage.context && errorMessage.context.indexOf("PubSubMessage") >= 0)) tableRow.errors.push(errorMessage.text);
+                   });
+                   if (tableRow.errors.length>0) {
+                       tableRow.isValid = false;
+                   } else {
+                       tableRow.isValid = true;
+                       $scope.oneStatusValid = true;
+                       $scope.$apply($scope.oneStatusValid);
+                   }
+               } else {
+                   tableRow.isValid = true;
+                   $scope.oneStatusValid = true;
+                   $scope.$apply($scope.oneStatusValid);
+               }
+            });
+            // Turn the cursor back to normal - Done with timeout so that it doesn't finish until after $scope.apply
+            $timeout(function () {
+                $scope.docBody.removeClass('waiting-cursor');
+            });
+            $scope.$apply($scope.table);
+        });
+    };
+
+    $scope.resetFooter = function() {
+        $scope.oneStatusValid = true;
+        $scope.evaluateFooterState();
+    };
+
+    //todo: find a better home
+    //Carrier lookup
+    var snapshots = {};
+    var SEARCH_FOR_CARRIER_SNAPSHOT_KEY = 'searchForCarrier';
+    $scope.carrierLookupTypeList = [{value:"ALL", label: "Individual Carrier and Group Names"}, {value:"GROUP", label: "Group"}];
+    var carrierLookupJsonObject = {'carrierLookupType': "ALL", 'carrierLookupString':"", 'otherCarrierName':"", 'otherCarrierIndicator':false};
+    $scope.carrierLookup = carrierLookupJsonObject;
+    $scope.isSearchForCarrierOpen = false;
+    $scope.carrierLookupRows = [];
+
+    $scope.getCarrierTable = function() {
+        // todo: remove jquery
+        return $('#carrierLookupTable').dataTable();
+    }
+
+    //****************************************************
+    // COLUMN INFORMATION FOR THE SEARCH FOR CARRIER TABLE
+    // ****************************************************
+    $scope.carrierLookupColumnHeadings =
+        [  {"sTitle": "Individual Carrier","sWidth" : "38%"},
+            {"sTitle": "Group", "sWidth" : "38%"},
+            {"sTitle": "A.M. Best Rating","sWidth" : "24%", "sType": "rating"}
+        ];
+    $scope.carrierLookupColumnHeadingsDef = [{'aTargets':[3], 'bVisible':false},
+        {'aTargets':[4], 'bVisible':false},
+        {'aTargets':[5], 'bVisible':false},
+        {'aTargets':[6], 'bVisible':false}];
+    $scope.searchForCarrierButtons =
+        [
+            {
+                "id":"searchForCarrierOk",
+                "label":"Ok",
+                "function":function(){$scope.onSelectCarrierName();},
+                "class":"btn btn-primary",
+                "disabled":"!carrierLookup.otherCarrierIndicator || carrierLookup.otherCarrierName.length < 1"
+            },
+            {
+                "id":"searchForCarrierCancel",
+                "label":"Cancel",
+                "function":function(){$scope.onCarrierLookupCancelButton();},
+                "class":"btn",
+                "disabled":""
+
+            }
+
+        ];
+    $scope.doCarrierLookup = function() {
+        RA.UI.doClearMessages($scope);
+
+        var dataTable = $scope.getCarrierTable();
+        dataTable.fnSettings().oLanguage.sEmptyTable = "There are no carriers that match the search criteria entered.  Please alter your search criteria and try your search again.";
+        dataTable.fnSort([]);
+        dataTable.fnClearTable();
+
+        $rootScope.showPageLoading();
+        async.series({carrierLookupRows : function(callback) {
+            Search.doCarrierLookup(
+                $scope.carrierLookup.carrierLookupString,
+                $scope.carrierLookup.carrierLookupType,
+                function(result) {
+                    var data = RA.Service.handleServiceResult(result, $scope);
+                    callback(null, data);
+                });
+        }
+        }, function(err, result) {
+            var data = result.carrierLookupRows;
+
+            if (data != null) {
+                $scope.carrierLookupRows = $scope.convertCarrierData(data);
+                $scope.$apply();
+            }
+            $rootScope.hidePageLoading();
+        });
+    };
+    $scope.onCarrierLookupOpen = function() {
+        $scope.isSearchForCarrierOpen = true;
+        RA.UI.doClearMessages($scope);
+        // Reset everything on opening the modal.
+        $scope.resetCarrierLookupValues();
+        $scope.saveSearchForCarrierSnapshot();
+    };
+
+    $scope.onSelectCarrierName = function() {
+        $scope.disposition.lostToCarrierName = $scope.carrierLookup.otherCarrierName;
+        $scope.disposition.lostToCarrierExternalPartyIdCd = EMPTY_STRING;
+        $scope.disposition.businessCategoryRefCode = CARRIER_TYPE_INDIVIDUAL;
+
+        $scope.isSearchForCarrierOpen = false;
+    };
+
+    $scope.doChangeCarrierLookupType = function() {
+        var dataTable = $scope.getCarrierTable();
+
+        dataTable.fnClearTable();
+
+        if ($scope.carrierLookup.carrierLookupType == "GROUP") {
+            dataTable.fnSetColumnVis(0, false);
+            dataTable.fnSetColumnVis(2, false);
+        } else {
+            dataTable.fnSetColumnVis(0, true);
+            dataTable.fnSetColumnVis(2, true);
+        }
+        dataTable.fnDraw();
+    };
+    $scope.onCarrierLookupCancel = function()
+    {
+        $scope.isSearchForCarrierOpen = false;
+    };
+    $scope.onCarrierLookupCancelButton = function onCarrierLookupCancelButton()
+    {
+        $scope.onCarrierLookupCancel();
+    };
+    $scope.convertCarrierData = function(carrierLookupRows) {
+        var carrierRowDataArray = [];
+        if (carrierLookupRows != null) {
+            angular.forEach(carrierLookupRows, function(carrier) {
+                var carrierName = '<a>' + carrier.carrierName + '</a>';
+                var groupName = EMPTY_STRING;
+
+                if ($scope.carrierLookup.carrierLookupType == CARRIER_LOOKUP_TYPE_ALL) {
+                    groupName = carrier.groupName;
+                } else {
+                    groupName = '<a>' + carrier.groupName + '</a>';
+                }
+
+                var carrierRow = [ carrierName, groupName,
+                    carrier.rating, carrier.externalId,
+                    carrier.groupId, carrier.carrierName,
+                    carrier.groupName ];
+                carrierRowDataArray.push(carrierRow);
+            });
+        }
+        return carrierRowDataArray;
+    };
+    $scope.saveSearchForCarrierSnapshot = function saveSearchForCarrierSnapShot()
+    {
+        snapshots[SEARCH_FOR_CARRIER_SNAPSHOT_KEY] = $scope.findSearchForCarrierSnapshot();
+    }
+    $scope.findSearchForCarrierSnapshot = function findSearchForCarrierSnapshot()
+    {
+        return RA.UI.takeSnapshot( $scope.carrierLookup );
+    }
+    //todo: remove jQuery
+    $scope.resetCarrierLookupValues = function() {
+        $scope.carrierLookup.carrierLookupString = EMPTY_STRING;
+        $scope.carrierLookup.carrierLookupType = CARRIER_LOOKUP_TYPE_ALL;
+        $scope.carrierLookup.otherCarrierName = EMPTY_STRING;
+        $scope.carrierLookup.otherCarrierIndicator = false;
+        $scope.getCarrierTable().fnSettings().oLanguage.sEmptyTable = "No data available in the table";
+        $scope.getCarrierTable().fnClearTable();
+        $scope.getCarrierTable().fnSetColumnVis(0, true);
+        $scope.getCarrierTable().fnSetColumnVis(2, true);
+    };
+    $scope.setSelectedCarrierDetails = function(carrierName, externalId) {
+
+        $scope.disposition.lostToCarrierName = carrierName;
+        $scope.disposition.lostToCarrierExternalPartyIdCd = externalId;
+        $scope.disposition.businessCategoryRefCode = CARRIER_TYPE_INDIVIDUAL;
+
+        $scope.isSearchForCarrierOpen = false;
+        if(!$scope.$$phase){
+            $scope.$apply();
+        }
+    }
+    $scope.setSelectedGroupDetails = function(groupName, externalId) {
+
+        $scope.disposition.lostToCarrierName = groupName;
+        $scope.disposition.lostToCarrierExternalPartyIdCd = externalId;
+        $scope.disposition.businessCategoryRefCode = CARRIER_TYPE_GROUP;
+
+        $scope.isSearchForCarrierOpen = false;
+        if(!$scope.$$phase){
+            $scope.$apply();
+        }
+    };
+
+}

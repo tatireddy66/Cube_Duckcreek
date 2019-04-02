@@ -1,0 +1,25 @@
+<div class="row-form">
+    <div class="row-fluid">
+        <div class="form-cell">
+            <label class="required" for="submissionStatus-submissionId">Submission ID</label>
+            <input id="submissionStatus-submissionId" onKeyPress="RA.UI.allowOnlyNumerics(event)" maxlength=16 class="input-small2" ng-model="changeSubmissionStatus.submissionId" type="text"></input>
+        </div>
+        <div class="form-cell">
+            <label class="required" for="submissionStatuses">Transaction Status</label>
+            <select id="submissionStatuses" class="input-small2" ng-model="changeSubmissionStatus.statusCd">
+                <option value="OPEN">Open</option>
+                <option value="QUOTED">Quoted</option>
+                <option value="RATED">Rated</option>
+                <option value="BND">Bound</option>
+                <option value="ISSU">Issued</option>
+                <option value="HOLD">Hold</option>
+            </select>
+        </div>
+        <div class="form-cell">
+            </br>Note: This change will ONLY update the submission status and activity history.
+        </div>
+    </div>
+</div>
+<button class="btn pull-right" id="changeStatusBtn" ng-disabled="changeSubmissionStatus.statusCd == '' || changeSubmissionStatus.statusCd == ''" ng-click="changeSubmissionStatusDevLocalOnly()">Change Status</button>
+
+<script type="text/javascript" src="dyn/js/changeSubStatus"></script>

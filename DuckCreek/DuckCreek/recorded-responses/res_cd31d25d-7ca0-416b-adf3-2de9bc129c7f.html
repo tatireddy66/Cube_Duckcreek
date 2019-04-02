@@ -1,0 +1,58 @@
+<div id="controller" ng-controller="DynamicController" class="with-bg">
+
+    <br />
+    <gaig-validation-panel ng-model="validationMessages" fixed-offset="55"></gaig-validation-panel>
+    <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+    <div error-catcher></div>
+
+    <div id="append" class="margin-indent"></div>
+
+    <gaig-modal
+            dynamic-css="modal.size"
+            modal-title="modal.title" ng-cloak
+            ng-model="modal.isOpen"
+            footer-buttons="modal.buttons"
+            on-close="cancelModal()"
+            on-cancel="cancelModal()"
+            show-save="false"
+            show-cancel="false">
+        <div class="container-fixed">
+            <div ng-show="showErrorsOnModal">
+                <gaig-validation-panel ng-model="validationMessages"></gaig-validation-panel>
+                <messages success="successMessages" info="infoMessages" error="errorMessages" validation="validationMessages"></messages>
+            </div>
+
+            <div error-catcher></div>
+
+            <div id="modalContent"></div>
+        </div>
+    </gaig-modal>
+
+    <div id="pageButtons" class="form-actions" ng-show="showPageButtons"></div>
+    <br><br>
+
+    <gaig-modal
+            id="timeoutModal"
+            modal-css="gaig-modal-small"
+            title="Timeout"
+            ng-model="timeoutModalView.isOpen"
+            footer-buttons="timeoutModalView.footerButtons"
+            show-cancel="false"
+            show-save="false">
+        <br />
+        Your request has exceeded the time allowed.
+    </gaig-modal>
+
+    <gaig-modal
+            id="confirmModal"
+            modal-css="gaig-modal-small"
+            title="Confirm"
+            ng-model="confirmModalView.isOpen"
+            footer-buttons="confirmModalView.footerButtons"
+            show-cancel="false"
+            show-save="false">
+        <br />
+        {{confirmMessage.message}}
+    </gaig-modal>
+
+</div>

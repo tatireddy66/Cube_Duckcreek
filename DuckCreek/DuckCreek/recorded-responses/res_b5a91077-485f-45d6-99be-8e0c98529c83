@@ -1,0 +1,19 @@
+var appChangeSubStatus = angular.module('refAppDirectivesChangeSubStatus', ['adminServices']);
+
+appChangeSubStatus.directive('changeSubStatus', function ()
+{
+
+    return ({
+        restrict: 'E',
+        transclude: true,
+        scope: {
+
+        },
+        controller: 'changeSubStatusController',
+        link: function (scope, element, attrs){
+
+        },
+        templateUrl: 'dyn/html/templates/directives/directivesChangeSubStatus'
+    });
+
+});

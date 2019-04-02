@@ -1,0 +1,78 @@
+//# sourceURL=dyn/js/directivesTemplateTable
+(function () {
+
+    function templateGroupDirective($parse) {
+        return {
+            restrict: 'E',
+            scope: true,
+            template: '<div ng-include="::templateUrl"></div>',
+            link: function templateTableLink(scope, element, attr) {
+                scope.templateUrl = attr.templateUrl;
+            }
+        }
+    }
+
+    function templateTableDirective($templateRequest, $compile) {
+        return {
+            restrict: 'E',
+            scope: true,
+            templateUrl: function (element, attrs) {
+
+            },
+            link: function templateTableLink(scope, element, attr) {
+
+            }
+        }
+    }
+
+    function templateTableColspanDirective($timeout) {
+        return {
+            link: function letterColspanLink($scope, element, attr) {
+                var watcher;
+                var offset = Number(attr.templateTableColspan) || 0;
+                var table = element.parent().closest('table');
+
+                element.hide();
+
+                startWatcher();
+                //$timeout(startWatcher, 500);
+                $timeout(clearWatcher, 10000);
+
+                function getTableHeadersLength() {
+                    return table.find('thead:first > tr:last > th').length;
+                }
+
+                function setColspan(newLength) {
+                    if (newLength > 0) {
+                        element.attr('colspan', newLength + offset);
+                    }
+                }
+
+                function startWatcher() {
+                    element.show();
+                    watcher = $scope.$watch(getTableHeadersLength, setColspan);
+                }
+
+                function clearWatcher() {
+                    watcher();
+                }
+            }
+        }
+    }
+
+    function templateTableConfigDirective($parse) {
+        return {
+            link: function templateTableConfigLink($scope, element, attr) {
+                var config = $parse(attr.templateTableConfig)($scope);
+
+            }
+        }
+    }
+
+    angular.module('templateTable', [])
+        .directive('templateGroup', templateGroupDirective)
+        .directive('templateTable', templateTableDirective)
+        .directive('templateTableColspan', templateTableColspanDirective)
+        .directive('templateTableConfig', templateTableConfigDirective);
+
+})();

@@ -1,0 +1,11 @@
+GET https://nexusrules.officeapps.live.com:443/nexus/rules?Application=winword.exe&Version=16.0.4738.1000&ClientId=%7B32390A39-988E-4894-AF2B-8648EC582CC4%7D&= HTTP/1.1
+Connection: Keep-Alive
+Accept: application/vnd.ms-nexus-rules-v12+xml
+Accept-Encoding: gzip, peerdist
+User-Agent: Microsoft Office/16.0 (Windows NT 10.0; Microsoft Word 16.0.4738; Pro)
+X-MS-Collection-Policy: ExternalRestrictive, Heartbeat
+X-MS-Process-Session-Id: {8F95DEF9-AF48-4E16-81EE-85C388B80409}
+X-P2P-PeerDist: Version=1.1
+X-P2P-PeerDistEx: MinContentInformation=1.0, MaxContentInformation=2.0
+Host: nexusrules.officeapps.live.com
+

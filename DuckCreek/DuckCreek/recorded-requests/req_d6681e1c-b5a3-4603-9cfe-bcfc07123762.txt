@@ -1,0 +1,9 @@
+GET https://secureauthdev.td.afg:443/siteminderagent/forms/base_gaisso.css HTTP/1.1
+Host: secureauthdev.td.afg
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: text/css,*/*;q=0.1
+Referer: https://secureauthdev.td.afg/siteminderagent/forms/branded_login.fcc?TYPE=33619969&REALMOID=06-00038ad9-6c6b-1925-a0e0-e8270a3240b7&GUID=&SMAUTHREASON=0&METHOD=GET&SMAGENTNAME=-SM-xhU9YfIiUidgyAraduAcmKijA%2bCgnyp7qzzAnBOFGxFVgONxDBxMfV%2fHHZrdN2mqFEHS2dAISvhs9gWfjpmDRKU%2fw20X1NTd&TARGET=-SM-http%3a%2f%2fcubealtmarketsdev%2etd%2eafg%2fUwdRefApp%2f
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+

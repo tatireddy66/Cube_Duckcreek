@@ -1,0 +1,82 @@
+div.changeRolesView {
+    margin-bottom: 25px;
+}
+
+.changeRolesButton {
+    margin-left: 20px;
+    position: relative;
+    top: -3px;
+}
+
+.changeRolesButtonSub {
+    margin-left: 30px;
+    position: relative;
+    top: -4px;
+}
+
+.gaig-stage.changeRolesStage {
+    width: 100%;
+}
+
+#changeRoleTable th {
+    cursor: pointer;
+    padding-right: 0;
+    padding-left: 0;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+#changeRoleTable th.highlight{
+    background-color: rgba(153, 153, 153, 1);
+    color: white;
+}
+
+#changeRoleTable th .gaig-icon-chevron-down:last-of-type{
+    float: right;
+}
+
+#changeRoleTable th .gaig-icon-chevron-up:last-of-type{
+    float :right;
+}
+
+#changeRoleTable tbody tr td:last-child {
+    width: 1em;
+    min-width: 2em;
+    text-align: center;
+}
+
+#changeRoleTable tbody tr td:nth-child(7){
+    text-align: center;
+    width: 9em;
+    min-width: 5em;
+}
+
+#changeRoleTable tbody tr td:nth-child(8){
+    text-align: center;
+    width: 7em;
+    min-width: 7em;
+}
+
+#changeRoleTable tbody tr td:nth-child(9){
+    text-align: center;
+    width: 5em;
+    min-width: 5em;
+}
+
+#changeRoleTable tbody tr td:nth-child(10){
+    text-align: center;
+    width: 8em;
+    min-width: 8em;
+}
+
+#changeRoleTable tbody tr td:nth-child(11){
+    text-align: center;
+    width: 12em;
+    min-width: 8em;
+}
+
+#changeRoleTable tbody tr td:nth-child(12){
+    text-align: center;
+    width: 4em;
+    min-width: 3em;
+}

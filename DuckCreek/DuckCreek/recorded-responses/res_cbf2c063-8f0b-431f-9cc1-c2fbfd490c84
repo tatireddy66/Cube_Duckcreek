@@ -1,0 +1,37 @@
+Ext.define('DCT.InputDateField2', {
+	override: 'DCT.InputDateField',
+
+	setDateFormat: function (config) {
+		var me = this;
+		
+		if (Ext.isEmpty(config.format)) {
+			/* BEGIN code for BIS: put expected date format in watermark */
+			var dateFormat = (Ext.isEmpty(config.dateFormat)) ? me.defaultDateFormat : config.dateFormat,
+				dateFormat2 = dateFormat;
+			/* END code for BIS */
+
+			if (dateFormat.search("yyyy") > -1)
+				dateFormat = dateFormat.replace("yyyy", "Y");
+			else
+				dateFormat = dateFormat.replace("yy", "y");
+			if (dateFormat.search("MMM") > -1)
+				dateFormat = dateFormat.replace("MMM", "M");
+			else if (dateFormat.search(/mm/i) > -1)
+				dateFormat = dateFormat.replace(/mm/i, "m");
+			else
+				dateFormat = dateFormat.replace(/m/i, "n");
+			if (dateFormat.search("dd") > -1)
+				dateFormat = dateFormat.replace("dd", "d");
+			else
+				dateFormat = dateFormat.replace("d", "j");
+
+			config.format = dateFormat;
+			/* BEGIN code for BIS: put expected date format in watermark */
+			config.formatText = Ext.String.formatEncode(me.formatText, dateFormat2);
+			if(!config.emptyText || config.emptyText == "") {
+				config.emptyText = dateFormat2;
+			}
+			/* END code for BIS */
+		}
+	}
+});

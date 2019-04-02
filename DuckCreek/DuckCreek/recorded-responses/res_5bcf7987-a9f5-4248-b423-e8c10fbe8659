@@ -1,0 +1,1 @@
+{"@type":"hMap","data":{"@type":"hMap","PresentationController.isProducerSecurityEnabledForUser":{"@type":"hMap","data":{"@type":"lhMap","flag":false},"messages":{"@type":"[Lcom.gaic.bue.uwd.ra.common.resource.Message;","@items":[]},"status":true}},"messages":{"@type":"hSet"},"status":true}

@@ -1,0 +1,6 @@
+HEAD https://mystorefront.gaig.com:443/Citrix/InternalWeb HTTP/1.1
+Connection: Keep-Alive
+User-Agent: CITRIXRECEIVER
+Host: mystorefront.gaig.com
+Cookie: cookiemonster=!krGkW/9W9d+QAWcS8/4zppzveG5js8wuMPBoSWYDTPHr3MsDl55GNNh2PminRh8/zON6yMxBt0j1XYty2+CPHSxqvgupT6PdDzrkM5FhrPLMp3bP2nE4rCLED8sZZc981rLEODy8wRVVy6UvSt6Q9ZjfGI9erF4=
+
