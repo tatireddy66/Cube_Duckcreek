@@ -1,0 +1,9 @@
+GET http://r1---sn-jpocxaa-j8bl.gvt1.com/edgedl/release2/chrome_component/AOKyF8GZ_vx3_32.0.0.114/32.0.0.114_win64_PepperFlashPlayer.crx3?cms_redirect=yes&mip=208.65.192.1&mm=28&mn=sn-jpocxaa-j8bl&ms=nvh&mt=1547050000&mv=m&pl=22&shardbypass=yes HTTP/1.1
+Accept: */*
+Accept-Encoding: identity, peerdist
+Range: bytes=813508-1632084
+User-Agent: Microsoft BITS/7.8
+X-P2P-PeerDist: Version=1.1
+X-P2P-PeerDistEx: MinContentInformation=1.0, MaxContentInformation=2.0
+Host: r1---sn-jpocxaa-j8bl.gvt1.com
+

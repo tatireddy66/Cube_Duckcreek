@@ -1,0 +1,9 @@
+GET http://storage.googleapis.com/update-delta/ojjgnpkioondelmggbekfhllhdaimnho/1016/1011/c69ecbbc2a2ba5788191136cc8c64205f2ee950961fa1489f4910c648e4991dc.crxd HTTP/1.1
+Accept: */*
+Accept-Encoding: identity, peerdist
+Range: bytes=2620-5239
+User-Agent: Microsoft BITS/7.8
+X-P2P-PeerDist: Version=1.1
+X-P2P-PeerDistEx: MinContentInformation=1.0, MaxContentInformation=2.0
+Host: storage.googleapis.com
+

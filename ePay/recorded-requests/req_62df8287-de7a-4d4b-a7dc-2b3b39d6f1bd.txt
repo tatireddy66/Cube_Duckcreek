@@ -1,0 +1,7 @@
+POST https://update.googleapis.com/service/update2 HTTP/2.0
+content-length: 968
+content-type: application/xml
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+accept-encoding: gzip, deflate, br
+
+<?xml version="1.0" encoding="UTF-8"?><request protocol="3.1" dedup="cr" acceptformat="crx2,crx3" sessionid="{6f1a5228-1dc9-4148-99c9-7e60a40a5b72}" requestid="{bb8a937a-413a-4f1d-ad1f-49b2f513007a}" updater="chrome" updaterversion="71.0.3578.98" prodversion="71.0.3578.98" lang="en-US" updaterchannel="" prodchannel="" os="win" arch="x64" nacl_arch="x86-64"><hw physmemory="8"/><os platform="Windows" arch="x86_64" version="10.0.14393.2670"/><app appid="gkmgaooipdjhmangpemjhigmamcehddo"><event eventtype="14" eventresult="1" downloader="bits" url="http://redirector.gvt1.com/edgedl/release2/chrome_component/AIbS9M7ge6Nd_36.184.200/36.184.200_win64_SoftwareReporter.crx3" downloaded="6171638" total="6171638" download_time_ms="4016" previousversion="0.0.0.0" nextversion="36.184.200"/><event eventtype="3" eventresult="1" nextfp="1.cc7f6dd639126c8dc7f24a0ed3be27c7a3e9b6a2ca2ed6de0d450ceb311f1be7" previousversion="0.0.0.0" nextversion="36.184.200"/></app></request>

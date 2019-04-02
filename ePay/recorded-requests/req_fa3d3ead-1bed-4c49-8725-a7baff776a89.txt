@@ -1,0 +1,4 @@
+GET https://www.gstatic.com/chrome/config/plugins_3/plugins_win.json HTTP/2.0
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+accept-encoding: gzip, deflate, br
+

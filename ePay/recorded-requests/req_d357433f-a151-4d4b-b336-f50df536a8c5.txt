@@ -1,0 +1,10 @@
+GET https://claimcenteruat.gaic.com:443/cc/resources/themes/theme-9/resources/images/menu/default-scroll-top.png HTTP/1.1
+Host: claimcenteruat.gaic.com
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+Accept: image/webp,image/apng,image/*,*/*;q=0.8
+Referer: https://claimcenteruat.gaic.com/cc/resources/themes/theme-9/resources/theme.css?ver=9.0.4.202
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: JSESSIONID=FFF7570657931769804DC50CAE4330A7; csrfToken=861cec98304ade4b138ca0b78e6f3c2098869152; cookiemonster=!BaF+So1S4D3AoX8cHaT850dQBGPxvOERmYVBTBpg1/OLFrhr+0flw0fBGgPh3iIQ8xhXVnwnng7CiDqA28l4yGqQKcI9dRFdfEkzy7gm9G57RS2TOoEaEb6AQiZc6IBxEhBo9xWkJiTkWxGdqV9kSElGEt3ZAvs=; SMSESSION=UsPYLzhDB3M7pHvlj6g5ONOUpBMkhpy6Uo9Tma78uBphmUjQU8nrasHzCXQ3dCKgDmUEv6V9tCFom+RWkOfVefWIPD/KZTHubU5Lt7t6LjAxQlK6h+whTLkQ5ZOGF2OSdIGjhomAnhp29flQEaqdQNsCppG4dqa/+6ecIjd0Yoqm0svIBjVq4R42sG8gKanZsbGoahuk9aApNYT2bjRSvr/SvBie85PUHD74OixXGbDcuNmk3YsuuF5dTBRvMKEaFbBEfnRel8ELEJF0/GZtOGIqeEfk5Hn0aBQ1z4a8OQ9+D+lLdCfoErU5UzSDhZwEUAtgwyG02evlu9Wxrlcqr3/cb5ICFNEh7h/JzU5zfpxu15vfG5LxDOpJXuFi6VDWrh9PsBl1lOzPYdfmLoAV5hHPRUTViIm9sGLRKrGxCDnwqwehpQBlZ0K12z/f9hhSMHAxS3EhIEZ6JAywgZpvTrHtTqpkdjHGw007WSE4K0BAdbNg3Svcb0W0xky/478lRl+l1g9M2kAuyoQkKydtbQNSIjNNecxWQr9GHGhWWklMy2eo8OAninBPVlmCg1WiZem8+Ieb/1/HDbac1RInV1EeI77N8awgUrYVco7alFXHY7KW7h6hpmDOf9bt+j1XWtF1Z+rNhbwRj2T9ySsaPK8Vup8c3UiBvQhDJs+jS6GBBADu6aKIxa8jieG5o6Bq/500KRRcSG89O+pZVryOuW9GhDivdHZziSxZEdkP5Fu+ZjM+bliUKQoI3fFLdNTl6aVXj+LHYM3i7ZbPShXtH/b/GjJvGnMEzXOPk2O4IYY6tVeH3YYvi7rS2dmaWzu62tal282htEDwST6EVnDyAALQx3ecpUUF4TanG1Oiy+pNOxH3g+txNNZkiZpRzM42bSBBPziJZAFGVHWpQ49nr82EuGz43wxjeprh++Lrsid0tMDXMv2vTfo5NFS1xlfA8EcrAqqc9RnsrZ/7iC5ZDth+tc78EgFregdQNNn5B9L666+K0nH+hWnpfhtaJVoqxwkhWyQdS1Nkekn+VU241PN7s9Ubeh+85Pia0ByaxpF5X9rXbk+xGpkxBJEB4N+jSAWV4i/wik/uDaZj4Y26F6tteNuCJPszf/jR2dCCaGgHj0KccOWkc9HkDO7g6w64iG7UR1xc/fGmTL0W8PqSZIIbJYH6yvngfVY8EUNAKY5f1sLNdndl/60/n5Txe0qed9hFiCH2EBm2nEwAee2NY2Z0Gm+JGYHf; businessUnit=Property & Inland Marine; SMUSER=taccount1; BuildingAndLocation=CVGDTN CINCINNATI; Type=Agent
+

@@ -1,0 +1,6 @@
+HEAD http://redirector.gvt1.com/edgedl/release2/chrome_component/AIbS9M7ge6Nd_36.184.200/36.184.200_win64_SoftwareReporter.crx3 HTTP/1.1
+Accept: */*
+Accept-Encoding: identity
+User-Agent: Microsoft BITS/7.8
+Host: redirector.gvt1.com
+

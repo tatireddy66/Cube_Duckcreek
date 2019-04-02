@@ -1,0 +1,13 @@
+POST https://cvgwpsccm11.ga.afginc.com:8531/ClientWebService/client.asmx HTTP/1.1
+Cache-Control: no-cache
+Connection: Keep-Alive
+Pragma: no-cache
+Content-Type: text/xml; charset=utf-8
+Accept-Encoding: xpress
+User-Agent: Windows-Update-Agent/10.0.10011.16384 Client-Protocol/1.40
+SOAPAction: "http://www.microsoft.com/SoftwareDistribution/Server/ClientWebService/SyncUpdates"
+MS-CV: b6eV1kM48kOzuI+p.1.2.2
+Content-Length: 1075
+Host: cvgwpsccm11.ga.afginc.com:8531
+
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><SyncUpdates xmlns="http://www.microsoft.com/SoftwareDistribution/Server/ClientWebService"><cookie><Expiration>2019-01-30T14:56:34Z</Expiration><EncryptedData>biSHuA8DjdTBrc9LMSx3Bxs0h/8cYa7iWpxUFPVFWlXVbfDVlCRbzzQmSyuFCB9pxX3z3JpyYObdkMTLXUYPRVBcAayhZpLi5lbuww0gk/WBIgnqD5l3syGSZM0vg8hTzN+82G/91Mob9vQP2yDgRm0ulXzNjshTcR8N8oEwQ1m7Znou0VAYTNkeFfEQsczRwTlGD1ueQtci2ESZZE5aCRDLhogAIh9N2SK6cCUG5Xio1F4Oruw7u3KTpyymyOLwuG1hpjaJPjIkAfeUgjzX8w==</EncryptedData></cookie><parameters><ExpressQuery>false</ExpressQuery><InstalledNonLeafUpdateIDs><int>33</int><int>39</int></InstalledNonLeafUpdateIDs><OtherCachedUpdateIDs><int>3049</int></OtherCachedUpdateIDs><SkipSoftwareSync>false</SkipSoftwareSync><FilterCategoryIds><CategoryIdentifier><Id>e104dd76-2895-41c4-9eb5-c483a61e9427</Id></CategoryIdentifier></FilterCategoryIds><NeedTwoGroupOutOfScopeUpdates>true</NeedTwoGroupOutOfScopeUpdates><AlsoPerformRegularSync>false</AlsoPerformRegularSync><ComputerSpec/></parameters></SyncUpdates></s:Body></s:Envelope>

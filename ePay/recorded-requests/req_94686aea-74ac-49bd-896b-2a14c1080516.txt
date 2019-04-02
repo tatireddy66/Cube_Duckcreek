@@ -1,0 +1,5 @@
+HEAD https://www.citrix.com:443/ HTTP/1.1
+Connection: Keep-Alive
+User-Agent: CITRIXRECEIVER
+Host: www.citrix.com
+

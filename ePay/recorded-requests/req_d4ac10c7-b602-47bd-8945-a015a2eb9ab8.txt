@@ -1,0 +1,10 @@
+GET https://secureauthcert.gaic.com:443/siteminderagent/forms/login-button.png HTTP/1.1
+Host: secureauthcert.gaic.com
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+Accept: image/webp,image/apng,image/*,*/*;q=0.8
+Referer: https://secureauthcert.gaic.com/siteminderagent/forms/base_gaisso.css
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: cookiemonster=!mpSSMNvfWEOzJi8cHaT850dQBGPxvNunUMq70JLGAHraEN0kxkXRKVMYqzrrngnHtWX/GWRr5tV1CRvio28qdEf5WyYU/zUDm1s1q23pc522hJo/uNYY/x2ML1wIRZ7tXHZSw18+u2UXICvpKPV0cX9xbls/5/o=
+

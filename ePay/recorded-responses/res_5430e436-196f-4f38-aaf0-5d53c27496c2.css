@@ -1,0 +1,160 @@
+.handheld {
+	display: none;
+}
+body {
+	margin: 0px;
+	border-top: 30px solid #cc0000;
+	background-color: #ffffff;
+	/*background: url('brushedMetalBg.gif') repeat*/
+	font-family: Helvetica, Arial, sans-serif;
+	font-size: 10pt;
+}
+.center {
+	margin-left: auto;
+	margin-right: auto;
+}
+#container {
+	width: 1004px;
+	/*background: url('shadow_left_and_right_1004x1.gif') repeat;*/
+}
+.header {
+	margin-left: 12px;
+	background-color: white;
+	width: 980px;
+}
+/*#red-band {
+	background-color: #cc0000;
+	height: 35px;
+}*/
+#banner {
+	width: 545px;
+	height: 78px;
+	/*background: url('logo_410x78.png') no-repeat;
+	background-size: 410px 78px;*/
+	margin-top: 18px;
+	margin-bottom: 25px;
+	margin-left: 20px;
+}
+#header-rule {
+	border-top: 1px solid #dedede;
+	margin-left: 10px;
+	margin-right: 10px;
+}
+.content {
+	margin-left: 12px;
+	background-color: white;
+	width: 980px;
+}
+.login-form {
+	text-align: left;
+	background-color: white;
+	padding-left: 212px;
+	padding-bottom: 50px;
+}
+.login-prompt {
+	font-family: "Arial Narrow", Arial;
+	font-weight: bold;
+	font-size: 14px;
+	color: #007A85;
+	margin-bottom: 10px;
+}
+.form-fields {
+	padding-bottom: 12px;
+}
+.form-fields label {
+	font-family: "Arial Narrow", Arial;
+	font-size: 12px;
+	color: #666666;
+	margin-bottom: 5px;
+}
+.form-fields input {
+	border: 1px solid #666666;
+	margin-bottom: 5px;
+}
+.submit-button {
+	cursor: pointer;
+	border: 0px;
+	width: 62px;
+	height: 30px;
+	background:url('login-button.png') no-repeat;
+	background-size: 62px 60px;
+	float:left;
+}
+.submit-button:hover {
+	cursor: pointer;
+	border: 0px;
+	width: 62px;
+	height: 30px;
+	background:url('login-button.png') 0px -30px no-repeat;
+	background-size: 62px 60px;
+	float:left;
+}
+.action-link {
+	float: left;
+	font-size: 10px;
+	margin-top: 17px;
+	margin-left: 10px;
+}
+.login-form form {
+	margin-bottom: 55px;
+}
+.error {
+	font-family: Arial;
+	font-size: 11px;
+	color: #ff0000;
+}
+#footer-container {
+	width: 100%;
+	background-color: #eaeaea;
+	/*background: url('shadow_left_and_right_1004x1.gif') repeat;*/
+}
+.footer {
+	width: 980px;
+	margin: 0 auto;
+	padding-top: 20px;
+	padding-bottom: 20px;
+}
+.footer .logo {
+	float: left;
+	margin-left: 20px;
+	width: 129px;
+	height: 70px;
+	background:url('AFG_logo.jpg') no-repeat;
+}
+.footer div {
+	width: 410px;
+	font-family: Arial;
+	font-size: 10px;
+	color: #333333;
+	text-align: left;
+	margin-left: 212px;
+	margin-bottom: 5px;
+}
+#bottom-cap {
+	/*background: url('roundedFooter_1004x20.gif') no-repeat;*/
+	width: 1004px;
+	height: 20px;
+	font-family: Arial;
+	font-size: 10px;
+	color: #333333;
+}
+#legal {
+	width: 1004px;
+	margin-top: 5px;
+	font-family: Arial;
+	font-size: 10px;
+	color: #333333;
+}
+#legal #copy {
+	float: left;
+	margin-left: 12px;
+}
+#legal #links {
+	float: right;
+	margin-right: 12px;
+	text-align: right;
+}
+a, a:visited, a:active, a:hover {
+	text-decoration: none;
+	color: #333333;
+}

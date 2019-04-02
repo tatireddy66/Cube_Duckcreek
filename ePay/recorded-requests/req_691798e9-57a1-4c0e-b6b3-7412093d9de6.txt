@@ -1,0 +1,6 @@
+HEAD http://redirector.gvt1.com/edgedl/release2/chrome_component/bhxs62VecFs_26/26_win_fileTypePolicies.crx3 HTTP/1.1
+Accept: */*
+Accept-Encoding: identity
+User-Agent: Microsoft BITS/7.8
+Host: redirector.gvt1.com
+

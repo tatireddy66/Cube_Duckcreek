@@ -1,0 +1,7 @@
+POST https://update.googleapis.com/service/update2 HTTP/2.0
+content-length: 927
+content-type: application/xml
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+accept-encoding: gzip, deflate, br
+
+<?xml version="1.0" encoding="UTF-8"?><request protocol="3.1" dedup="cr" acceptformat="crx2,crx3" sessionid="{6f1a5228-1dc9-4148-99c9-7e60a40a5b72}" requestid="{e5222cc6-9aba-4100-a413-2421e198240d}" updater="chrome" updaterversion="71.0.3578.98" prodversion="71.0.3578.98" lang="en-US" updaterchannel="" prodchannel="" os="win" arch="x64" nacl_arch="x86-64"><hw physmemory="8"/><os platform="Windows" arch="x86_64" version="10.0.14393.2670"/><app appid="khaoiebndkojlmppeemjhbpbandiljpe"><event eventtype="14" eventresult="1" downloader="bits" url="http://redirector.gvt1.com/edgedl/release2/chrome_component/bhxs62VecFs_26/26_win_fileTypePolicies.crx3" downloaded="5049" total="5049" download_time_ms="4019" previousversion="0.0.0.0" nextversion="26"/><event eventtype="3" eventresult="1" nextfp="1.b7fa09165a7675e638db0a1ce541dbef415c3657b468d2f195c9b32c2fa7f49b" previousversion="0.0.0.0" nextversion="26"/></app></request>

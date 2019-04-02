@@ -1,0 +1,9 @@
+POST https://accounts.google.com/ListAccounts?gpsia=1&source=durations_metrics&json=standard HTTP/2.0
+content-length: 1
+origin: https://www.google.com
+content-type: application/x-www-form-urlencoded
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+accept-encoding: gzip, deflate, br
+accept-language: en-US,en;q=0.9
+
+ 

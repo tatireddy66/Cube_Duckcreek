@@ -1,0 +1,10 @@
+GET https://secureauthcert.gaic.com:443/siteminderagent/forms/base_gaisso.css HTTP/1.1
+Host: secureauthcert.gaic.com
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+Accept: text/css,*/*;q=0.1
+Referer: https://secureauthcert.gaic.com/siteminderagent/forms/branded_login.fcc?TYPE=33554433&REALMOID=06-0004e218-ac9f-1a26-b0a1-78350a324017&GUID=&SMAUTHREASON=0&METHOD=GET&SMAGENTNAME=-SM-HR0i3lfg6jgQQtp%2bLW7su%2fh01DTCQZ0B3oQ0kjTkSvc1BUrWOg2YMaEtzvAaCADTIF5pSg49U%2b2b%2b%2ffgLZYhW0%2bfwqqs9kzP&TARGET=-SM-http%3a%2f%2fclaimcenteruat%2egaic%2ecom%2fcc%2fClaimCenter%2edo
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: cookiemonster=!gckK3dEQDLLrmBEcHaT850dQBGPxvBsUSGy9T688LhsUXVLw7Rk6/0CEpW4GPhdltgBRTcoyfIIQ/P9yLfTB4vMfUBBWq0MIb7qYvHjhuBi0hQ44QQN+8vdpm9SgJZpDrjP4NwOCpIFjyD2MKqQu/wq6r++3APQ=
+

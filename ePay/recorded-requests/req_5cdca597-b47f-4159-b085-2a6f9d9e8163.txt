@@ -1,0 +1,7 @@
+POST https://update.googleapis.com/service/update2 HTTP/2.0
+content-length: 1072
+content-type: application/xml
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+accept-encoding: gzip, deflate, br
+
+<?xml version="1.0" encoding="UTF-8"?><request protocol="3.1" dedup="cr" acceptformat="crx2,crx3" sessionid="{92bbc7a5-adb8-4a78-a3df-ec42c7376018}" requestid="{abff8a3c-6b95-4090-946c-34f95c9ce28e}" updater="chrome" updaterversion="71.0.3578.98" prodversion="71.0.3578.98" lang="en-US" updaterchannel="" prodchannel="" os="win" arch="x64" nacl_arch="x86-64"><hw physmemory="8"/><os platform="Windows" arch="x86_64" version="10.0.14393.2670"/><app appid="hfnkpimlhhgieaddgfemjhofmfblmnib"><event eventtype="14" eventresult="1" downloader="bits" url="http://storage.googleapis.com/update-delta/hfnkpimlhhgieaddgfemjhofmfblmnib/4904/4902/ee615e296f832c5473b298f233377d744556f7cc933f8861f2b1d09da39752bc.crxd" downloaded="4465" total="4465" download_time_ms="8144" previousversion="4902" nextversion="4904"/><event eventtype="3" eventresult="1" diffresult="1" previousfp="1.58ea48765efaed09e2330a4532ad924a2374ba075bd62725e073b4cee02864b8" nextfp="1.60956354b1975cb39d46ccecae1a88a15d9bd4042e8c3b6b8e43f80e469711ec" previousversion="4902" nextversion="4904"/></app></request>

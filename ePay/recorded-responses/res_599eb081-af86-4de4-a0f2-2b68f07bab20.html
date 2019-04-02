@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+
+<!-- SiteMinder Encoding=ISO-8859-1; -->
+
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0" />
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge>
+		<link rel="shortcut icon" href="favicon.ico" type="image/vnd.microsoft.icon">
+		<link rel="stylesheet" media="all" href="base_gaisso.css" />
+		<link rel="stylesheet" media="only screen and (max-width: 1013px)" href="mobile.css" />
+		<title>Great American Insurance Group Login</title>
+		<script src="jquery-1.7.1.min.js"></script>
+		<script type="text/javascript">
+		$(function() {
+			if (document.cookie.toLowerCase().indexOf("siteminder_error=1") >= 0) {
+				$("#error").html("There was a problem validating your account. Please verify your user name and password.<br /> For assistance, please contact the Cincinnati Customer Care Center at 513 369 3663, or toll free at 800 543 1150.");
+			}
+			if (document.cookie.toLowerCase().indexOf("siteminder_error=2") >= 0) {
+				$("#error").html("You do not have access to this application.<br /> For assistance, please contact the Cincinnati Customer Care Center at 513 369 3663, or toll free at 800 543 1150.");
+			}
+		});
+		$(function() {
+			$("#USER").focus();
+		});	
+		</script>
+	</head>
+	<body>
+	<div id="body">
+		<div id="container" class="center">
+			<div class="header">
+				<div id="red-band">&nbsp;</div>
+				<div id="banner-mobile">&nbsp;</div>
+				<div id="banner"><img src="logo_410x78.png" width="410" height="78" /></div>
+				<div id="tag-line" class="handheld center">Specialty Property &amp; Casualty&nbsp;|&nbsp;Annuities</div>
+				<div id="header-rule">&nbsp;</div>
+			</div>
+			<div class="content">
+				<div class="login-form">
+					<form name="Login" method="POST">
+						<div class="login-prompt">Login</div>
+						<div class="form-fields">
+							<label for="USER">Username</label><br />
+							<input type="text" placeholder="Enter your username" name="USER" id="USER"/><br />
+							<label for="PASSWORD">Password</label><br />
+							<input type="password" placeholder="Enter your password" name="PASSWORD" id="PASSWORD" /><br />
+						</div>
+						<input type="hidden" name="SMENC" value="ISO-8859-1" /> 
+						<input type="hidden" name="SMLOCALE" value="US-EN" /> 
+						<input type="hidden" name="target" value="http://claimcenteruat.gaic.com/cc/ClaimCenter.do" />
+						<input type="hidden" name="smquerydata" value="" /> 
+						<input type="hidden" name="smauthreason" value="0" /> 
+						<input type="hidden" name="smagentname" value="HR0i3lfg6jgQQtp+LW7su/h01DTCQZ0B3oQ0kjTkSvc1BUrWOg2YMaEtzvAaCADTIF5pSg49U+2b+/fgLZYhW0+fwqqs9kzP" />
+						<input type="hidden" name="postpreservationdata" value="" />
+
+						<input class="submit-button" type="submit" name="submit" value="" />
+						<div class="action-link"><a href="https://ims.afglink.com/pwm/public/ForgottenPassword?target=close">Forgot your password?</a></div><br /><br />						
+					</form>
+					<div id="error" class="error">&nbsp;<!--Error message style--></div>
+				</div>
+			</div>
+		</div>
+		<div id="footer-container" class="center">
+			<div class="footer">
+				<!--<div class="screen logo">&nbsp;</div>-->
+				<div>Access to this application requires your Enterprise Directory username and password. For assistance, please contact the Cincinnati Customer Care Center at 513 369 3663, or toll free at 800 543 1150.</div>
+				<div>
+					<b>Corporate Headquarters,</b> Great American Insurance Group Tower<br />
+					301 E. Fourth St., Cincinnati, OH 45202 &nbsp; | &nbsp; 513 369 5000
+				</div>
+				<!--<div class="handheld logo">&nbsp;</div>-->
+			</div>
+			<div id="footer-rule" class="handheld">&nbsp;</div>
+		</div>
+		<div id="bottom-cap" class="center">&nbsp;</div>
+		<div id="legal" class="center">
+			<div id="copy">&copy; <span id="CopyrightDate"><script type="text/javascript" language="javascript">today = new Date(); y0 = today.getFullYear(); document.write(y0);</script> Great American Insurance Group. All Rights Reserved.</span></div>
+			<div id="links">
+				<a href="http://www.greatamericaninsurancegroup.com/Pages/legal.aspx">Legal</a> | 
+				<a href="http://www.greatamericaninsurancegroup.com/Pages/privacy.aspx">Privacy</a>
+			</div>
+		</div>
+	</div>
+	</body>
+</html>

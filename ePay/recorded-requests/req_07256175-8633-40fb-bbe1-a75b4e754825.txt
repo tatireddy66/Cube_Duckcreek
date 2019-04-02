@@ -1,0 +1,7 @@
+GET https://r1---sn-jpocxaa-j8bl.gvt1.com:443/edgedl/chrome/dict/en-us-8-0.bdic?cms_redirect=yes&mip=208.65.192.1&mm=28&mn=sn-jpocxaa-j8bl&ms=nvh&mt=1547049620&mv=m&pl=22&shardbypass=yes HTTP/1.1
+Host: r1---sn-jpocxaa-j8bl.gvt1.com
+Connection: keep-alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+

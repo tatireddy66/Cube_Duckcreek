@@ -1,0 +1,13 @@
+POST https://cvgwpsccm11.ga.afginc.com:8531/ClientWebService/client.asmx HTTP/1.1
+Cache-Control: no-cache
+Connection: Keep-Alive
+Pragma: no-cache
+Content-Type: text/xml; charset=utf-8
+Accept-Encoding: xpress
+User-Agent: Windows-Update-Agent/10.0.10011.16384 Client-Protocol/1.40
+SOAPAction: "http://www.microsoft.com/SoftwareDistribution/Server/ClientWebService/GetCookie"
+MS-CV: B+ZlXOMjJEyKURv2.1.2.1
+Content-Length: 1544
+Host: cvgwpsccm11.ga.afginc.com:8531
+
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><GetCookie xmlns="http://www.microsoft.com/SoftwareDistribution/Server/ClientWebService"><authCookies><AuthorizationCookie><PlugInId>SimpleTargeting</PlugInId><CookieData>pMBDxx5763ByMKe1BW8+zvHsJ3Qx3gxGJPjnvrV0kTRx/l3NEEhmnH6th0D5cpM/rsy94/jttoiohWOWdDwMN9RjBDv/0drnkvFBG2HsHL6OZfho6yIc/pH1NmVSoJPNRmvRXH020f8XLlU86ZYkkaq7kllnjBj6DX4UcTKDlg9oQ+c4hKReQZtqMN9pe22edeWcRqAfwNJHJ5+kCUsS856ZNADE4FQ9r+1QPXTTzO0yD6TGTzSUweU7vApa8Ixm39NAEmQPhe0sNjgYUy5wgM42i7wXnjLi0LTZhEVzn9FnbkK0SfRI+nt2ScPmdEnp9L1o15Wia0oguk7NxulW/uO+UKv9flFU8Mgbz5pW0vm33fe8TzMW5ddre1ick04E36xQPdfKmOmDFH5jCb3Xw6KuihTI29nMm1PSr/taO8pz77+YxgA9J6COnCHGmLg/NusbkfxiPOwZypsAeWvKnVpm09rnql6csnyH4bGpKCNQFfE7Dx6/Aag1ghkkaQeUHcqyTlMvDpak9UZan8mtRFSUUhxzjjq/x6Z5x3dIbz5FVnDV8KL11L2oc1QY8rJtSWvFVGRxopJv/Eh0H3jhy9fA1dUCWogwfN6gqGQyuu9qDoKjiN+bZVojN0W2zhCaFaD7jQbkBsazqZm2rYGxrQ7RTRDVfE8A7MVGUYIiAePOjMpECVN9JFQmyQZaRN9+</CookieData></AuthorizationCookie></authCookies><oldCookie><Expiration>2019-01-30T09:43:03Z</Expiration><EncryptedData>mfobvFLnAS0DFjGfbACWPjFpegnUvJLKgO6ExvsCM8EkY/lAsYwvtgusqYEkZAZaSOfObx/ujNBaUvdXilOFPy22vttEfa8yFYcoElWMijq5nf2tCmFZbFaQD+wd/j4Ua9OB1fg6uVA0CepdRrg1WILcZixIrttW1kXVXcr1fH792U00vRVHN5Gu2CzuzVbUzqoqiowPik8sTgXaYI9lZ//CEp/SAAWXJcfPGT45fOmvAQxzu0LWkLjbZEuTpM/+UabZRvWcdP8Fp2O8XzYRpw==</EncryptedData></oldCookie><lastChange>2019-01-30T05:49:25.957Z</lastChange><currentTime>2019-01-30T09:45:18Z</currentTime><protocolVersion>1.40</protocolVersion></GetCookie></s:Body></s:Envelope>

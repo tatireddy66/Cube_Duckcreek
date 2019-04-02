@@ -1,0 +1,7 @@
+POST https://update.googleapis.com/service/update2 HTTP/2.0
+content-length: 924
+content-type: application/xml
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+accept-encoding: gzip, deflate, br
+
+<?xml version="1.0" encoding="UTF-8"?><request protocol="3.1" dedup="cr" acceptformat="crx2,crx3" sessionid="{6f1a5228-1dc9-4148-99c9-7e60a40a5b72}" requestid="{ca3fbf16-a7bc-4276-8139-7c545332c003}" updater="chrome" updaterversion="71.0.3578.98" prodversion="71.0.3578.98" lang="en-US" updaterchannel="" prodchannel="" os="win" arch="x64" nacl_arch="x86-64"><hw physmemory="8"/><os platform="Windows" arch="x86_64" version="10.0.14393.2670"/><app appid="giekcmmlnklenlaomppkphknjmnnpneh"><event eventtype="14" eventresult="1" downloader="bits" url="http://redirector.gvt1.com/edgedl/release2/chrome_component/V3P1l2hLvLw_7/7_all_sslErrorAssistant.crx3" downloaded="5407" total="5407" download_time_ms="4025" previousversion="0.0.0.0" nextversion="7"/><event eventtype="3" eventresult="1" nextfp="1.3eb16d6c28b502ac4cfee8f4a148df05f4d93229fa36a71db8b08d06329ff18a" previousversion="0.0.0.0" nextversion="7"/></app></request>

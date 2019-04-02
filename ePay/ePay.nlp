@@ -1,0 +1,13 @@
+# Project description file
+
+project.name=ePay
+project.version=6.3
+project.original.version=6.4
+product.name=NeoLoad
+product.original.name=NeoLoad
+product.version=6.5.1
+product.original.version=6.6.0
+project.id=4df89f69-6f61-40de-8acc-d55fb883df15
+project.config.path=config.zip
+project.config.storage=ZIP
+team.server.enabled=false

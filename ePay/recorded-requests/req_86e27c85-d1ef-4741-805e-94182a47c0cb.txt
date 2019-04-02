@@ -1,0 +1,9 @@
+GET https://sls.update.microsoft.com:443/SLS/%7B9482F4B4-E343-43B6-B170-9A65BC822C77%7D/x64/10.0.14393.0/0?CH=783&L=en-US&P=&PT=0x4&WUA=10.0.14393.2608 HTTP/1.1
+Connection: Keep-Alive
+Accept: */*
+Accept-Encoding: peerdist
+User-Agent: Windows-Update-Agent/10.0.10011.16384 Client-Protocol/1.40
+X-P2P-PeerDist: Version=1.1
+X-P2P-PeerDistEx: MinContentInformation=1.0, MaxContentInformation=2.0
+Host: sls.update.microsoft.com
+
